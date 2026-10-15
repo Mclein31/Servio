@@ -1,7 +1,8 @@
 # SERVIO — Operational Roadmap & Task Checklist
 
-> **Status:** Active Roadmap  
+> **Status:** Active Roadmap · **Updated:** 2026-10-16
 > **Legend:** `[ ]` Not Started | `[/]` In Progress | `[x]` Completed
+> **Branches:** `main` = app (frontend). `feature/app-and-backend` = `servio-api/` work in progress.
 
 ---
 
@@ -10,49 +11,105 @@
 - [x] Document project context, strict scope boundaries, and ADRs.
 - [x] Map comprehensive Obsidian Vault with linked nodes, screen inventory, and research.
 - [x] Initialize repository Git structure and base Ionic-Angular project layout (`servio-app/`).
-- [x] Create editable Figma customer/Pro flows, linked branding and introductory onboarding graphics/prototype animations.
-- [ ] Validate representative Philippine catalog pricing, fees and payout assumptions before implementation.
+- [x] Create editable Figma customer/Pro flows, linked branding and onboarding graphics (`SERVIO.fig`).
+- [ ] Validate representative Philippine catalog pricing, the ₱50 trust fee and the 85/15 payout split before launch.
+- [ ] Record the backend stack decision as an ADR (Workers + Hono + Drizzle + Neon via Hyperdrive + R2, same as AdvanCare).
+
+---
+
+## Priority: Prototype Demo Readiness (upcoming demo)
+
+**Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
+- [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sophia (tutor role), and an admin.
+- [ ] Pro profiles: KYC approved, online, locations around Bel-Air / Poblacion, Makati; SKUs each Pro offers; ratings and jobs done matching the app.
+- [ ] Active order **#SRV-8821** (Split AC Water Leak Repair, ₱1,100 + ₱50 fee) in `EN_ROUTE` with escrow `HOLD_AUTHORIZED`, its event timeline and the seeded chat thread.
+- [ ] Order history: #SRV-8807, #SRV-8790, #SRV-8772 (completed, with reviews and released escrow).
+- [ ] Bulletin feed: the 6 sample requests (Open / Urgent / Accepted / Completed).
+- [ ] Daniel's wallet ledger: ₱8,640.75 available, ₱1,870.00 in escrow, today's net ₱3,316.25, and the sample credits, cashout and in-escrow rows.
+- [ ] Demo photos uploaded to the dev R2 bucket (sample drain-hose evidence, avatars).
+- [ ] Every demo row marked as demo data (`is_demo` flag or a fixed demo id range) so cleanup can never touch real data.
+
+**Reset and backup**
+- [ ] `npm run db:demo-reset`: deletes only demo rows (respecting the append-only ledger, using a guarded cleanup path), then re-runs the catalog seed and the demo seed, leaving a clean known state in one command.
+- [ ] Hard guard: reset and demo seed refuse to run when `ENVIRONMENT=production` or against the production database.
+- [ ] Backup before the demo: `pg_dump` snapshot script (`npm run db:backup` → `backups/servio-<date>.sql`, git-ignored) plus a restore script; on Neon, also create a branch snapshot (`demo-baseline`) to restore from instantly.
+- [ ] App "Reset demo order" button (Tracking tab) calls the API reset endpoint (dev/demo only) instead of only clearing local storage.
+- [ ] Demo-day checklist: run reset, verify both accounts sign in, walk the full flow (book → track → add-on → PIN → wallet → review), reset again before presenting.
 
 ---
 
 ## Phase 1: MVP Core Development
 
-### 1. Backend & Data Layer
-- [ ] Database schema migrations (Users, Profiles, Categories, Services, Bookings, Transactions, Reviews).
-- [ ] Authentication endpoints & phone OTP verification.
-- [ ] Service catalog CRUD & query APIs.
-- [ ] Booking creation, calculation engine & escrow authorization mock/integration.
-- [ ] Dispatch matching logic (spatial bounding box & radius matching).
-- [ ] WebSockets / Real-time state channel for active order tracking.
+### 1. Backend — `servio-api/` (Cloudflare Workers + Neon Postgres + R2)
+
+**Step 1 — Foundation**
+- [x] Scaffold Workers + Hono + Drizzle project (Node 26, `.nvmrc`), `wrangler.toml`, `.env.example`.
+- [x] Drizzle schema + migrations (17 tables) with DB guards: append-only ledger/events, balanced double-entry.
+- [x] Local `servio_dev` / `servio_test` databases migrated; idempotent catalog seed (`npm run db:seed`).
+- [x] Shared helpers: env bindings, per-request DB client, errors, validation, crypto, money split.
+- [ ] Middleware: request ID, CORS (Capacitor origins), error envelope, `withDb`, `requireUser`.
+- [ ] Routes: `GET /health`, `GET /catalog` (categories, SKUs, add-ons).
+- [ ] Vitest setup (`@cloudflare/vitest-plugin`) + tests for health, catalog, money split, ledger guards.
+
+**Step 2 — Sign-in (email codes, ADR-014 pattern from AdvanCare)**
+- [ ] Gmail SMTP mailer over `cloudflare:sockets` (dev: code printed to log).
+- [ ] `POST /auth/request-otp`, `POST /auth/verify-otp`, `GET /auth/me`, `POST /auth/sign-out` (hashed codes + sessions, rate limits, attempt lockout).
+- [ ] Profile endpoints (name, phone, avatar), Pro profile + KYC submission.
+- [ ] App: switch login screen from phone to email code; `AuthService` calls the API and stores the session token.
+
+**Step 3 — Booking, escrow & wallet**
+- [ ] Booking create (price snapshot, ₱50 fee, escrow hold ledger entries) + status transitions with event log.
+- [ ] Add-on quotes: R2 presigned photo upload, create/approve/decline with ledger hold.
+- [ ] Completion PIN (HMAC-derived, attempt-limited) → escrow release, 85/15 split, tips.
+- [ ] Wallet balance from ledger, transaction history, cashout requests (min ₱500, ₱15 fee).
+- [ ] Reviews, bulletin requests, order chat messages (REST first).
+- [ ] App: replace `OrderService` / `WalletService` mocks with API calls (keep screens unchanged).
+
+**Step 4 — Real-time & dispatch**
+- [ ] Dispatch: nearest approved, online Pros within 10 km (enable PostGIS on Neon), 60-second offers, expiry.
+- [ ] Durable Object per order: WebSocket for live GPS, status broadcasts and chat.
+- [ ] App: Pro device streams real GPS (`@capacitor/geolocation`); `TrackingSimService` consumes the live feed instead of the simulator.
+- [ ] Push notifications via FCM (dispatch alerts, add-on requests, arrival) + `@capacitor/push-notifications`.
+
+**Step 5 — Payments & extra sign-in**
+- [ ] PayMongo sandbox: GCash + card, payment intents, webhooks into the ledger; mock provider stays for tests.
+- [ ] Payouts to GCash / InstaPay.
+- [ ] Legal check: custodial escrow of GCash funds vs. BSP e-money rules.
+- [ ] Google sign-in + Sign in with Apple (required together on iOS).
+- [ ] Switch sign-in delivery to Semaphore SMS when budget allows (same flow).
 
 ### 2. Unified Mobile App (Ionic-Angular with HTML & SCSS)
-- [x] Initialize Ionic-Angular project with Capacitor (`servio-app/`, Angular 22 standalone + Ionic 9 + Capacitor 8).
-- [x] Setup design tokens in `src/theme/variables.scss` (#FF5C00 primary, pastels, card shadows, rounded radii).
-- [x] Implement 5-tab router (`tabs.page.html` with `ion-tabs` & `ion-tab-bar`).
-- [x] Build **Home Page** (`home.page.html` / `.scss`) matching `01_screen_home.png` (Search, hero promo, category cards, bulletin preview, top helpers, active tracking widget).
-- [x] Build **Directory Page** (`directory.page.html` / `.scss`) matching `02_screen_directory.png` (Category chips, 2-column helper grid cards with availability badge).
-- [x] Build **Bulletin Page** (`bulletin.page.html` / `.scss`) matching `03_screen_bulletin.png` (Search, urgency filters, hero map banner, vertical request cards feed).
-- [x] Build **Tracking Page** (`tracking.page.html` / `.scss`) matching `05_screen_tracking.png` (Hero active card, map route snippet, 5-stage stepper, chat trigger, other requests).
-- [x] Build **Profile Page** (`profile.page.html` / `.scss`) matching `04_screen_profile.png` (User card, 4-stat badges, "My Services" Philippine peso prices with explicit units, settings list).
-- [x] Implement introductory onboarding with first-run persistence and reduced-motion support from the Figma handoff.
-- [x] Implement reusable components: `app-status-badge`, `app-stepper`, `app-helper-card`, `app-search-filter`.
-- [x] Customer secondary flows: helper sheet, post bulletin, escrow checkout, chat, add-on approval, completion PIN, rating & tip (mock data).
-- [x] Servio Pro screens: dashboard, radar alert (audio/haptics), job execution state machine, add-on quote (camera), PIN verify, wallet & cashout (mock data).
-- [/] Capacitor native plugins configuration (Camera, Haptics, Preferences, Native Audio installed; Geolocation & Push not yet; `ionic cap add ios/android` not run).
-- [ ] Replace mock services (`core/data/mock-data.ts`, OrderService/WalletService) with the real API + real-time order channel.
-- [ ] Provide a CARTO basemaps API key (`environment.cartoApiKey`) or choose a licensed tile provider before release; OSM fallback is dev-only.
-- [ ] Wire live GPS from the Pro device into TrackingSimService's fix stream (currently simulated heartbeat).
+- [x] Ionic-Angular + Capacitor project (`servio-app/`, Angular 22 standalone + Ionic 9 + Capacitor 8).
+- [x] Design tokens, 5-tab shell, Home / Directory / Bulletin / Tracking / Profile screens.
+- [x] Onboarding (Discover / Trust / Track animations), phone OTP auth (mock), reusable components.
+- [x] Customer flows: helper sheet, post bulletin, escrow checkout, chat, add-on approval, completion PIN, rating & tip (mock data).
+- [x] Servio Pro: dashboard, radar alert (audio/haptics), job state machine, add-on quote (camera), PIN verify, wallet & cashout (mock data).
+- [x] Foodpanda-style live tracking engine (street route, interpolated GPS, heading, follow camera).
+- [x] Native iOS project added and running in the Simulator (camera/photo permission strings set).
+- [ ] Android project: `npx cap add android`, permissions, run on emulator.
+- [ ] App icon + splash screen from `assets/logo/` (iOS + Android).
+- [ ] Map tiles: add a CARTO API key (`environment.cartoApiKey`) or pick a licensed provider; OSM fallback is dev-only.
 - [ ] Reconcile Figma vs implementation-brief content differences (see CHANGELOG 0.4.0).
+- [ ] Pro KYC upload screen (`/pro/onboarding`) and Request Detail sheet (`/request/:id`) from the screen inventory.
+- [ ] Error / offline / loading states once screens call the real API.
+- [ ] Accessibility pass (VoiceOver labels, contrast, dynamic type) and a dark-mode decision.
+
+### 3. Quality & Release
+- [ ] CI (GitHub Actions): app build + tests, API typecheck + tests, migrations against a Neon branch.
+- [ ] Deploy `servio-api` to Workers (production env, Hyperdrive id, secrets).
+- [ ] Neon production database + migrations; R2 production bucket.
+- [ ] Privacy policy, Terms of Service, Escrow Protection Policy (Data Privacy Act compliance).
+- [ ] TestFlight / Play internal testing builds; App Store & Play listings.
 
 ### 4. Admin Web Console
 - [ ] Provider verification dashboard (KYC document inspection, approve/reject).
 - [ ] Service catalog & pricing manager.
-- [ ] Active bookings monitor & dispute resolution panel.
+- [ ] Active bookings monitor & dispute resolution panel (manual escrow release/refund).
 
 ---
 
 ## Phase 2: Post-MVP Enhancements
 - [ ] Dynamic surge pricing and peak demand algorithms.
 - [ ] Automated SMS fallback for offline technicians.
-- [ ] Multi-language and localization support.
+- [ ] Multi-language and localization support (Filipino / English).
 - [ ] Provider tier badges (Top Rated, Master Certified).
