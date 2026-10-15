@@ -1,0 +1,48 @@
+# SERVIO API — Cloudflare Workers + Hono (same setup as AdvanCare's backend).
+# Secrets are NEVER committed. Local: copy .env.example to .env (in servio-api/).
+# Deployed: `wrangler secret put <NAME> --env production` for every secret in .env.example.
+name = "servio-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+# Capacitor apps: iOS serves from capacitor://localhost, Android from http://localhost.
+# In development any http://localhost:<port> is also allowed (see src/middleware/cors.ts).
+ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,http://localhost:8100"
+R2_BUCKET_NAME = "servio-uploads-dev"
+
+# Local development reaches Postgres/Neon directly through DATABASE_URL (servio-api/.env).
+# Hyperdrive is bound only in deployed environments; see [env.production].
+
+# Local simulated bucket until the real dev bucket exists. When it does, add `remote = true`
+# so `wrangler dev` reads the same bucket presigned uploads write to.
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "servio-uploads-dev"
+
+# Sign-in codes: 10 requests/attempts per minute per IP and per email.
+[[ratelimits]]
+name = "AUTH_LIMITER"
+namespace_id = "2001"
+simple = { limit = 10, period = 60 }
+
+[env.production]
+name = "servio-api"
+vars = { ENVIRONMENT = "production", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost", R2_BUCKET_NAME = "servio-uploads" }
+
+# Create once you have the Neon URL, then paste the printed id here:
+#   npx wrangler hyperdrive create servio-neon --connection-string="<DATABASE_URL_UNPOOLED>"
+# [[env.production.hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "REPLACE_WITH_HYPERDRIVE_ID"
+
+[[env.production.ratelimits]]
+name = "AUTH_LIMITER"
+namespace_id = "2001"
+simple = { limit = 10, period = 60 }
+
+[[env.production.r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "servio-uploads"
