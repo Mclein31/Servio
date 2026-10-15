@@ -1,0 +1,138 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  padding: calc(32px + var(--ion-safe-area-top, 0px)) var(--servio-gutter) 24px;
+}
+
+.brand {
+  align-self: center;
+  margin-bottom: 28px;
+  border-radius: 22px;
+  box-shadow: 0 14px 30px rgba(255, 92, 0, 0.25);
+  animation: pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.servio-subtitle {
+  margin-bottom: 28px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.phone-field {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+  border-radius: 16px;
+  border: 1.5px solid var(--servio-border);
+  background: #FFFFFF;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--servio-brand-orange);
+    box-shadow: 0 0 0 4px rgba(255, 92, 0, 0.12);
+  }
+
+  &.invalid {
+    border-color: var(--servio-red);
+  }
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 16px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--servio-text-primary);
+
+    &::placeholder {
+      color: #C4C9D2;
+      font-weight: 500;
+    }
+  }
+}
+
+.prefix {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  background: #F9FAFB;
+  border-right: 1px solid var(--servio-border);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  user-select: none;
+
+  ion-icon {
+    font-size: 12px;
+    color: var(--servio-neutral-300);
+  }
+}
+
+.flag {
+  font-size: 20px;
+}
+
+.help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--servio-text-muted);
+
+  &.error {
+    color: var(--servio-red-strong);
+  }
+}
+
+.trust {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 16px;
+  background: var(--servio-green-surface);
+  border-color: #D1FAE5;
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 22px;
+    color: var(--servio-green-text);
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 19px;
+    color: #065F46;
+  }
+}
+
+.terms {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--servio-text-muted);
+}
+
+ion-spinner {
+  width: 20px;
+  height: 20px;
+  color: #FFFFFF;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}

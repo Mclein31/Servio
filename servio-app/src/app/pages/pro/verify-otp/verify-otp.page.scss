@@ -1,0 +1,140 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  padding: 8px var(--servio-gutter) 24px;
+}
+
+.shield {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 18px;
+  border-radius: 20px;
+  background: var(--servio-green-surface);
+  color: var(--servio-green-strong);
+  font-size: 32px;
+}
+
+.servio-subtitle {
+  margin: 8px 0 26px;
+}
+
+.err {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--servio-red-strong);
+}
+
+.scan {
+  margin-top: 24px;
+}
+
+.scanner {
+  position: relative;
+  height: 140px;
+  margin-top: 12px;
+  border-radius: 16px;
+  background: #111827;
+  overflow: hidden;
+}
+
+.beam {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: #34D399;
+  box-shadow: 0 0 12px #34D399;
+  animation: beam 1.2s ease-in-out infinite alternate;
+}
+
+.escrow {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--servio-green-surface);
+  font-size: 13px;
+  line-height: 19px;
+  color: #065F46;
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+  }
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 40px var(--servio-gutter);
+  text-align: center;
+
+  h1 {
+    margin: 22px 0 8px;
+    font-size: 26px;
+    line-height: 32px;
+    font-weight: 800;
+
+    .price {
+      color: var(--servio-green-strong);
+    }
+  }
+
+  p {
+    margin: 0 0 28px;
+    font-size: 14px;
+    color: var(--servio-text-muted);
+  }
+}
+
+.tick {
+  width: 112px;
+  height: 112px;
+
+  circle {
+    fill: var(--servio-green-surface);
+    stroke: var(--servio-green);
+    stroke-width: 4;
+    stroke-dasharray: 277;
+    stroke-dashoffset: 277;
+    animation: draw 0.6s ease-out forwards;
+  }
+
+  path {
+    fill: none;
+    stroke: var(--servio-green-strong);
+    stroke-width: 7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 64;
+    stroke-dashoffset: 64;
+    animation: draw 0.4s ease-out 0.5s forwards;
+  }
+}
+
+.success-btn {
+  max-width: 360px;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes beam {
+  from {
+    top: 10%;
+  }
+  to {
+    top: 88%;
+  }
+}

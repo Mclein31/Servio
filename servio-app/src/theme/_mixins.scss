@@ -1,0 +1,53 @@
+// SERVIO SCSS mixins. Import in component styles with:
+//   @use 'theme/mixins' as *;
+
+@mixin servio-card($radius: 20px) {
+  background: #FFFFFF;
+  border-radius: $radius;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  border: 1px solid #F3F4F6;
+}
+
+@mixin servio-pill-btn($bg: #D04A00) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 30px;
+  background-color: $bg;
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  @if $bg == #D04A00 {
+    &:active { background-color: #C24400; }
+  }
+
+  &:active { transform: scale(0.98); }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+@mixin servio-price {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@mixin servio-reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}

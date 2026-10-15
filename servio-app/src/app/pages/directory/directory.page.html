@@ -1,0 +1,39 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-app-bar">
+    <h1 class="servio-tab-title">Directory</h1>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  <div class="servio-section intro">
+    <p class="servio-subtitle">Browse neighbors offering skills and services.</p>
+    <app-search-filter placeholder="Search services, skills, or helpers…" [selectedFilterCount]="active() === 'all' ? 0 : 1"
+      (searchChange)="query.set($event)"></app-search-filter>
+  </div>
+
+  <div class="servio-section">
+    <div class="chip-row" role="tablist" aria-label="Filter helpers by category">
+      @for (c of chips; track c.id) {
+        <button type="button" class="chip" role="tab" [class.active]="active() === c.id" [attr.aria-selected]="active() === c.id" (click)="active.set(c.id)">
+          <ion-icon [name]="c.icon" aria-hidden="true"></ion-icon>{{ c.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="servio-section">
+    @if (helpers().length) {
+      <div class="grid">
+        @for (h of helpers(); track h.id) {
+          <app-helper-card [helper]="h" (selected)="open($event)" (book)="open($event)"></app-helper-card>
+        }
+      </div>
+    } @else {
+      <div class="empty servio-card">
+        <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+        <p>No helpers match yet. Try another category.</p>
+      </div>
+    }
+  </div>
+  <div class="spacer"></div>
+</ion-content>

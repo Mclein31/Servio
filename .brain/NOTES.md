@@ -26,3 +26,10 @@ When an agent is asked to implement or design a feature:
 - All screen layouts, custom cards, and status badges must match the UI design tokens defined in `vault/03_User_Experience_and_Screens/UI_Assets_and_Screen_Specs_for_Codex.md`.
 - Do NOT generate Flutter, React Native, or Vue code.
 
+
+## 5. Running the App & Implementation Gotchas
+- Run: `cd servio-app && npm start` (http://localhost:8100). Test: `npx ng test --watch=false`. Lint: `npx ng lint`.
+- First run shows onboarding; any 6-digit OTP signs in (test code `123456`); customer completion PIN is `7492`. “Reset demo order” on Tracking restores the mid-route seed state.
+- Leaflet maps inside Ionic pages need explicit width/height and `invalidateSize()` on `ionViewDidEnter`; tab pages are attached late.
+- Do not put `maxlength="1"` on OTP cells: iOS one-time-code autofill inserts the whole code into the first cell (`app-code-input` distributes it).
+- `ion-title` is absolutely positioned in iOS mode; `.servio-detail-bar` insets it past the back button.

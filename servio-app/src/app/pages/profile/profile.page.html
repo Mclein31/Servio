@@ -1,0 +1,82 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-app-bar">
+    <div class="bar">
+      <h1 class="servio-tab-title">Profile</h1>
+      <button type="button" class="icon-btn" aria-label="Notifications">
+        <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+      </button>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  <div class="servio-section intro">
+    <p class="servio-subtitle">Manage your account, listings, and requests.</p>
+  </div>
+
+  <div class="servio-section">
+    <section class="hero servio-card-hero">
+      <div class="identity">
+        <app-avatar src="assets/avatars/sophia.png" name="Sophia M." [size]="76" [online]="true"></app-avatar>
+        <div class="who">
+          <h2>Sophia M.</h2>
+          <span class="role">Community Helper & Customer</span>
+          <span class="loc"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>Bel-Air, Makati</span>
+        </div>
+        <button type="button" class="edit">
+          <ion-icon name="create-outline" aria-hidden="true"></ion-icon>Edit
+        </button>
+      </div>
+      <div class="metrics">
+        @for (m of metrics; track m.label) {
+          <div class="metric" [style.background]="m.tint">
+            <ion-icon [name]="m.icon" [style.color]="m.ink" aria-hidden="true"></ion-icon>
+            <strong>{{ m.value }}</strong>
+            <span>{{ m.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <div class="servio-section">
+    <div class="servio-section-head">
+      <h2>My Services</h2>
+      <button type="button" class="see-all">Manage <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></button>
+    </div>
+    <div class="services servio-card">
+      @for (s of services; track s.name) {
+        <div class="service">
+          <span class="svc-icon" [style.background]="s.tint" [style.color]="s.ink"><ion-icon [name]="s.icon" aria-hidden="true"></ion-icon></span>
+          <div class="svc-text">
+            <span class="svc-name">{{ s.name }}</span>
+            <span class="svc-detail">{{ s.detail }}</span>
+          </div>
+          <span class="price-tag">{{ s.pricePhp | php: 'whole' }}/{{ s.unit }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="servio-section">
+    <nav class="settings servio-card" aria-label="Account settings">
+      @for (item of settings; track item.label) {
+        <button type="button" class="setting" (click)="open(item)">
+          <span class="set-icon" [style.background]="item.tint" [style.color]="item.ink"><ion-icon [name]="item.icon" aria-hidden="true"></ion-icon></span>
+          <span class="set-text">
+            <span class="set-label">{{ item.label }}</span>
+            <span class="set-caption">{{ item.caption }}</span>
+          </span>
+          <ion-icon name="chevron-forward" class="chev" aria-hidden="true"></ion-icon>
+        </button>
+      }
+    </nav>
+  </div>
+
+  <div class="servio-section">
+    <button type="button" class="pill-btn-outline block danger" (click)="logout()">
+      <ion-icon name="log-out-outline" aria-hidden="true"></ion-icon> Log out
+    </button>
+    <p class="servio-caption footnote">Community starts with people like you.</p>
+  </div>
+</ion-content>

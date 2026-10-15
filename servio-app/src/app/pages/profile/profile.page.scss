@@ -1,0 +1,195 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.intro {
+  margin-top: 0;
+
+  .servio-subtitle {
+    margin: 0;
+  }
+}
+
+.hero {
+  padding: 18px;
+  background: linear-gradient(160deg, #FFF4ED 0%, #FFFFFF 55%);
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.who {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  h2 {
+    margin: 2px 0 0;
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+}
+
+.role {
+  font-size: 13px;
+  color: var(--servio-text-muted);
+}
+
+.loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--servio-text-muted);
+}
+
+.edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 30px;
+  background: var(--servio-orange-tint);
+  color: var(--servio-orange-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 360px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 14px;
+
+  ion-icon {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  strong {
+    font-size: 18px;
+    line-height: 22px;
+  }
+
+  span {
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--servio-text-muted);
+  }
+}
+
+.services {
+  padding: 4px 16px;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+
+  & + & {
+    border-top: 1px solid var(--servio-border-soft);
+  }
+}
+
+.svc-icon,
+.set-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.svc-text,
+.set-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.svc-name,
+.set-label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.svc-detail,
+.set-caption {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--servio-text-muted);
+}
+
+.price-tag {
+  font-size: 15px;
+}
+
+.settings {
+  padding: 4px 0;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+
+  & + & {
+    border-top: 1px solid var(--servio-border-soft);
+  }
+
+  &:active {
+    background: #F9FAFB;
+  }
+}
+
+.chev {
+  flex: 0 0 auto;
+  color: var(--servio-neutral-300);
+  font-size: 18px;
+}
+
+.footnote {
+  display: block;
+  margin: 14px 0 28px;
+  text-align: center;
+}

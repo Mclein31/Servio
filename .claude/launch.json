@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "servio-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "servio-app", "start", "--", "--port", "8100"],
+      "port": 8100
+    }
+  ]
+}

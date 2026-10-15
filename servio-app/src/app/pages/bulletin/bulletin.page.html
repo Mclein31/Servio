@@ -1,0 +1,90 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-app-bar">
+    <h1 class="servio-tab-title">Bulletin</h1>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  <div class="servio-section intro">
+    <p class="servio-subtitle">Live requests from your neighborhood.</p>
+    <app-search-filter placeholder="Search requests, skills, or keywords…" [selectedFilterCount]="filter() === 'ALL' ? 0 : 1"
+      (searchChange)="query.set($event)"></app-search-filter>
+  </div>
+
+  <div class="servio-section">
+    <div class="chip-row" role="tablist" aria-label="Filter requests">
+      @for (f of filters; track f.id) {
+        <button type="button" class="chip solid" role="tab" [class.active]="filter() === f.id" [class.urgent]="f.id === 'URGENT' && filter() !== f.id"
+          [attr.aria-selected]="filter() === f.id" (click)="filter.set(f.id)">
+          @if (f.id === 'URGENT') { <span class="bang" aria-hidden="true">!</span> }
+          @if (f.id === 'OPEN') { <ion-icon name="time-outline" aria-hidden="true"></ion-icon> }
+          @if (f.id === 'NEARBY') { <ion-icon name="location-outline" aria-hidden="true"></ion-icon> }
+          {{ f.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Map banner -->
+  <div class="servio-section">
+    <section class="map-banner" aria-labelledby="banner-title">
+      <div class="banner-copy">
+        <span class="servio-eyebrow">Help your neighbors</span>
+        <h2 id="banner-title">Local requests need your skills.</h2>
+        <p>{{ openCount }} open requests within 5 km.</p>
+        <button type="button" class="pill-btn-outline map-cta" id="open-pin-map">View on Map <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon></button>
+      </div>
+      <div class="banner-map" aria-hidden="true">
+        <svg viewBox="0 0 160 150" class="streets">
+          <path d="M0 40 H160 M0 98 H160 M46 0 V150 M112 0 V150 M0 140 L160 10" />
+        </svg>
+        <span class="cluster c1">3</span>
+        <span class="pin p1"></span>
+        <span class="pin p2"></span>
+        <span class="pin p3 urgent"></span>
+        <span class="pin p4"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Feed -->
+  <div class="servio-section feed">
+    @for (r of requests(); track r.id) {
+      <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'">
+        <span class="cat" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
+          <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
+        </span>
+        <div class="body">
+          <div class="row">
+            <h3>{{ r.title }}</h3>
+            <app-status-badge [status]="r.status"></app-status-badge>
+          </div>
+          <p class="desc">{{ r.description }}</p>
+          <span class="meta">{{ r.author }} · {{ r.postedAgo }} • {{ r.neighborhood }}</span>
+          <div class="row bottom">
+            <span class="distance"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ r.distanceKm }} km away</span>
+            <span class="price-badge price">{{ r.pricePhp | php }}{{ r.priceUnit === 'hr' ? '/hr' : '' }}</span>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="empty servio-card">No requests match this filter.</div>
+    }
+  </div>
+  <div class="fab-space"></div>
+
+  <!-- 48 × 48 FAB: 20px above the content edge = 84px from the screen bottom over the 64px tab bar. -->
+  <button slot="fixed" type="button" class="fab" (click)="compose()" aria-label="Post a new bulletin request">
+    <ion-icon name="add" aria-hidden="true"></ion-icon>
+  </button>
+
+  <ion-modal trigger="open-pin-map" [initialBreakpoint]="0.85" [breakpoints]="[0, 0.85]" class="servio-sheet" (didPresent)="initPinMap()" (willDismiss)="destroyPinMap()">
+    <ng-template>
+      <div class="pin-sheet">
+        <h2 class="servio-detail-title">Requests near you</h2>
+        <p class="servio-caption">Exact addresses are shared only after a helper is booked.</p>
+        <div #pinMap class="pin-map"></div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

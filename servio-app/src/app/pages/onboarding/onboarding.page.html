@@ -1,0 +1,51 @@
+<ion-content class="servio-page" [scrollY]="false">
+  <div class="screen">
+    <header class="top">
+      <div class="lockup">
+        <img src="assets/logo/servio_app_icon_orange.png" alt="" width="32" height="32" />
+        <span class="wordmark">SERVIO</span>
+      </div>
+      <button type="button" class="text-btn" (click)="skip()">Skip</button>
+    </header>
+
+    <div #track class="slides" (scroll)="onScroll()" (keydown)="onKey($event)" tabindex="0" aria-roledescription="carousel" aria-label="Introduction">
+      @for (s of slides; track s.id; let i = $index) {
+        <section class="slide" [class.active]="index() === i" [attr.aria-hidden]="index() !== i" aria-roledescription="slide" [attr.aria-label]="(i + 1) + ' of 3'">
+          <div class="visual">
+            @switch (s.id) {
+              @case ('discover') {
+                <div class="discover" [class.reveal]="seen().has(0)">
+                  <span class="bubble b1">Tutoring · ₱350/hr</span>
+                  <span class="bubble b2">AC repair · ₱1,100</span>
+                  <img src="assets/design/neighborhood-help-illustration.png" alt="Neighbors helping each other" />
+                </div>
+              }
+              @case ('trust') {
+                <app-trust-visual [play]="index() === 1"></app-trust-visual>
+              }
+              @case ('track') {
+                <app-track-visual [play]="index() === 2"></app-track-visual>
+              }
+            }
+          </div>
+          <div class="copy">
+            <span class="eyebrow">{{ s.eyebrow }}</span>
+            <h1>{{ s.title }}</h1>
+            <p>{{ s.body }}</p>
+          </div>
+        </section>
+      }
+    </div>
+
+    <footer class="actions">
+      <div class="dots" role="tablist" aria-label="Choose slide">
+        @for (s of slides; track s.id; let i = $index) {
+          <button type="button" class="dot" role="tab" [class.active]="index() === i" [attr.aria-selected]="index() === i"
+            [attr.aria-label]="'Go to slide ' + (i + 1)" (click)="goTo(i)"></button>
+        }
+      </div>
+      <button type="button" class="pill-btn block" (click)="next()">{{ isLast ? 'Get Started' : 'Next' }}</button>
+      <p class="login">Already have an account? <button type="button" class="text-btn" (click)="skip()">Log in</button></p>
+    </footer>
+  </div>
+</ion-content>

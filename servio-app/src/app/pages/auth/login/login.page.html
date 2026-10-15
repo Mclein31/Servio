@@ -1,0 +1,37 @@
+<ion-content class="servio-page">
+  <div class="wrap">
+    <img class="brand" src="assets/logo/servio_app_icon_orange.png" alt="SERVIO" width="88" height="88" />
+    <h1 class="servio-display">Enter your mobile number</h1>
+    <p class="servio-subtitle">We'll send a 6-digit verification code.</p>
+
+    <form (submit)="$event.preventDefault(); submit()">
+      <label class="field-label" for="phone">Mobile number</label>
+      <div class="phone-field" [class.invalid]="showHint()">
+        <span class="prefix" aria-label="Philippines, plus 63">
+          <span class="flag" aria-hidden="true">🇵🇭</span>+63
+          <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
+        </span>
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="917 123 4567"
+          maxlength="12" [value]="display()" (input)="onInput($event)" aria-describedby="phone-help" />
+      </div>
+      <p id="phone-help" class="help" [class.error]="showHint()">
+        @if (showHint()) { Philippine mobile numbers start with 9 (e.g. 917 123 4567). }
+        @else { Philippines · 10-digit mobile number }
+      </p>
+    </form>
+
+    <div class="trust servio-card">
+      <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+      <p>Passwordless sign-in. Your number is never shown to helpers — calls and chats stay masked in the app.</p>
+    </div>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <div class="servio-action-bar">
+    <button type="button" class="pill-btn block" [disabled]="!valid() || sending()" (click)="submit()">
+      @if (sending()) { <ion-spinner name="crescent"></ion-spinner> } @else { Continue }
+    </button>
+    <p class="terms">By continuing, you agree to SERVIO's Terms of Service and Escrow Protection Policy.</p>
+  </div>
+</ion-footer>

@@ -1,0 +1,40 @@
+.intro {
+  margin-top: 0;
+
+  .servio-subtitle {
+    margin: 0 0 14px;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 340px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--servio-text-muted);
+  text-align: center;
+
+  ion-icon {
+    font-size: 28px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.spacer {
+  height: 24px;
+}

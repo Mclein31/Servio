@@ -1,0 +1,411 @@
+@use 'theme/mixins' as *;
+
+/* Inter (self-hosted, no network dependency) */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+
+/* Core CSS required for Ionic components to work properly */
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/display.css';
+@import '@ionic/angular/css/padding.css';
+@import '@ionic/angular/css/flex-utils.css';
+
+html,
+body {
+  font-family: var(--servio-font);
+  background: var(--servio-surface);
+  color: var(--servio-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Typography ---------- */
+.servio-tab-title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--servio-text-primary);
+}
+
+.servio-detail-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 700;
+  color: var(--servio-text-primary);
+}
+
+.servio-display {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.servio-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--servio-text-muted);
+}
+
+.servio-caption {
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: 500;
+  color: var(--servio-text-muted);
+}
+
+.servio-eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Currency: amounts never wrap their centavos onto a second line. */
+.price,
+.price-tag,
+.amount {
+  @include servio-price;
+}
+
+.price-tag {
+  color: var(--servio-orange-text);
+  font-weight: 600;
+}
+
+/* ---------- Layout ---------- */
+.servio-page {
+  --background: var(--servio-surface);
+}
+
+.servio-section {
+  padding: 0 var(--servio-gutter);
+  margin-top: 24px;
+}
+
+.servio-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+
+  .see-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 0;
+    background: none;
+    padding: 4px 0;
+    font: inherit;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 600;
+    color: var(--servio-orange-text);
+    cursor: pointer;
+  }
+}
+
+/* Main tab app bar: 64px, sits below the status-bar safe area. */
+.servio-app-bar {
+  --background: var(--servio-surface);
+  --border-width: 0;
+  --min-height: var(--servio-app-bar-height);
+  --padding-start: var(--servio-gutter);
+  --padding-end: var(--servio-gutter);
+
+  &::after { display: none; }
+}
+
+.servio-detail-bar {
+  --background: var(--servio-surface);
+  --border-width: 0;
+  --min-height: var(--servio-app-bar-height);
+  --padding-start: 12px;
+  --padding-end: 12px;
+
+  /* iOS-mode titles are absolutely positioned across the bar; inset past the 44px back button. */
+  ion-title {
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+    padding-inline: 64px 16px;
+    text-align: left;
+  }
+
+  &:not(:has([slot='start'])) ion-title {
+    padding-inline-start: var(--servio-gutter);
+  }
+
+  &:has([slot='end']) ion-title {
+    padding-inline-end: 64px;
+  }
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--servio-text-primary);
+  cursor: pointer;
+  font-size: 24px;
+
+  &.tinted {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: var(--servio-orange-tint);
+    color: var(--servio-orange-text);
+  }
+
+  &:active { transform: scale(0.96); }
+}
+
+/* ---------- Surfaces ---------- */
+.servio-card {
+  @include servio-card();
+}
+
+.servio-card-hero {
+  @include servio-card(24px);
+}
+
+/* ---------- Buttons ---------- */
+.pill-btn {
+  @include servio-pill-btn();
+
+  &.block { display: flex; width: 100%; }
+  &.success { background-color: var(--servio-green-text); }
+  &.success:active { background-color: #06694B; }
+  &.white {
+    background: #FFFFFF;
+    color: var(--servio-text-primary);
+    &:active { background: #F3F4F6; }
+  }
+}
+
+.pill-btn-outline {
+  @include servio-pill-btn(#FFFFFF);
+  color: var(--servio-text-primary);
+  border: 1.5px solid var(--servio-border);
+
+  &.block { display: flex; width: 100%; }
+  &.danger { color: #B42318; border-color: #FECACA; }
+  &.brand { color: var(--servio-orange-text); border-color: #FFD3B8; }
+  &:active { background: #F9FAFB; }
+}
+
+.text-btn {
+  display: inline-block;
+  text-decoration: none;
+  border: 0;
+  background: none;
+  padding: 8px 4px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--servio-orange-text);
+  cursor: pointer;
+}
+
+/* ---------- Chips ---------- */
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px var(--servio-gutter);
+  margin: 0 calc(var(--servio-gutter) * -1);
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 39px;
+  padding: 0 14px;
+  border-radius: var(--servio-radius-pill);
+  border: 1px solid var(--servio-border);
+  background: #FFFFFF;
+  color: var(--servio-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &.active {
+    background: var(--servio-orange-tint);
+    border-color: #FFD3B8;
+    color: var(--servio-orange-text);
+    font-weight: 600;
+  }
+
+  &.solid.active {
+    background: var(--servio-action-orange);
+    border-color: var(--servio-action-orange);
+    color: #FFFFFF;
+  }
+
+  &.urgent { color: var(--servio-red-strong); }
+}
+
+/* ---------- Fixed footer action bar ---------- */
+.servio-action-bar {
+  padding: 16px var(--servio-gutter) calc(16px + var(--ion-safe-area-bottom, 0px));
+  background: #FFFFFF;
+  border-top: 1px solid var(--servio-border-soft);
+  box-shadow: 0 -8px 24px rgba(17, 24, 39, 0.04);
+}
+
+/* ---------- Sheets & modals ---------- */
+ion-modal.servio-sheet {
+  --border-radius: 24px;
+  --background: var(--servio-surface);
+}
+
+ion-modal.servio-fullscreen {
+  --background: var(--servio-surface);
+}
+
+/* ---------- Routed bottom-sheet screens (add-on, completion PIN, review) ---------- */
+.sheet-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #E2E8F0;
+}
+
+.sheet-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(16px + var(--ion-safe-area-top, 0px)) var(--servio-gutter) 22px;
+  color: var(--servio-text-muted);
+
+  strong {
+    display: block;
+    font-size: 16px;
+    color: #475569;
+  }
+
+  span {
+    font-size: 13px;
+  }
+}
+
+.sheet-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 10px var(--servio-gutter) calc(20px + var(--ion-safe-area-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--servio-surface);
+  box-shadow: 0 -12px 32px rgba(17, 24, 39, 0.12);
+  animation: sheet-up 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.sheet-handle {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: #94A3B8;
+}
+
+.sheet-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 700;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+/* ---------- Leaflet tweaks ---------- */
+.leaflet-container {
+  font-family: var(--servio-font);
+  background: #F2EFE9;
+}
+
+/* Approximates the CARTO Light look on keyless OSM tiles so the orange route stays the hero. */
+.servio-tiles-light {
+  filter: grayscale(0.85) brightness(1.08) contrast(0.88);
+}
+
+.leaflet-control-attribution {
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* ---------- Accessibility ---------- */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--servio-brand-orange);
+  outline-offset: 2px;
+}
+
+@include servio-reduced-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

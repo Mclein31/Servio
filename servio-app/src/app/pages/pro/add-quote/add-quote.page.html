@@ -1,0 +1,66 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-detail-bar">
+    <button type="button" class="icon-btn" slot="start" (click)="back()" aria-label="Back">
+      <ion-icon name="arrow-back" aria-hidden="true"></ion-icon>
+    </button>
+    <ion-title>Add Extra Scope / Parts Quote</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  <div class="wrap">
+    <p class="lead">Show the issue, pick the standard part. The customer approves every extra charge before you start.</p>
+
+    <!-- Camera capture -->
+    <section class="servio-card photo-card">
+      @if (photo(); as src) {
+        <div class="preview">
+          <img [src]="src" alt="Captured photo of the damaged part" />
+          <span class="tag"><ion-icon name="camera" aria-hidden="true"></ion-icon>Photo 1 · evidence</span>
+        </div>
+        <div class="photo-actions">
+          <span class="ok"><ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>Evidence attached</span>
+          <button type="button" class="text-btn" (click)="retake()">Retake</button>
+        </div>
+      } @else {
+        <button type="button" class="capture" (click)="capture()" [disabled]="capturing()">
+          @if (capturing()) { <ion-spinner name="crescent"></ion-spinner> } @else { <ion-icon name="camera-outline" aria-hidden="true"></ion-icon> }
+          <strong>Capture damaged part</strong>
+          <span>Clear, well-lit photo of the defect</span>
+        </button>
+        <button type="button" class="text-btn sample" (click)="useSample()">Use sample evidence photo (demo)</button>
+      }
+    </section>
+
+    <!-- Part selector -->
+    <label class="field">
+      <span class="label">Standardized part (approved catalog)</span>
+      <ion-select class="select" interface="action-sheet" [value]="partId()" (ionChange)="partId.set($any($event).detail.value)"
+        [interfaceOptions]="{ header: 'Approved parts catalog' }" aria-label="Standardized part">
+        @for (p of catalog; track p.id) {
+          <ion-select-option [value]="p.id">{{ optionLabel(p.name, p.pricePhp) }}</ion-select-option>
+        }
+      </ion-select>
+      <span class="hint">{{ part().detail }}</span>
+    </label>
+
+    <label class="field">
+      <span class="label">Why it’s needed</span>
+      <textarea rows="3" [value]="note()" (input)="note.set($any($event.target).value)" maxlength="200"></textarea>
+    </label>
+
+    <!-- Payout recalculation -->
+    <section class="calc" aria-live="polite">
+      <div class="line"><span>Customer Escrow Charge</span><strong class="price">{{ split().grossPhp | php: 'signed' }}</strong></div>
+      <div class="line pro"><span>Pro Additional Cut (85%)</span><strong class="price">{{ split().proPhp | php: 'signed' }}</strong></div>
+      <div class="line"><span>Platform Fee (15%)</span><strong class="price">{{ split().platformPhp | php }}</strong></div>
+    </section>
+    <p class="fine">The original job continues. This add-on waits for customer approval.</p>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <div class="servio-action-bar">
+    <button type="button" class="pill-btn block" [disabled]="!canSubmit()" (click)="submit()">Push Quote to Customer for Approval</button>
+  </div>
+</ion-footer>

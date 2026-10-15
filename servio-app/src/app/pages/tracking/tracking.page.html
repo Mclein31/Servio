@@ -1,0 +1,105 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-app-bar">
+    <h1 class="servio-tab-title">Tracking</h1>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  <div class="servio-section intro">
+    <p class="servio-subtitle">Follow your active requests in real time.</p>
+  </div>
+
+  @let o = orders.order();
+
+  <div class="servio-section">
+    <section class="active servio-card" aria-labelledby="order-title">
+      <!-- Header card -->
+      <div class="order-head">
+        <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="56"></app-avatar>
+        <div class="order-text">
+          <span class="servio-caption">Active Order #{{ o.id }}</span>
+          <h2 id="order-title">{{ o.sku.name }}</h2>
+          <span class="helper-line">{{ o.helper.name }} · <ion-icon name="star" aria-hidden="true"></ion-icon> {{ o.helper.rating | number: '1.1-1' }} ({{ o.helper.reviewCount }})</span>
+        </div>
+        <span class="status-chip" [class]="'status-chip ' + statusChip().tone">
+          <ion-icon [name]="statusChip().icon" aria-hidden="true"></ion-icon>{{ statusChip().label }}
+        </span>
+      </div>
+
+      <!-- Live map -->
+      <app-tracking-map [height]="280"></app-tracking-map>
+
+      <!-- Milestones -->
+      <app-stepper class="stepper" [steps]="orders.milestones()" [showTimes]="true"></app-stepper>
+
+      <!-- Communication bar -->
+      <div class="comm">
+        <span class="comm-icon"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></span>
+        <p>{{ banner() }}</p>
+      </div>
+      <div class="comm-actions">
+        <button type="button" class="call" (click)="call()" aria-label="Call helper (masked number)">
+          <ion-icon name="call-outline" aria-hidden="true"></ion-icon>
+        </button>
+        <a class="pill-btn message" [routerLink]="['/order', o.id, 'chat']">
+          <ion-icon name="chatbubble-ellipses" aria-hidden="true"></ion-icon> Message
+        </a>
+      </div>
+
+      <!-- Lifecycle actions -->
+      @if (orders.pendingAddon(); as addon) {
+        <a class="next-step warn" [routerLink]="['/order', o.id, 'addon-modal']">
+          <ion-icon name="alert-circle" aria-hidden="true"></ion-icon>
+          <span>Add-on requested · <span class="price">{{ addon.sku.pricePhp | php: 'signed' }}</span></span>
+          <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon>
+        </a>
+      } @else if (o.status === 'ARRIVED' || o.status === 'IN_PROGRESS') {
+        <a class="pill-btn block" [routerLink]="['/order', o.id, 'completion']">
+          <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Show Completion PIN
+        </a>
+      } @else if (o.status === 'COMPLETED') {
+        <a class="pill-btn block success" [routerLink]="['/order', o.id, 'review']">
+          <ion-icon name="star-outline" aria-hidden="true"></ion-icon> Rate & Tip {{ o.helper.name }}
+        </a>
+      }
+
+      <div class="escrow-line">
+        <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
+        @if (o.escrow === 'HOLD_AUTHORIZED') {
+          <span><span class="price">{{ orders.escrowTotalPhp() | php }}</span> held in escrow until you share your PIN</span>
+        } @else {
+          <span>Escrow released · <span class="price">{{ orders.escrowTotalPhp() | php }}</span></span>
+        }
+      </div>
+
+      <div class="demo">
+        <button type="button" class="text-btn" (click)="replay()">Replay route</button>
+        <button type="button" class="text-btn muted" (click)="resetDemo()">Reset demo order</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Order history -->
+  <div class="servio-section">
+    <div class="servio-section-head"><h2>Order History</h2></div>
+    <ion-accordion-group class="history servio-card" [multiple]="true">
+      @for (h of history; track h.id) {
+        <ion-accordion [value]="h.id">
+          <ion-item slot="header" lines="none">
+            <ion-label>
+              <h3>{{ h.title }}</h3>
+              <p>{{ h.helper }} · {{ h.when }}</p>
+            </ion-label>
+            <span class="done-pill" slot="end">Completed</span>
+          </ion-item>
+          <div class="history-body" slot="content">
+            <div class="kv"><span>Order</span><span>#{{ h.id }}</span></div>
+            <div class="kv"><span>Total paid (released from escrow)</span><span class="price">{{ h.amountPhp | php }}</span></div>
+            <a class="text-btn" routerLink="/tabs/directory">Book again</a>
+          </div>
+        </ion-accordion>
+      }
+    </ion-accordion-group>
+  </div>
+  <div class="spacer"></div>
+</ion-content>

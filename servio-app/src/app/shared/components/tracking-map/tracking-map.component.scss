@@ -1,0 +1,233 @@
+:host {
+  display: block;
+}
+
+.frame {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #F2EFE9;
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
+}
+
+/* Explicit size: Leaflet may force position:relative when the page isn't attached yet at init, which would collapse an inset-only box. */
+.map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.eta-chip {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 500;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 30px;
+  background: #111827;
+  color: #FFFFFF;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(17, 24, 39, 0.22);
+  transition: background-color 0.3s ease;
+
+  &.arrived {
+    background: #087F5B;
+  }
+}
+
+.pulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF5C00;
+  flex: 0 0 auto;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 92, 0, 0.6);
+    animation: chip-pulse 1.6s ease-out infinite;
+  }
+
+  .arrived & {
+    background: #34D399;
+  }
+}
+
+.recenter {
+  position: absolute;
+  right: 12px;
+  bottom: 28px;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: #111827;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.18);
+  cursor: pointer;
+}
+
+/* Leaflet injects marker HTML outside this component's view, so these must pierce encapsulation. */
+:host ::ng-deep {
+  .servio-rider {
+    background: none;
+    border: 0;
+
+    .accuracy-halo {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 96px;
+      height: 96px;
+      margin: -48px 0 0 -48px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 92, 0, 0.22) 0%, rgba(255, 92, 0, 0.12) 45%, rgba(255, 92, 0, 0) 70%);
+      animation: accuracy-halo 2.2s ease-out infinite;
+      pointer-events: none;
+    }
+
+    .rider-heading {
+      position: absolute;
+      inset: -14px;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .rider-cone {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 0;
+      height: 0;
+      margin-left: -9px;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-bottom: 14px solid #FF5C00;
+      filter: drop-shadow(0 1px 2px rgba(17, 24, 39, 0.3));
+    }
+
+    .rider-face {
+      position: relative;
+      display: block;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2.5px solid #FFFFFF;
+      box-sizing: border-box;
+      object-fit: cover;
+      background: #FFF2E8;
+      box-shadow: 0 4px 12px rgba(17, 24, 39, 0.28);
+    }
+
+    .rider-initials {
+      display: grid;
+      place-items: center;
+      color: #B64000;
+      font-weight: 700;
+    }
+
+    &.arrived .rider-cone {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    &.arrived .accuracy-halo {
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0) 70%);
+    }
+  }
+
+  .servio-destination {
+    background: none;
+    border: 0;
+
+    .dest-pin {
+      position: absolute;
+      left: 4px;
+      top: 0;
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50% 50% 50% 0;
+      background: #FF5C00;
+      transform: rotate(-45deg);
+      box-shadow: 0 4px 10px rgba(255, 92, 0, 0.35);
+
+      svg {
+        width: 16px;
+        height: 16px;
+        transform: rotate(45deg);
+      }
+    }
+
+    .dest-label {
+      position: absolute;
+      left: 50%;
+      top: 38px;
+      transform: translateX(-50%);
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #111827;
+      font-size: 10px;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(17, 24, 39, 0.15);
+    }
+  }
+
+  .servio-origin {
+    background: none;
+    border: 0;
+
+    span {
+      display: block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 4px solid #9CA3AF;
+      box-sizing: border-box;
+    }
+  }
+}
+
+@keyframes accuracy-halo {
+  0% {
+    transform: scale(0.45);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes chip-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

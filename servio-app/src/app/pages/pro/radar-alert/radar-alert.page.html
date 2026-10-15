@@ -1,0 +1,44 @@
+@let o = orders.order();
+<ion-content [fullscreen]="true" class="radar-content">
+  <div class="screen" role="alertdialog" aria-labelledby="radar-title" aria-describedby="radar-desc">
+    <div class="eyebrow"><ion-icon name="notifications" aria-hidden="true"></ion-icon>New request nearby</div>
+
+    <div class="ring-wrap" [class.urgent]="urgent()">
+      <span class="ripple r1" aria-hidden="true"></span>
+      <span class="ripple r2" aria-hidden="true"></span>
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle cx="110" cy="110" [attr.r]="ringR" class="track" />
+        <circle cx="110" cy="110" [attr.r]="ringR" class="progress"
+          [attr.stroke-dasharray]="circumference" [attr.stroke-dashoffset]="dashOffset()" />
+      </svg>
+      <div class="count" aria-live="off">
+        <strong>{{ secondsLeft() }}s</strong>
+        <span>remaining</span>
+      </div>
+    </div>
+
+    <h1 id="radar-title">A nearby home needs your expertise.</h1>
+
+    <section class="job" id="radar-desc">
+      <div class="row"><ion-icon name="construct-outline" aria-hidden="true"></ion-icon><div><span>Service SKU</span><strong>{{ o.sku.name }}</strong></div></div>
+      <div class="row"><ion-icon name="location-outline" aria-hidden="true"></ion-icon><div><span>Location</span><strong>Barangay Bel-Air, Makati (1.4 km away)</strong></div></div>
+      <div class="row"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><div><span>Customer</span><strong>{{ o.customerName }}</strong></div></div>
+    </section>
+
+    <section class="payout">
+      <span class="label">Guaranteed Payout (85% Net)</span>
+      <strong class="value price">{{ orders.basePayout().proPhp | php }}</strong>
+      <span class="sub">Total Customer Escrow: <span class="price">{{ o.sku.pricePhp | php }}</span> · No bidding</span>
+    </section>
+
+    <div class="actions">
+      @if (!expired()) {
+        <button type="button" class="accept" (click)="accept()">Accept Job ({{ secondsLeft() }}s)</button>
+        <button type="button" class="decline" (click)="decline()">Decline</button>
+      } @else {
+        <p class="expired">This request timed out and was offered to the next nearby Pro. Passing won't affect your rating.</p>
+        <button type="button" class="decline" (click)="decline()">Back to radar</button>
+      }
+    </div>
+  </div>
+</ion-content>

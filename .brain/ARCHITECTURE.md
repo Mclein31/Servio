@@ -86,3 +86,13 @@ The mobile app is developed strictly in the **Ionic-Angular framework (`@ionic/a
 - **HTTP / REST / GraphQL:** Transactional CRUD (Auth, catalog, profile, payment intent).
 - **WebSockets / Server-Sent Events (SSE):** Real-time order status broadcasts and chat.
 - **FCM (Firebase Cloud Messaging) / APNs:** High-priority push notifications for dispatch alerts and message pings.
+
+---
+
+## 4. Client Implementation (`servio-app/`)
+
+- **Stack:** Angular 22 standalone (zoneless, signals, OnPush) + `@ionic/angular` 9 (iOS mode) + Capacitor 8. SCSS tokens in `src/theme/variables.scss`, mixins in `src/theme/_mixins.scss`, global utilities in `src/global.scss`.
+- **Layout:** `core/` (guards, services, mock data), `shared/` (components, modals, models, pipes, utils), `pages/` (screens), `tabs/` (shell).
+- **State:** `OrderService` is the single source of truth for the demo order and escrow state machine (`HOLD_AUTHORIZED → COMPLETED` only via a matching PIN); `WalletService` holds Pro balances/ledger. Both persist to localStorage for demo reloads (`demo-store.ts`).
+- **Tracking:** `TrackingSimService` emits a simulated GPS fix every second along `core/data/makati-route.ts`; renderers call `displayDistance(now)` each animation frame. Real GPS should replace the fix source, not the renderer.
+- **Routes:** `/onboarding`, `/auth/login`, `/auth/verify-otp`, `/tabs/{home,directory,bulletin,tracking,profile}`, `/checkout`, `/order/:id/{chat,addon-modal,completion,review}`, `/pro`, `/pro/radar-alert`, `/pro/order/:id/{execute,add-quote,verify-otp}`, `/pro/wallet` (+ aliases from the screen inventory).

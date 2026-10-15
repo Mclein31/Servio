@@ -1,0 +1,117 @@
+import { CategoryId, HelperSummary, RequestStatus } from './ui.models';
+
+/** Order lifecycle — see .brain/SCOPE.md §4. */
+export type OrderStatus =
+  | 'PENDING_ACCEPTANCE'
+  | 'ACCEPTED'
+  | 'EN_ROUTE'
+  | 'ARRIVED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+/** Escrow ledger state — ADR-002. Funds move only on a verified completion PIN. */
+export type EscrowState = 'NONE' | 'HOLD_AUTHORIZED' | 'COMPLETED' | 'REFUNDED';
+
+export type PaymentMethod = 'GCASH' | 'CARD';
+
+/** Standardized, fixed-price catalog item — ADR-001 (no bidding, no custom quotes). */
+export interface ServiceSku {
+  id: string;
+  name: string;
+  category: CategoryId;
+  pricePhp: number;
+  unit: 'job' | 'hr' | 'errand' | 'visit';
+  durationLabel: string;
+  inclusions: string[];
+}
+
+/** Approved add-on part / extra labor catalog — ADR-004. */
+export interface AddonSku {
+  id: string;
+  name: string;
+  pricePhp: number;
+  detail: string;
+}
+
+export type AddonDecision = 'PENDING' | 'APPROVED' | 'DECLINED';
+
+export interface AddonQuote {
+  id: string;
+  sku: AddonSku;
+  photoUrl: string;
+  note: string;
+  createdAt: Date;
+  decision: AddonDecision;
+}
+
+export interface Order {
+  id: string;
+  sku: ServiceSku;
+  helper: HelperSummary;
+  customerName: string;
+  customerAvatarUrl: string;
+  address: { street: string; barangay: string; city: string; landmark: string };
+  schedule: string;
+  paymentMethod: PaymentMethod;
+  trustFeePhp: number;
+  addons: AddonQuote[];
+  status: OrderStatus;
+  escrow: EscrowState;
+  completionPin: string;
+  tipPhp: number;
+  statusTimes: Partial<Record<OrderStatus, Date>>;
+}
+
+export interface BulletinRequest {
+  id: string;
+  title: string;
+  description: string;
+  category: CategoryId;
+  author: string;
+  postedAgo: string;
+  neighborhood: string;
+  distanceKm: number;
+  pricePhp: number;
+  priceUnit?: 'hr' | 'job' | 'errand';
+  status: RequestStatus;
+}
+
+export interface HelperReview {
+  author: string;
+  rating: number;
+  when: string;
+  text: string;
+}
+
+export interface HelperProfile extends HelperSummary {
+  bio: string;
+  credentials: string[];
+  skus: ServiceSku[];
+  reviews: HelperReview[];
+  jobsDone: number;
+  yearsExperience: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  from: 'system' | 'helper' | 'customer';
+  text: string;
+  time: string;
+}
+
+export type LedgerKind = 'credit' | 'debit' | 'escrow';
+
+export interface LedgerEntry {
+  id: string;
+  kind: LedgerKind;
+  amountPhp: number;
+  title: string;
+  detail: string;
+  when: string;
+}
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}

@@ -1,0 +1,55 @@
+@let o = orders.order();
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-detail-bar">
+    <button type="button" class="icon-btn" slot="start" (click)="back()" aria-label="Back">
+      <ion-icon name="arrow-back" aria-hidden="true"></ion-icon>
+    </button>
+    <ion-title>Complete Service & Unlock Escrow</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page">
+  @if (credited() === null) {
+    <div class="wrap">
+      <span class="shield"><ion-icon name="shield-checkmark" aria-hidden="true"></ion-icon></span>
+      <h1 class="servio-display">Unlock your payout</h1>
+      <p class="servio-subtitle">Ask customer {{ o.customerName }} for their 4-digit PIN.</p>
+
+      <app-code-input [length]="4" size="large" [error]="error()" label="Customer completion PIN"
+        (codeChange)="pin.set($event)" (completed)="pin.set($event)"></app-code-input>
+      @if (error()) {
+        <p class="err" role="alert">Incorrect PIN. Ask the customer to check their SERVIO app.</p>
+      }
+
+      <button type="button" class="pill-btn-outline block scan" (click)="scan()" [disabled]="scanning()">
+        <ion-icon name="scan-outline" aria-hidden="true"></ion-icon> {{ scanning() ? 'Scanning…' : 'Scan Customer QR Code' }}
+      </button>
+      @if (scanning()) {
+        <div class="scanner" aria-hidden="true"><span class="beam"></span></div>
+      }
+
+      <div class="escrow">
+        <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
+        <span><strong class="price">{{ orders.proPayoutPhp() | php }}</strong> is held in escrow and released the moment the PIN matches.</span>
+      </div>
+    </div>
+  } @else {
+    <div class="success">
+      <svg class="tick" viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="48" r="44" />
+        <path d="M28 50 L42 63 L69 34" />
+      </svg>
+      <h1><span class="price">{{ credited()! | php }}</span> Credited to Wallet!</h1>
+      <p>Escrow for order #{{ o.id }} moved from HOLD_AUTHORIZED to COMPLETED.</p>
+      <button type="button" class="pill-btn block success-btn" (click)="viewWallet()">View Wallet</button>
+    </div>
+  }
+</ion-content>
+
+@if (credited() === null) {
+  <ion-footer class="ion-no-border">
+    <div class="servio-action-bar">
+      <button type="button" class="pill-btn block success" [disabled]="pin().length !== 4" (click)="submit()">Verify PIN & Release Funds</button>
+    </div>
+  </ion-footer>
+}

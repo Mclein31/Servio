@@ -1,0 +1,129 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="servio-app-bar">
+    <div class="app-bar">
+      <div class="identity">
+        <div class="lockup">
+          <img src="assets/logo/servio_app_icon_orange.png" alt="" width="32" height="32" />
+          <span class="wordmark">SERVIO</span>
+        </div>
+        <span class="servio-caption">{{ greeting }}, Sophia</span>
+      </div>
+      <button type="button" class="bell" aria-label="Notifications, 2 unread">
+        <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+        <span class="badge-dot" aria-hidden="true"></span>
+      </button>
+      <a routerLink="/tabs/profile" class="me" aria-label="Your profile">
+        <app-avatar src="assets/avatars/sophia.png" name="Sophia M." [size]="40"></app-avatar>
+      </a>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="servio-page" [fullscreen]="false">
+  <div class="servio-section first">
+    <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)"></app-search-filter>
+  </div>
+
+  <!-- Hero -->
+  <div class="servio-section">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <span class="servio-eyebrow">Stronger together</span>
+        <h2 id="hero-title">Need a trusted hand nearby?</h2>
+        <p>Tutoring, repairs and errands — from verified neighbors.</p>
+        <a class="pill-btn white hero-cta" routerLink="/tabs/directory">
+          Find a Helper <ion-icon name="arrow-forward" aria-hidden="true"></ion-icon>
+        </a>
+      </div>
+      <img class="hero-art" src="assets/design/neighborhood-help-illustration.png" alt="Two neighbors exchanging a package" />
+    </section>
+  </div>
+
+  <!-- Categories -->
+  <div class="servio-section">
+    <div class="servio-section-head">
+      <h2>Community Directory</h2>
+      <a class="see-all" routerLink="/tabs/directory">See all <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></a>
+    </div>
+    <div class="category-row">
+      @for (c of categories; track c.id) {
+        <button type="button" class="category" [style.background]="c.tint" (click)="openCategory(c.id)">
+          <span class="well" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
+          <span class="cat-label">{{ c.label }}</span>
+          <span class="cat-caption">{{ c.caption }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Live bulletin -->
+  <div class="servio-section">
+    <div class="servio-card bulletin-card">
+      <div class="servio-section-head inset">
+        <div class="head-left">
+          <span class="head-icon"><ion-icon name="newspaper-outline" aria-hidden="true"></ion-icon></span>
+          <div>
+            <h2>Bulletin</h2>
+            <span class="servio-caption">Live requests from your area</span>
+          </div>
+        </div>
+        <a class="see-all" routerLink="/tabs/bulletin">See all <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></a>
+      </div>
+      <ul class="bulletin-list">
+        @for (r of bulletin; track r.id) {
+          <li>
+            <a class="bulletin-row" routerLink="/tabs/bulletin">
+              <span class="req-icon" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
+                <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
+              </span>
+              <span class="req-body">
+                <span class="req-title">{{ r.title }}</span>
+                <span class="req-meta"><span class="price">{{ r.pricePhp | php: 'whole' }}{{ r.priceUnit === 'hr' ? '/hr' : '' }}</span> · {{ r.postedAgo }}</span>
+              </span>
+              <app-status-badge [status]="r.status"></app-status-badge>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <!-- Top helpers -->
+  <div class="servio-section">
+    <div class="servio-section-head">
+      <h2>Top Helpers Nearby</h2>
+      <a class="see-all" routerLink="/tabs/directory">See all <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></a>
+    </div>
+    <div class="helper-carousel">
+      @for (h of helpers; track h.id) {
+        <app-helper-card [helper]="h" actionMode="book" (selected)="openHelper($event)" (book)="book()"></app-helper-card>
+      }
+    </div>
+  </div>
+
+  <div class="bottom-space"></div>
+
+  <!-- Active tracking mini-widget -->
+  @if (orders.isActive()) {
+    <a class="tracking-widget" routerLink="/tabs/tracking" aria-label="Open live tracking">
+      <div class="tw-top">
+        <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="44" [online]="true"></app-avatar>
+        <div class="tw-text">
+          <span class="tw-title">{{ orders.order().helper.name }} • {{ orders.order().sku.name }}</span>
+          <span class="tw-sub">Order #{{ orders.order().id }}</span>
+        </div>
+        <span class="tw-eta">
+          <span class="live-dot" aria-hidden="true"></span>{{ statusLine() }}
+        </span>
+      </div>
+      <div class="tw-progress" role="progressbar" [attr.aria-valuenow]="miniProgress().index + 1" aria-valuemin="1" aria-valuemax="4">
+        <div class="tw-bar"><span class="tw-fill" [style.transform]="'scaleX(' + miniProgress().fill + ')'"></span></div>
+        <div class="tw-steps">
+          @for (s of miniSteps; track s; let i = $index) {
+            <span [class.done]="i <= miniProgress().index">{{ s }}</span>
+          }
+        </div>
+      </div>
+    </a>
+  }
+</ion-content>
