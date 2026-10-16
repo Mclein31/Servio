@@ -38,10 +38,13 @@ interface Location { lat: number; lng: number }
 /** Pass null when the Pro has no fix younger than freshLocationSeconds. Replaceable by routing later. */
 export function estimateTravelMinutes(from: Location | null, to: Location, profile = cityProfile()): number {
   if (!from) return profile.defaultTravelMinutes;
+  return Math.max(profile.minTravelMinutes, Math.min(profile.maxTravelMinutes,
+    Math.ceil(haversineKm(from, to) * profile.roadFactor / profile.averageSpeedKmh * 60)));
+}
+
+export function haversineKm(from: Location, to: Location): number {
   const rad = (degrees: number) => degrees * Math.PI / 180;
   const a = Math.sin(rad(to.lat - from.lat) / 2) ** 2
     + Math.cos(rad(from.lat)) * Math.cos(rad(to.lat)) * Math.sin(rad(to.lng - from.lng) / 2) ** 2;
-  const distanceKm = 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, a))));
-  return Math.max(profile.minTravelMinutes, Math.min(profile.maxTravelMinutes,
-    Math.ceil(distanceKm * profile.roadFactor / profile.averageSpeedKmh * 60)));
+  return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, a))));
 }

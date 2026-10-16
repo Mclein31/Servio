@@ -5,6 +5,7 @@ import { errorHandler, notFoundHandler } from './middleware/error';
 import { requestId } from './middleware/request-id';
 import { auth } from './routes/auth';
 import { bookings } from './routes/bookings';
+import { community } from './routes/community';
 import { catalog } from './routes/catalog';
 import { health } from './routes/health';
 import { uploads } from './routes/uploads';
@@ -26,6 +27,7 @@ v1.route('/', me);
 v1.route('/', bookings);
 v1.route('/', uploads);
 v1.route('/', wallet);
+v1.route('/', community);
 app.route('/api/v1', v1);
 
 export default app;

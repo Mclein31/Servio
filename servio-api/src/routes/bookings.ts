@@ -1,10 +1,11 @@
-import { and, asc, desc, eq, or, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import type { Executor } from '../db/client';
 import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
-import { addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
+import { addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users, messages } from '../db/schema';
 import type { AppEnv } from '../env';
+import { bookingDetails, participantBooking, serverNow } from '../lib/bookings';
+import { registerBookingSocial } from './booking-social';
 import { completionPin } from '../lib/completion-pin';
 import { sha256Hex, timingSafeEqualString } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
@@ -35,11 +36,6 @@ const CreateBooking = v.pipe(v.strictObject({
 
 export const bookings = new Hono<AppEnv>();
 bookings.use('/bookings/*', withDb, requireUser);
-
-function publicBooking(row: typeof bookingTable.$inferSelect, addons: (typeof addonQuotes.$inferSelect)[] = []) {
-  const { idempotencyKey: _key, requestHash: _hash, pinAttempts: _attempts, ...booking } = row;
-  return { ...booking, totalCentavos: row.priceCentavos + row.trustFeeCentavos + addons.filter((a) => a.decision === 'APPROVED').reduce((n, a) => n + a.priceCentavos, 0) };
-}
 
 bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   const input = c.req.valid('json');
@@ -95,6 +91,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     }).returning();
     await mockPayments.authorizeHold({ bookingId: row!.id, customerId, amountCentavos: total, paymentMethod: input.paymentMethod });
     await tx.insert(bookingEvents).values({ bookingId: row!.id, status: row!.status, actorId: customerId, note: 'Mock escrow authorized.' });
+    await tx.insert(messages).values({ bookingId: row!.id, body: `Booking ${row!.code} ${input.proId ? 'accepted' : 'posted'}. Mock escrow authorized.` });
     const txnId = crypto.randomUUID();
     await tx.insert(ledgerEntries).values([
       { txnId, account: `customer:${customerId}`, amountCentavos: -total, bookingId: row!.id, kind: 'ESCROW_HOLD' },
@@ -105,26 +102,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   return c.json({ booking: await bookingDetails(c.get('db'), booking) }, 201);
 });
 
-async function serverNow(db: Executor): Promise<Date> {
-  const result = await db.execute<{ nowMs: string }>(sql`SELECT (extract(epoch FROM clock_timestamp()) * 1000)::text AS "nowMs"`);
-  return new Date(Number(result.rows[0]!.nowMs));
-}
-
 const idSchema = v.strictObject({ id: v.pipe(v.string(), v.uuid()) });
-
-/** Authorization is part of the query; an unrelated user cannot probe whether a booking exists. */
-export async function participantBooking(db: Executor, id: string, userId: string, lock = false) {
-  const query = db.select().from(bookingTable).where(and(eq(bookingTable.id, id), or(eq(bookingTable.customerId, userId), eq(bookingTable.proId, userId))));
-  const [row] = lock ? await query.for('update') : await query;
-  if (!row) throw new ApiError(404, 'NOT_FOUND', 'Booking not found.');
-  return row;
-}
-
-export async function bookingDetails(db: Executor, row: typeof bookingTable.$inferSelect, userId?: string, secret?: string) {
-  const events = await db.select().from(bookingEvents).where(eq(bookingEvents.bookingId, row.id)).orderBy(asc(bookingEvents.createdAt), asc(bookingEvents.id));
-  const addons = await db.select().from(addonQuotes).where(eq(addonQuotes.bookingId, row.id)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id));
-  return { ...publicBooking(row, addons), events, addons, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
-}
 
 bookings.get('/bookings/:id', validate('param', idSchema), async (c) => {
   const row = await participantBooking(c.get('db'), c.req.valid('param').id, c.get('userId'));
@@ -218,6 +196,7 @@ bookings.post('/bookings/:id/status', validate('param', idSchema), validate('jso
     }
     const [changed] = await tx.update(bookingTable).set(patch).where(eq(bookingTable.id, booking.id)).returning();
     await tx.insert(bookingEvents).values({ bookingId: booking.id, status: to, actorId: userId, note, createdAt: now });
+    await tx.insert(messages).values({ bookingId: booking.id, body: `Booking status: ${to.replaceAll('_', ' ').toLowerCase()}.`, createdAt: now });
     return changed!;
   });
   return c.json({ booking: await bookingDetails(c.get('db'), row) });
@@ -307,9 +286,12 @@ bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
       ].filter((entry) => entry.amountCentavos !== 0));
       const [changed] = await tx.update(bookingTable).set({ status: 'COMPLETED', escrow: 'COMPLETED' }).where(eq(bookingTable.id, row.id)).returning();
       await tx.insert(bookingEvents).values({ bookingId: row.id, status: 'COMPLETED', actorId: c.get('userId'), note: 'Customer completion PIN verified.', createdAt: await serverNow(tx) });
+      await tx.insert(messages).values({ bookingId: row.id, body: 'Job completed. Escrow released after customer PIN verification.', createdAt: await serverNow(tx) });
       await tx.update(proProfiles).set({ jobsDone: sql`${proProfiles.jobsDone} + 1` }).where(eq(proProfiles.userId, row.proId!));
       return { booking: changed! };
     });
     if (result.error) throw result.error;
     return c.json({ booking: await bookingDetails(c.get('db'), result.booking!) });
   });
+
+registerBookingSocial(bookings);

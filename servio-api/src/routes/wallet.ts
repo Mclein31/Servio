@@ -32,7 +32,7 @@ wallet.get('/wallet', validate('query', List), async (c) => {
     const balances = await db.execute<{ available: string; today: string }>(sql`
       SELECT COALESCE(SUM(amount_centavos),0)::text AS available,
         COALESCE(SUM(amount_centavos) FILTER (WHERE amount_centavos > 0 AND created_at >=
-          (date_trunc('day', clock_timestamp() AT TIME ZONE 'Asia/Manila') AT TIME ZONE 'Asia/Manila')),0)::text AS today
+          (date_trunc('day', clock_timestamp() AT TIME ZONE INTERVAL '+08:00') AT TIME ZONE INTERVAL '+08:00')),0)::text AS today
       FROM ledger_entries WHERE account = ${account}
     `);
     const open = sql`SELECT b.id, b.created_at, b.code, b.sku_name,

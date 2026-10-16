@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.9] — 2026-10-16
+### Added
+- A9: Once-only customer review after completion, 100% Pro tips with balanced entries, and integer rating_sum for exact aggregate averages (`0006_exact_review_averages`, migrated dev/test).
+- Strict catalog/category bulletin creation and open/urgent/nearby feeds; approved Pro directory with distance, catalog from-price, availability and public reviews. Filters/ranking happen before the output limit.
+- Participant-only chat, bounded text/owned photo attachments, read cursors and system messages for booking status changes; closed bookings reject new chat and KYC files cannot be reused as attachments. Shared booking helpers extracted for app/realtime integration (ADR-014).
+### Verified
+- API typecheck and 121 tests pass: review/tip auth, validation, duplicate concurrency, 100% tip balance and rollback; bulletin SKU/category/price constraints; chat privacy/photos/status messages/pagination; approved directory rates/distance; >100-candidate locality filtering regression. Philippine wallet day uses explicit UTC+08:00, retaining the no-old-city-string code guard.
+
 ## [0.5.8] — 2026-10-16
 ### Added
 - A8: Pro-only wallet with ledger-derived available balance, 85% pending base/add-on earnings excluding trust fee, earnings since Philippine midnight, and stable pagination across posted/pending rows.
