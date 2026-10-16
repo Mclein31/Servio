@@ -45,7 +45,7 @@
 - [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
 
 **Owner-added real-user readiness (payments remain mock)**
-- [ ] Real email-code delivery configuration and verification; normal verified-email account creation stays separate from demo identities.
+- [/] Gmail SMTP implementation, setup guide and code/concurrency tests pass; actual inbox delivery awaits owner-configured local credentials. Normal verified-email account creation stays separate from demo identities.
 - [x] Editable profile name/mobile/photo, authenticated persistence, current-avatar display and owned completed-upload validation.
 - [ ] Owner-scoped saved addresses, map pin picker and checkout using the confirmed location.
 

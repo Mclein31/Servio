@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import * as v from 'valibot';
 import { loginCodes, users } from '../db/schema';
@@ -103,30 +103,29 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
     });
     if (result) return c.json(result);
   }
-  const [code] = await db
-    .select()
-    .from(loginCodes)
-    .where(and(eq(loginCodes.email, email), isNull(loginCodes.consumedAt), gt(loginCodes.expiresAt, new Date())))
-    .orderBy(desc(loginCodes.createdAt))
-    .limit(1);
-  if (!code) throw wrong();
-  if (code.attempts >= MAX_CODE_ATTEMPTS) {
-    await db.update(loginCodes).set({ consumedAt: new Date() }).where(eq(loginCodes.id, code.id));
-    throw new ApiError(401, 'CODE_LOCKED', 'Too many wrong tries. Ask for a new code.');
-  }
-  if (!timingSafeEqualString(await codeHash(email, entered), code.codeHash)) {
-    await db.update(loginCodes).set({ attempts: sql`${loginCodes.attempts} + 1` }).where(eq(loginCodes.id, code.id));
-    throw wrong();
-  }
-
   const result = await db.transaction(async (tx) => {
-    // Conditional consume: two parallel verifications can't both succeed.
+    // Serialize attempts and consumption: a correct request cannot use a stale attempt count.
+    const [code] = await tx.select().from(loginCodes)
+      .where(and(eq(loginCodes.email, email), isNull(loginCodes.consumedAt)))
+      .orderBy(desc(loginCodes.createdAt)).limit(1).for('update');
+    if (!code || code.expiresAt.getTime() <= Date.now()) return { error: wrong() };
+    if (code.attempts >= MAX_CODE_ATTEMPTS) {
+      await tx.update(loginCodes).set({ consumedAt: new Date() }).where(eq(loginCodes.id, code.id));
+      return { error: new ApiError(401, 'CODE_LOCKED', 'Too many wrong tries. Ask for a new code.') };
+    }
+    if (!timingSafeEqualString(await codeHash(email, entered), code.codeHash)) {
+      await tx.update(loginCodes).set({ attempts: code.attempts + 1 }).where(eq(loginCodes.id, code.id));
+      // Return the failure so the attempt increment commits before sending the error response.
+      return { error: wrong() };
+    }
+    // Recheck expiry at the actual write, including time spent waiting on database locks.
     const [claimed] = await tx
       .update(loginCodes)
       .set({ consumedAt: new Date() })
-      .where(and(eq(loginCodes.id, code.id), isNull(loginCodes.consumedAt)))
+      .where(and(eq(loginCodes.id, code.id), isNull(loginCodes.consumedAt),
+        gt(loginCodes.expiresAt, sql`clock_timestamp()`), lt(loginCodes.attempts, MAX_CODE_ATTEMPTS)))
       .returning({ id: loginCodes.id });
-    if (!claimed) throw wrong();
+    if (!claimed) return { error: wrong() };
     const [existing] = await tx
       .select({ id: users.id, isActive: users.isActive, role: users.role })
       .from(users)
@@ -138,6 +137,7 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
     const session = await issueSession(tx, user.id, c.req.header('User-Agent'));
     return { ...session, user: { id: user.id, email, role: user.role, isNew: !existing } };
   });
+  if ('error' in result) throw result.error;
   return c.json(result);
 });
 

@@ -36,7 +36,7 @@ export async function sendMail(env: Bindings, mail: Mail, requestId: string): Pr
   const from = env.MAIL_FROM || env.SMTP_USER!;
   const message = buildMessage({ from, fromName: env.MAIL_FROM_NAME || 'SERVIO', ...mail });
   try {
-    await withTimeout(smtpSend(env, from, mail.to, message), TIMEOUT_MS);
+    await smtpSend(env, from, mail.to, message);
     return 'sent';
   } catch (err) {
     // SMTP replies can echo addresses; log the first part only.
@@ -72,20 +72,22 @@ async function smtpSend(env: Bindings, from: string, to: string, message: string
   const send = (line: string) => writer.write(encoder.encode(`${line}\r\n`));
 
   try {
-    await reply(220);
-    await send('EHLO servio.app');
-    await reply(250);
-    await send(`AUTH PLAIN ${btoa(`\0${env.SMTP_USER}\0${env.SMTP_PASSWORD}`)}`);
-    await reply(235);
-    await send(`MAIL FROM:<${from}>`);
-    await reply(250);
-    await send(`RCPT TO:<${to}>`);
-    await reply(250);
-    await send('DATA');
-    await reply(354);
-    await writer.write(encoder.encode(`${dotStuff(message)}\r\n.\r\n`));
-    await reply(250);
-    await send('QUIT');
+    await withTimeout((async () => {
+      await reply(220);
+      await send('EHLO servio.app');
+      await reply(250);
+      await send(`AUTH PLAIN ${btoa(`\0${env.SMTP_USER}\0${env.SMTP_PASSWORD}`)}`);
+      await reply(235);
+      await send(`MAIL FROM:<${from}>`);
+      await reply(250);
+      await send(`RCPT TO:<${to}>`);
+      await reply(250);
+      await send('DATA');
+      await reply(354);
+      await writer.write(encoder.encode(`${dotStuff(message)}\r\n.\r\n`));
+      await reply(250);
+      await send('QUIT');
+    })(), TIMEOUT_MS, () => { void socket.close().catch(() => undefined); });
   } finally {
     await socket.close().catch(() => undefined);
   }
@@ -126,6 +128,13 @@ export function buildMessage(m: { from: string; fromName: string; to: string; su
   return [...headers, '', ...parts].join('\r\n');
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('SMTP timeout')), ms))]);
+async function withTimeout<T>(p: Promise<T>, ms: number, onTimeout: () => void): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([p, new Promise<T>((_, reject) => {
+      timer = setTimeout(() => { onTimeout(); reject(new Error('SMTP timeout')); }, ms);
+    })]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
