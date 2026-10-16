@@ -4,6 +4,15 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.4] — 2026-10-16
+### Added
+- A4: Participant-only booking detail and cursor-paginated customer/Pro lists, event/add-on totals, assigned-Pro status transitions and 409 invalid-transition guards. Completion still requires the upcoming PIN endpoint.
+- Locked cancellation transactions refund full escrow before departure, keep a ₱100 trip / ₱200 visit fee entirely for the Pro, block in-progress customer cancellation for admin dispute, and refund fully with one strike when the Pro cancels. All movements use balanced compensating entries and record the reason in append-only events.
+- `0004_booking_status_and_deadlines` stores schedule windows, arrival ETA, fixed no-show deadlines and Pro strikes; migrated dev/test. ASAP departure uses fresh Pro location or Tuguegarao fallback; scheduled deadlines remain window end +30 min. Server time controls no-show eligibility; expired new schedule windows are rejected before money writes.
+- Owner demo answers recorded in ADR-010 and implementation plan sections 3/4: October 19; iPhone customer, Android Pro; LAN/local API and no-email demo sign-in; Android build required; FCM/admin/CI/deploy deferred. No cloud resources assumed.
+### Verified
+- API typecheck and 69 tests pass on Node 26, including status tables, wrong actor/order, cancellation amounts/balance, no-show timing, concurrent cancellation, schedule validation and pagination.
+
 ## [0.5.3] — 2026-10-16
 ### Changed
 - Launch city is Tuguegarao City, Cagayan (ADR-008). Verified city-proper map center on OSM and replaced the former route with a 1,802.3 m OSRM driving route from near the cathedral via Luna/Bassig Streets into residential Ugac Norte, retaining OSM/ODbL attribution.

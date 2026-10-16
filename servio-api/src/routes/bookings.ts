@@ -1,32 +1,42 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, or, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import { bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
+import type { Executor } from '../db/client';
+import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
+import { addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
 import { sha256Hex } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
+import { TRUST_FEE_CENTAVOS } from '../lib/money';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
 import { withDb } from '../middleware/db';
 import { mockPayments } from '../payments/mock';
 
 const shortText = (max: number) => v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
-const CreateBooking = v.strictObject({
+const timestamp = v.pipe(v.string(), v.isoTimestamp());
+const CreateBooking = v.pipe(v.strictObject({
   skuId: shortText(100),
   address: v.strictObject({ street: shortText(200), barangay: shortText(100), city: shortText(100), landmark: v.optional(shortText(200)) }),
   lat: v.pipe(v.number(), v.minValue(-90), v.maxValue(90)),
   lng: v.pipe(v.number(), v.minValue(-180), v.maxValue(180)),
   schedule: shortText(100),
+  scheduleStartAt: v.optional(timestamp),
+  scheduleEndAt: v.optional(timestamp),
   paymentMethod: v.picklist(['GCASH', 'CARD']),
   proId: v.optional(v.pipe(v.string(), v.uuid())),
-});
+}), v.check((input) => input.schedule === 'ASAP'
+  ? !input.scheduleStartAt && !input.scheduleEndAt
+  : !!input.scheduleStartAt && !!input.scheduleEndAt && Date.parse(input.scheduleEndAt) > Date.parse(input.scheduleStartAt),
+'ASAP must omit a window; scheduled bookings require ordered start/end timestamps.'));
+
 
 export const bookings = new Hono<AppEnv>();
 bookings.use('/bookings/*', withDb, requireUser);
 
-function publicBooking(row: typeof bookingTable.$inferSelect) {
+function publicBooking(row: typeof bookingTable.$inferSelect, addons: (typeof addonQuotes.$inferSelect)[] = []) {
   const { idempotencyKey: _key, requestHash: _hash, pinAttempts: _attempts, ...booking } = row;
-  return { ...booking, totalCentavos: row.priceCentavos + row.trustFeeCentavos };
+  return { ...booking, totalCentavos: row.priceCentavos + row.trustFeeCentavos + addons.filter((a) => a.decision === 'APPROVED').reduce((n, a) => n + a.priceCentavos, 0) };
 }
 
 bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
@@ -38,9 +48,9 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   }
   const requestHash = await sha256Hex(JSON.stringify([
     input.skuId, input.address.street, input.address.barangay, input.address.city, input.address.landmark ?? null,
-    input.lat, input.lng, input.schedule, input.paymentMethod, input.proId ?? null,
+    input.lat, input.lng, input.schedule, input.paymentMethod, input.proId ?? null, input.scheduleStartAt ?? null, input.scheduleEndAt ?? null,
   ]));
-  const trustFeeCentavos = Number(c.env.TRUST_FEE_CENTAVOS ?? '5000');
+  const trustFeeCentavos = Number(c.env.TRUST_FEE_CENTAVOS ?? TRUST_FEE_CENTAVOS);
   if (!Number.isInteger(trustFeeCentavos) || trustFeeCentavos < 0 || trustFeeCentavos > 2_147_483_647) {
     throw new ApiError(503, 'CONFIGURATION_ERROR', 'Booking fees are unavailable. Please try later.');
   }
@@ -68,8 +78,16 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     }
     const total = sku.priceCentavos + trustFeeCentavos;
     if (!Number.isSafeInteger(total) || total > 2_147_483_647) throw new ApiError(422, 'AMOUNT_TOO_LARGE', 'This booking exceeds the supported amount.');
+    const profile = cityProfile(c.env.LAUNCH_CITY);
+    const scheduleStartAt = input.scheduleStartAt ? new Date(input.scheduleStartAt) : null;
+    const scheduleEndAt = input.scheduleEndAt ? new Date(input.scheduleEndAt) : null;
+    if (scheduleEndAt && scheduleEndAt <= await serverNow(tx)) {
+      throw new ApiError(422, 'SCHEDULE_EXPIRED', 'Choose a service window that has not ended.');
+    }
     const [row] = await tx.insert(bookingTable).values({
-      ...input, customerId, skuName: sku.name, priceCentavos: sku.priceCentavos, trustFeeCentavos,
+      ...input, scheduleStartAt, scheduleEndAt, expectedArrivalAt: scheduleEndAt,
+      noShowDeadlineAt: scheduleEndAt ? new Date(scheduleEndAt.getTime() + profile.noShowGraceMinutes * 60000) : null,
+      customerId, skuName: sku.name, priceCentavos: sku.priceCentavos, trustFeeCentavos,
       status: input.proId ? 'ACCEPTED' : 'PENDING_ACCEPTANCE', escrow: 'HOLD_AUTHORIZED',
       isDemo: customer!.isDemo, idempotencyKey: key, requestHash,
     }).returning();
@@ -82,5 +100,123 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     ]);
     return row!;
   });
-  return c.json({ booking: publicBooking(booking) }, 201);
+  return c.json({ booking: await bookingDetails(c.get('db'), booking) }, 201);
+});
+
+async function serverNow(db: Executor): Promise<Date> {
+  const result = await db.execute<{ nowMs: string }>(sql`SELECT (extract(epoch FROM clock_timestamp()) * 1000)::text AS "nowMs"`);
+  return new Date(Number(result.rows[0]!.nowMs));
+}
+
+const idSchema = v.strictObject({ id: v.pipe(v.string(), v.uuid()) });
+
+/** Authorization is part of the query; an unrelated user cannot probe whether a booking exists. */
+export async function participantBooking(db: Executor, id: string, userId: string, lock = false) {
+  const query = db.select().from(bookingTable).where(and(eq(bookingTable.id, id), or(eq(bookingTable.customerId, userId), eq(bookingTable.proId, userId))));
+  const [row] = lock ? await query.for('update') : await query;
+  if (!row) throw new ApiError(404, 'NOT_FOUND', 'Booking not found.');
+  return row;
+}
+
+export async function bookingDetails(db: Executor, row: typeof bookingTable.$inferSelect) {
+  const events = await db.select().from(bookingEvents).where(eq(bookingEvents.bookingId, row.id)).orderBy(asc(bookingEvents.createdAt), asc(bookingEvents.id));
+  const addons = await db.select().from(addonQuotes).where(eq(addonQuotes.bookingId, row.id)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id));
+  return { ...publicBooking(row, addons), events, addons };
+}
+
+bookings.get('/bookings/:id', validate('param', idSchema), async (c) => {
+  const row = await participantBooking(c.get('db'), c.req.valid('param').id, c.get('userId'));
+  return c.json({ booking: await bookingDetails(c.get('db'), row) });
+});
+
+const ListBookings = v.strictObject({
+  role: v.optional(v.picklist(['customer', 'pro']), 'customer'),
+  status: v.optional(v.picklist(bookingStatus.enumValues)),
+  cursor: v.optional(v.pipe(v.string(), v.maxLength(500))),
+  limit: v.optional(v.pipe(v.string(), v.regex(/^\d{1,3}$/), v.transform(Number), v.minValue(1), v.maxValue(100)), '20'),
+});
+const Cursor = v.strictObject({ id: v.pipe(v.string(), v.uuid()) });
+
+bookings.get('/bookings', validate('query', ListBookings), async (c) => {
+  const { role, status, cursor, limit } = c.req.valid('query');
+  let after: v.InferOutput<typeof Cursor> | undefined;
+  if (cursor) {
+    try { after = v.parse(Cursor, JSON.parse(atob(cursor))); }
+    catch { throw new ApiError(422, 'VALIDATION_FAILED', 'Invalid booking cursor.'); }
+  }
+  if (after) await participantBooking(c.get('db'), after.id, c.get('userId'));
+  const rows = await c.get('db').select().from(bookingTable).where(and(
+    eq(role === 'pro' ? bookingTable.proId : bookingTable.customerId, c.get('userId')),
+    status ? eq(bookingTable.status, status) : undefined,
+    after ? sql`(${bookingTable.createdAt}, ${bookingTable.id}) < (SELECT created_at, id FROM bookings WHERE id = ${after.id})` : undefined,
+  )).orderBy(desc(bookingTable.createdAt), desc(bookingTable.id)).limit(limit + 1);
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return c.json({ bookings: await Promise.all(page.map((row) => bookingDetails(c.get('db'), row))),
+    nextCursor: rows.length > limit && last ? btoa(JSON.stringify({ id: last.id })) : null });
+});
+
+const ChangeStatus = v.strictObject({ to: v.picklist(bookingStatus.enumValues), reason: v.optional(shortText(500)) });
+const NEXT_STATUS: Partial<Record<typeof bookingTable.$inferSelect.status, typeof bookingTable.$inferSelect.status>> = {
+  ACCEPTED: 'EN_ROUTE', EN_ROUTE: 'ARRIVED', ARRIVED: 'IN_PROGRESS',
+};
+const invalidTransition = () => new ApiError(409, 'INVALID_TRANSITION', 'That status change is not allowed.');
+
+bookings.post('/bookings/:id/status', validate('param', idSchema), validate('json', ChangeStatus), async (c) => {
+  const { to, reason } = c.req.valid('json');
+  const userId = c.get('userId');
+  const row = await c.get('db').transaction(async (tx) => {
+    const booking = await participantBooking(tx, c.req.valid('param').id, userId, true);
+    if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw invalidTransition();
+    const [actor] = await tx.select({ role: users.role }).from(users).where(eq(users.id, userId));
+    const isPro = booking.proId === userId && actor!.role === 'PRO';
+    const isCustomer = booking.customerId === userId;
+    const now = await serverNow(tx);
+    const profile = cityProfile(c.env.LAUNCH_CITY);
+    let note = reason ?? null;
+    const patch: Partial<typeof bookingTable.$inferInsert> = { status: to };
+    if (to === 'CANCELLED') {
+      if (!reason) throw new ApiError(422, 'VALIDATION_FAILED', 'Tell us why this booking is being cancelled.');
+      if (!isPro && !isCustomer) throw new ApiError(403, 'FORBIDDEN', 'Only participants may cancel.');
+      if (isCustomer && booking.status === 'IN_PROGRESS') {
+        throw new ApiError(409, 'DISPUTE_REQUIRED', 'Work has started. Contact support to open a dispute.');
+      }
+      const noShow = isCustomer && booking.status === 'EN_ROUTE' && booking.noShowDeadlineAt !== null && now > booking.noShowDeadlineAt;
+      const fee = isPro || noShow ? 0 : booking.status === 'EN_ROUTE' ? CANCELLATION_FEES.enRouteCentavos
+        : booking.status === 'ARRIVED' ? CANCELLATION_FEES.arrivedCentavos : 0;
+      const balanceResult = await tx.execute<{ held: string }>(sql`
+        SELECT COALESCE(SUM(amount_centavos), 0)::text AS held FROM ledger_entries WHERE account = ${`escrow:${booking.id}`}
+      `);
+      const held = Number(balanceResult.rows[0]!.held);
+      if (!Number.isSafeInteger(held) || held <= 0 || held > 2_147_483_647 || fee > held || (fee && !booking.proId)) {
+        throw new ApiError(409, 'ESCROW_INVALID', 'The escrow needs support review before cancelling.');
+      }
+      const refund = held - fee;
+      if (refund) await mockPayments.refund({ bookingId: booking.id, customerId: booking.customerId, amountCentavos: refund, paymentMethod: booking.paymentMethod });
+      const txnId = crypto.randomUUID();
+      await tx.insert(ledgerEntries).values([
+        { txnId, bookingId: booking.id, account: `escrow:${booking.id}`, amountCentavos: -held, kind: 'REFUND' },
+        ...(refund ? [{ txnId, bookingId: booking.id, account: `customer:${booking.customerId}`, amountCentavos: refund, kind: 'REFUND' }] : []),
+        ...(fee ? [{ txnId, bookingId: booking.id, account: `pro_wallet:${booking.proId}`, amountCentavos: fee, kind: 'REFUND', memo: `${booking.status === 'ARRIVED' ? 'Visit' : 'Trip'} fee` }] : []),
+      ]);
+      if (isPro) await tx.update(proProfiles).set({ cancellationStrikes: sql`${proProfiles.cancellationStrikes} + 1` }).where(eq(proProfiles.userId, userId));
+      patch.escrow = 'REFUNDED';
+      note = `${reason} [${isPro ? 'PRO_CANCELLED' : noShow ? 'NO_SHOW' : 'CUSTOMER_CANCELLED'}; fee=${fee}; refund=${refund}]`;
+    } else {
+      if (!isPro) throw new ApiError(403, 'ASSIGNED_PRO_REQUIRED', 'Only the assigned Pro may advance this booking.');
+      if (NEXT_STATUS[booking.status] !== to) throw invalidTransition();
+      if (to === 'EN_ROUTE' && !booking.noShowDeadlineAt) {
+        const [pro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId));
+        const ageMs = pro?.lastLocatedAt ? now.getTime() - pro.lastLocatedAt.getTime() : Infinity;
+        const from = pro?.lastLat != null && pro.lastLng != null && ageMs >= 0 && ageMs < profile.freshLocationSeconds * 1000
+          ? { lat: pro.lastLat, lng: pro.lastLng } : null;
+        patch.expectedArrivalAt = new Date(now.getTime() + estimateTravelMinutes(from, booking, profile) * 60000);
+        patch.noShowDeadlineAt = new Date(patch.expectedArrivalAt.getTime() + profile.noShowGraceMinutes * 60000);
+      }
+    }
+    const [changed] = await tx.update(bookingTable).set(patch).where(eq(bookingTable.id, booking.id)).returning();
+    await tx.insert(bookingEvents).values({ bookingId: booking.id, status: to, actorId: userId, note, createdAt: now });
+    return changed!;
+  });
+  return c.json({ booking: await bookingDetails(c.get('db'), row) });
 });

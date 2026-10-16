@@ -195,7 +195,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 ### Phase D — Demo readiness (priority for the upcoming demo)
 
 **D1. `npm run db:seed-demo`** (`servio-api/scripts/seed-demo.ts`) — refuses to run unless the DB host is localhost **or** the DB name/Neon branch is `servio_demo`/`demo`; never in `ENVIRONMENT=production`. All rows `is_demo=true`. Creates:
-- Customer **Sophia M.** `demo.customer@servio.test`; Pros **Daniel K.** (`demo.pro@servio.test`, AC/electrical/laptop SKUs), Chris L., Ava L., Kevin T., Sophia (tutor) — KYC approved, online, locations in Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur, Tuguegarao City, Cagayan; ratings/jobs matching `servio-app/src/app/core/data/mock-data.ts`.
+- Customer **Sophia M.** `demo.customer@servio.test`; Pros **Daniel K.** (`demo.pro@servio.test`, AC/electrical/laptop SKUs), Chris L., Ava L., Kevin T., **Sofia R.** (`demo.tutor@servio.test`, separate tutor account) — KYC approved, online, locations in Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur, Tuguegarao City, Cagayan; ratings/jobs matching `servio-app/src/app/core/data/mock-data.ts`.
 - Active booking **SRV-8821** (`sku-ac-leak`, ₱1,100 + ₱50) `EN_ROUTE`, `HOLD_AUTHORIZED`, events at −11/−7/−1 min, the seeded chat thread.
 - Completed history SRV-8807 / 8790 / 8772 with reviews and released escrow; the 6 bulletin requests.
 - Daniel's wallet ledger reproducing ₱8,640.75 available / ₱1,870.00 pending / ₱3,316.25 today (create balanced historical txns that produce these sums).
@@ -240,13 +240,22 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 
 ---
 
-## 3. Suggested order & milestones
-1. **Milestone "Demo" (highest priority):** A1 → A3 → A4 → A5 → A6 → A7 → A8 → A9 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → B2 → B3 → D4.
-2. **Milestone "Launch-ready":** B1 → B4 → C5 → E → F1 → F2 → F3 → F4.
-3. **Milestone "Payments":** Phase G.
+## 3. Owner-approved order & milestones (updated 2026-10-16)
 
-## 4. Questions to ask the owner (don't guess)
-- Cancellation/trip-fee and no-show policy (A4): answered 2026-10-16; see ADR-009 and the city profile in ADR-008.
-- Exact demo date and which devices (two iPhones? one Android?) — affects F1/B3 priority.
-- Whether "Sophia" is both the demo customer and a tutor Pro, or two separate demo accounts.
-- Business name/address for the email sender and legal pages.
+**Demo: Monday, October 19, 2026.** Only this milestone matters until the demo. Prioritize a working end-to-end flow and report blockers early.
+
+1. Demo implementation: A1 → A3 → A4 → A5 → A6 → A7 → A8 → A9 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → B2 → B3 → **F1 (Android packaging + icons/splash + dev/demo LAN access)** → D4. Include only the A2 availability / B1 dispatch pieces necessary for booking → Pro acceptance and in-app WebSocket alerts; defer broader launch dispatch work.
+2. Demo devices: **iPhone 14 Plus customer**, installed from Xcode using a free Apple ID Personal Team (7-day provisioning); iPhone simulator on Mac backup. **Android phone Pro**, second Android backup Pro/customer. Mac hosts API/Postgres; Windows laptop available. No paid Apple Developer account.
+3. Pro Android streams real GPS via B2/B3; keep **Demo: simulate route** ready indoors. **No FCM/B4 before the demo**: dispatch/add-on alerts use in-app WebSocket events.
+4. Phones use the Mac's **LAN IP**, never localhost. Run `wrangler dev --ip 0.0.0.0`, configure the app API base URL (environment or hidden demo setting), and allow development LAN origins. Add iOS `NSAllowsLocalNetworking` / ATS exception and Android cleartext network configuration **only in dev/demo builds**. Document same-Wi-Fi setup and the complete reset/sign-in/flow/install procedure in `docs/DEMO_CHECKLIST.md`.
+5. If LAN operation proves unreliable, propose Cloudflare + Neon deployment and **ask the owner first**. No Neon project or Cloudflare resources exist yet; never assume credentials/resources.
+6. After the demo: Launch-ready B1 remainder → B4 → C5 → E → F2 → F3 → F4. Skip admin console, push, CI and deploy until then. Phase G remains explicitly gated on owner instruction.
+
+## 4. Owner answers and remaining questions (updated 2026-10-16)
+
+- **Cancellation/no-show:** answered; ADR-009. Tuguegarao constants supersede earlier traffic assumptions (ADR-008).
+- **Date/devices:** Monday, October 19, 2026; iPhone 14 Plus customer, Android Pro, backup Android and iPhone simulator; Mac + Windows laptop. See section 3 and ADR-010.
+- **Accounts:** Sophia M. (`demo.customer@servio.test`) is customer only. Tutor is a separate person/account **Sofia R.** (`demo.tutor@servio.test`). Daniel K. (`demo.pro@servio.test`) remains main Pro. No demo account is both customer and Pro.
+- **Sender:** `SERVIO`. Gmail App Password is not configured. Use development API-log codes plus `DEMO_LOGIN_CODE` for demo users so sign-in works without email.
+- **Business/legal:** use exactly **Business address to follow — prototype** in the email footer and legal pages. Do not invent a registered name, address, TIN or DTI/SEC number. Keep Terms, Privacy and Escrow Protection Policy short and label them **Prototype — not legal advice**.
+- **Cloud:** no Neon/Cloudflare resources yet; deployment fallback requires owner approval. Actual personal-team signing and physical-device GPS/install verification require the owner's connected devices and Apple ID.
