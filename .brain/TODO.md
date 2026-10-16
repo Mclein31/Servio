@@ -126,8 +126,8 @@
 
 ### 3. Quality & Release
 - [ ] CI (GitHub Actions): app build + tests, API typecheck + tests, migrations against a Neon branch.
-- [ ] Deploy `servio-api` to Workers (production env, Hyperdrive id, secrets).
-- [ ] Neon production database + migrations; R2 production bucket.
+- [x] Deploy `servio-api` to Workers (production env, Hyperdrive id, secrets) — https://servio-api.mcleinonza0531.workers.dev.
+- [x] Neon production database + migrations; R2 production bucket (+ CORS).
 - [ ] Privacy policy, Terms of Service, Escrow Protection Policy (Data Privacy Act compliance).
 - [ ] TestFlight / Play internal testing builds; App Store & Play listings.
 
