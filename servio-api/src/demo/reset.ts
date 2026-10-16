@@ -33,11 +33,14 @@ export async function resetDemoOrder(db: Database, userId: string, city?: string
     }
     if (booking.status === 'COMPLETED') await tx.update(proProfiles).set({ jobsDone:sql`${proProfiles.jobsDone}-1` }).where(eq(proProfiles.userId,booking.proId));
     await tx.delete(addonQuotes).where(eq(addonQuotes.bookingId,booking.id));
-    const now = await serverNow(tx); const profile=cityProfile(city);
+    const clock = await serverNow(tx);
+    const previous=await tx.execute<{ ms:string|null }>(sql`SELECT floor(extract(epoch FROM MAX(created_at))*1000)::text AS ms FROM booking_events WHERE booking_id=${booking.id}`);
+    const now=new Date(Math.max(clock.getTime(),Number(previous.rows[0]?.ms ?? 0)+1));
+    const profile=cityProfile(city);
     const expectedArrivalAt = new Date(now.getTime()+profile.defaultTravelMinutes*60000);
     await tx.update(bookings).set({ status:'EN_ROUTE',escrow:'HOLD_AUTHORIZED',pinAttempts:0,tipCentavos:0,expectedArrivalAt,
       noShowDeadlineAt:new Date(expectedArrivalAt.getTime()+profile.noShowGraceMinutes*60000),createdAt:now }).where(eq(bookings.id,booking.id));
-    for (const status of ['PENDING_ACCEPTANCE','ACCEPTED','EN_ROUTE'] as const) await tx.insert(bookingEvents).values({ bookingId:booking.id,status,actorId:userId,note:status==='PENDING_ACCEPTANCE'?'DEMO_RESET: presentation restarted.':null,createdAt:await serverNow(tx) });
+    for (const [index,status] of (['PENDING_ACCEPTANCE','ACCEPTED','EN_ROUTE'] as const).entries()) await tx.insert(bookingEvents).values({ bookingId:booking.id,status,actorId:userId,note:status==='PENDING_ACCEPTANCE'?'DEMO_RESET: presentation restarted.':null,createdAt:new Date(now.getTime()+index) });
     await tx.insert(messages).values({ bookingId:booking.id,body:'Order reset. Your Pro is on the way.',createdAt:await serverNow(tx) });
     return booking.id;
   });

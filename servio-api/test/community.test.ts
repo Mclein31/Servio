@@ -124,7 +124,8 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
   });
 
   it('filters and ranks eligible local results before limiting more than 100 candidates', async () => {
-    await f.db.update(proProfiles).set({ lastLat: 17.618111, lastLng: 121.718927 }).where(eq(proProfiles.userId, f.pro.id));
+    const origin={ lat:17.62+Math.random()*0.001,lng:121.72+Math.random()*0.001 };
+    await f.db.update(proProfiles).set({ lastLat: origin.lat, lastLng: origin.lng }).where(eq(proProfiles.userId, f.pro.id));
     const posted = await (await postBulletin()).json() as { request: { id: string } };
     const distant = await f.db.insert(users).values(Array.from({ length: 101 }, () => ({ email: `${crypto.randomUUID()}@servio.test`, role: 'PRO' as const }))).returning({ id: users.id });
     await f.db.insert(proProfiles).values(distant.map((p) => ({ userId: p.id, kycStatus: 'APPROVED' as const, lastLat: 18, lastLng: 122 })));
@@ -132,21 +133,22 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
     await f.db.insert(bulletinRequests).values(distant.map(() => ({ authorId: f.customer.id, skuId: 'sku-ac-leak', categoryId: 'repairs', description: 'Distant request', neighborhood: 'Test area', lat: 18, lng: 122 })));
     const local = await (await api('/bulletin?filter=nearby&lat=17.618111&lng=121.718927', { headers: f.headers.customer })).json() as { requests: { id: string }[] };
     expect(local.requests.some((r) => r.id === posted.request.id)).toBe(true);
-    const directory = await (await api('/pros?category=repairs&lat=17.618111&lng=121.718927', { headers: f.headers.customer })).json() as { pros: { id: string }[] };
+    const directory = await (await api(`/pros?category=repairs&lat=${origin.lat}&lng=${origin.lng}`, { headers: f.headers.customer })).json() as { pros: { id: string }[] };
     expect(directory.pros.some((p) => p.id === f.pro.id)).toBe(true);
   });
 
   it('lists only approved active Pros with catalog rates, distance and no contact details', async () => {
-    await f.db.update(proProfiles).set({ lastLat: 17.618111, lastLng: 121.718927, isOnline: true }).where(eq(proProfiles.userId, f.pro.id));
+    const origin={ lat:17.62+Math.random()*0.001,lng:121.72+Math.random()*0.001 };
+    await f.db.update(proProfiles).set({ lastLat: origin.lat, lastLng: origin.lng, isOnline: true }).where(eq(proProfiles.userId, f.pro.id));
     await f.db.insert(proSkus).values([{ proId: f.pro.id, skuId: 'sku-elec-inspect' }, { proId: f.pro.id, skuId: 'sku-laptop-diag' }]);
     await f.db.insert(proProfiles).values({ userId: f.other.id, kycStatus: 'PENDING' });
     await f.db.insert(proSkus).values({ proId: f.other.id, skuId: 'sku-ac-leak' });
-    const res = await api('/pros?lat=17.618111&lng=121.718927', { headers: f.headers.customer }); expect(res.status).toBe(200);
+    const res = await api(`/pros?lat=${origin.lat}&lng=${origin.lng}`, { headers: f.headers.customer }); expect(res.status).toBe(200);
     const result = await res.json() as { pros: { id: string; distanceKm: number; fromPriceCentavos: number }[] };
     expect(result.pros.find((p) => p.id === f.pro.id)).toMatchObject({ distanceKm: 0, fromPriceCentavos: 45000 });
     expect(result.pros.some((p) => p.id === f.other.id)).toBe(false);
     expect(JSON.stringify(result)).not.toContain(f.pro.email);
-    const tech = await (await api('/pros?category=tech', { headers: f.headers.customer })).json() as { pros: { id: string; fromPriceCentavos: number }[] };
+    const tech = await (await api(`/pros?category=tech&lat=${origin.lat}&lng=${origin.lng}`, { headers: f.headers.customer })).json() as { pros: { id: string; fromPriceCentavos: number }[] };
     expect(tech.pros.find((p) => p.id === f.pro.id)!.fromPriceCentavos).toBe(50000);
     expect((await api('/pros')).status).toBe(401);
     expect((await api('/pros?lat=91&lng=121', { headers: f.headers.customer })).status).toBe(422);
