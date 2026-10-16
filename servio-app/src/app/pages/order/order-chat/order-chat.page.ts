@@ -10,7 +10,7 @@ import { AvatarComponent } from '../../../shared/components/avatar/avatar.compon
 const AUTO_REPLIES = [
   'Got it 👍',
   'Noted, I’ll bring a spare drain hose just in case.',
-  'Almost there — traffic on Jupiter St is light.',
+  'Almost there — I’m heading into Ugac Norte now.',
   'Thanks! I’ll message when I’m at the gate.',
 ];
 

@@ -1,7 +1,7 @@
 # SERVIO — Project Context
 
-> **Last Updated:** 2026-10-15  
-> **Status:** Discovery & Architecture Definition  
+> **Last Updated:** 2026-10-16
+> **Status:** Demo implementation on `feature/app-and-backend`
 > **Repository Root:** `/Users/mclein/Documents/Developer/Personal_Projects/SERVIO`  
 > **Knowledge Vault:** `vault/00_Index/MOC_Servio.md`
 
@@ -15,6 +15,8 @@ Instead of delivering restaurant meals or groceries, SERVIO delivers **vetted se
 
 ### The Core Premise: "Foodpanda for Services"
 Traditional service marketplaces (Craigslist, Facebook Groups, TaskRabbit) suffer from high friction: unpredictable hourly bids, vague job scopes, unverified handymen, and off-platform cash disputes.
+
+**Launch city:** Tuguegarao City, Cagayan. Default map center is 17.613, 121.727 (verified on OpenStreetMap). Demo locations use Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur; the embedded tracking route runs 1.80 km from near the cathedral via Luna/Bassig Streets into Ugac Norte. Backend ETA/cancellation constants live in `servio-api/src/config/cities.ts` (`CITY_PROFILES.tuguegarao`). Sample catalog prices are unchanged and require Cagayan validation; see ADR-008.
 
 SERVIO eliminates this friction by treating services as **standardized catalog items (SKUs)** with clear upfront pricing, instant algorithmic technician matching, live on-the-way GPS tracking, in-app escrow payment, and OTP-verified job completion.
 

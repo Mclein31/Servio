@@ -47,7 +47,7 @@ export class CheckoutPage {
   }
 
   async changeAddress(): Promise<void> {
-    const t = await this.toasts.create({ message: 'Saved addresses arrive with the address book. Using 42 Jupiter Street.', duration: 1800, position: 'top' });
+    const t = await this.toasts.create({ message: 'Saved addresses arrive with the address book. Using Ugac Norte, Tuguegarao City.', duration: 1800, position: 'top' });
     await t.present();
   }
 

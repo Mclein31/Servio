@@ -8,8 +8,8 @@ import { mockPayments } from '../src/payments/mock';
 import { api, hasDb, json, testEmail } from './helpers';
 
 export const bookingInput = {
-  skuId: 'sku-ac-leak', address: { street: '123 Test Street', barangay: 'Bel-Air', city: 'Makati' },
-  lat: 14.563, lng: 121.031, schedule: 'ASAP', paymentMethod: 'GCASH',
+  skuId: 'sku-ac-leak', address: { street: 'Ugac Norte', barangay: 'Ugac Norte', city: 'Tuguegarao City' },
+  lat: 17.618111, lng: 121.718927, schedule: 'ASAP', paymentMethod: 'GCASH',
 };
 
 interface CreatedBooking { booking: typeof bookings.$inferSelect & { totalCentavos: number } }
@@ -72,7 +72,7 @@ describe.runIf(hasDb)('booking creation and mock escrow (A3)', () => {
     expect(responses.map((r) => r.status)).toEqual([201, 201, 201]);
     const results = await Promise.all(responses.map((r) => r.json() as Promise<CreatedBooking>));
     expect(new Set(results.map((r) => r.booking.id)).size).toBe(1);
-    const retry = await create({ ...bookingInput, address: { city: 'Makati', street: '123 Test Street', barangay: 'Bel-Air' } });
+    const retry = await create({ ...bookingInput, address: { city: 'Tuguegarao City', street: 'Ugac Norte', barangay: 'Ugac Norte' } });
     expect(await retry.json()).toEqual(results[0]);
     expect(authorize).toHaveBeenCalledTimes(1);
     const entries = await client.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, results[0]!.booking.id));
@@ -97,7 +97,7 @@ describe.runIf(hasDb)('booking creation and mock escrow (A3)', () => {
   it.each([
     { priceCentavos: 1 }, { trustFeeCentavos: 0 }, { status: 'COMPLETED' }, { customerId: crypto.randomUUID() },
     { lat: 91 }, { lng: -181 }, { schedule: '' }, { paymentMethod: 'CASH' }, { proId: 'invalid' },
-    { address: { street: '', barangay: 'Bel-Air', city: 'Makati' } }, { skuId: 'unknown-sku' },
+    { address: { street: '', barangay: 'Ugac Norte', city: 'Tuguegarao City' } }, { skuId: 'unknown-sku' },
   ])('rejects invalid or client-controlled input: %j', async (change) => {
     expect((await create({ ...bookingInput, ...change })).status).toBe(422);
     expect(await client.db.select().from(bookings).where(eq(bookings.idempotencyKey, key))).toHaveLength(0);

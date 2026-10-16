@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/angular';
 import * as L from 'leaflet';
 import { servioTileLayer } from '../../shared/utils/map-tiles';
+import { TUGUEGARAO_CENTER } from '../../core/data/launch-city';
 import { BULLETIN_REQUESTS, CATEGORIES } from '../../core/data/mock-data';
 import { SheetsService } from '../../core/services/sheets.service';
 import { SearchFilterComponent } from '../../shared/components/search-filter/search-filter.component';
@@ -12,9 +13,9 @@ import { PhpPipe } from '../../shared/pipes/php.pipe';
 
 type Filter = 'ALL' | 'OPEN' | 'URGENT' | 'NEARBY';
 
-/** Illustrative pin positions around Bel-Air / Poblacion for the map sheet. */
+/** Illustrative pins around Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur. */
 const PIN_COORDS: [number, number][] = [
-  [14.5605, 121.0262], [14.5588, 121.0301], [14.5652, 121.0318], [14.5562, 121.0241], [14.5679, 121.0279], [14.5541, 121.0336],
+  [17.6134, 121.7305], [17.618111, 121.718927], [17.608459, 121.726858], [17.626467, 121.735061], [17.625031, 121.721542], [17.634940, 121.720236],
 ];
 
 @Component({
@@ -71,7 +72,7 @@ export class BulletinPage {
   initPinMap(): void {
     if (!this.pinMapEl) return;
     this.pinMap?.remove();
-    const map = L.map(this.pinMapEl.nativeElement, { zoomControl: false }).setView([14.5615, 121.0285], 15);
+    const map = L.map(this.pinMapEl.nativeElement, { zoomControl: false }).setView([...TUGUEGARAO_CENTER], 14);
     servioTileLayer().addTo(map);
     BULLETIN_REQUESTS.forEach((r, i) => {
       const urgent = r.status === 'URGENT';

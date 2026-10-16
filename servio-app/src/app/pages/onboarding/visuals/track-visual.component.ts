@@ -55,8 +55,8 @@ const CRUISE_PX_S = 92;
         <path d="M-10 90 H398 M-10 174 H398 M64 -10 V318 M231 -10 V318" />
       </g>
       <g fill="#9CA3AF" font-size="8" font-family="Inter, sans-serif" font-weight="600" letter-spacing="0.5">
-        <text x="112" y="93">JUPITER ST</text>
-        <text x="378" y="197" text-anchor="end">PASEO DE ROXAS</text>
+        <text x="112" y="93">LUNA ST</text>
+        <text x="378" y="197" text-anchor="end">BASSIG ST</text>
       </g>
 
       <!-- route -->

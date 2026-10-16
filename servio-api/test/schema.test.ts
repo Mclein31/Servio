@@ -31,8 +31,8 @@ describe.runIf(hasDb)('demo and Pro schema (A1)', () => {
       expect(customer!.isDemo).toBe(false);
       const rows = await client.db.insert(bookings).values([false, true].map((isDemo) => ({
         customerId: customer!.id, skuId: 'sku-ac-leak', skuName: 'Split AC Water Leak Repair',
-        priceCentavos: 110000, trustFeeCentavos: 5000, address: { street: 'Test', barangay: 'Bel-Air', city: 'Makati' },
-        lat: 14.56, lng: 121.03, schedule: 'ASAP', paymentMethod: 'GCASH' as const, isDemo,
+        priceCentavos: 110000, trustFeeCentavos: 5000, address: { street: 'Test', barangay: 'Ugac Norte', city: 'Tuguegarao City' },
+        lat: 17.618111, lng: 121.718927, schedule: 'ASAP', paymentMethod: 'GCASH' as const, isDemo,
       }))).returning();
       expect(rows.map((row) => row.isDemo)).toEqual([false, true]);
       for (const row of rows) expect(row.code).toMatch(/^SRV-\d{4,6}$/);
