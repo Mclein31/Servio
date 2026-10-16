@@ -6,3 +6,4 @@ dist/
 !.env.example
 .dev.vars
 .dev.vars.*
+backups/
