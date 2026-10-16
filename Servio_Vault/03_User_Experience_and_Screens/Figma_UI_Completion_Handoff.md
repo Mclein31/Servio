@@ -1,7 +1,7 @@
 ---
 title: SERVIO — Figma UI Completion Handoff
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [type/ux, design-system/screens, handoff]
 ---
 
@@ -25,6 +25,8 @@ All 26 phone screens use Figma’s built-in iPhone 14 Plus frame preset (428 × 
 The oversized orange plus on Bulletin was caused by a fill-width icon container. It was corrected to a fixed 48 × 48 touch control. The masked-call control was similarly constrained. Directory identity containers use hug height to avoid clipping names.
 
 ## Philippine pricing
+
+**Launch-city update (2026-10-16):** SERVIO launches in **Tuguegarao City, Cagayan**. The existing sample prices primarily reflect Metro Manila research (with supplemental Philippine examples below); they are retained for demo continuity and **must be re-validated against Cagayan rates before launch**. Do not treat the sample prices, trust fee or payout split as validated local pricing. See `.brain/DECISIONS.md`, ADR-008.
 
 The user explicitly rejected both a symbol-only currency replacement and exchange-rate conversion. Use representative Philippine service prices, selected within published local ranges. These are design assumptions, not measured nationwide averages or approved live catalog prices.
 

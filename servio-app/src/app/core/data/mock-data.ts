@@ -81,7 +81,7 @@ export const HELPERS: HelperProfile[] = [
   {
     id: 'sophia', name: 'Sophia M.', avatarUrl: 'assets/avatars/sophia.png', category: 'Math Tutor',
     rating: 5.0, reviewCount: 14, distanceKm: 1.2, hourlyRatePhp: 350, isAvailable: true, badgeLabel: 'Verified',
-    bio: 'Licensed teacher helping Grade 1–12 students in Bel-Air and San Lorenzo with math, homework and test prep.',
+    bio: 'Licensed teacher helping Grade 1–12 students in Centro and Ugac Norte with math, homework and test prep.',
     credentials: ['NBI Clearance', 'LET Passer', 'ID Verified'],
     skus: [SKUS['mathTutor'], SKUS['scienceTutor']],
     reviews: [
@@ -94,7 +94,7 @@ export const HELPERS: HelperProfile[] = [
   {
     id: 'daniel', name: 'Daniel K.', avatarUrl: 'assets/avatars/daniel.png', category: 'Electronics & IT',
     rating: 4.9, reviewCount: 28, distanceKm: 2.5, hourlyRatePhp: 500, isAvailable: true, badgeLabel: 'Top Pro',
-    bio: 'I help Bel-Air households with aircon, electrical and electronics repairs. I arrive with tools and explain every step.',
+    bio: 'I help Tuguegarao households with aircon, electrical and electronics repairs. I arrive with tools and explain every step.',
     credentials: ['NBI Clearance', 'TESDA RAC NC II', 'Electrical Installation NC II'],
     skus: [SKUS['acLeak'], SKUS['elecInspect'], SKUS['laptopDiag']],
     reviews: [
@@ -155,12 +155,12 @@ export const HELPER_CATEGORIES: Record<string, string[]> = {
 };
 
 export const BULLETIN_REQUESTS: BulletinRequest[] = [
-  { id: 'req-1', title: 'Math Tutor for Grade 8', description: 'Algebra help twice a week after school.', category: 'tutoring', author: 'Mia S.', postedAgo: '2 mins ago', neighborhood: 'Barangay San Lorenzo', distanceKm: 1.2, pricePhp: 350, priceUnit: 'hr', status: 'OPEN' },
-  { id: 'req-2', title: 'Split AC Water Leak Repair', description: 'Water dripping from indoor unit since this morning.', category: 'repairs', author: 'Carlo B.', postedAgo: '15 mins ago', neighborhood: 'Barangay Bel-Air', distanceKm: 1.4, pricePhp: 1100, priceUnit: 'job', status: 'URGENT' },
-  { id: 'req-3', title: 'Grocery Pickup — Puregold', description: 'Weekly groceries for a senior resident. List provided.', category: 'errands', author: 'Lola Remy', postedAgo: '1 hour ago', neighborhood: 'Barangay Poblacion', distanceKm: 0.8, pricePhp: 150, priceUnit: 'errand', status: 'OPEN' },
-  { id: 'req-4', title: 'Laptop Setup Assistance', description: 'Set up a new laptop and install school software.', category: 'tech', author: 'Joy F.', postedAgo: '3 hours ago', neighborhood: 'Barangay Pio del Pilar', distanceKm: 2.6, pricePhp: 500, priceUnit: 'hr', status: 'ACCEPTED' },
-  { id: 'req-5', title: 'Home Haircut for Lola', description: 'Simple trim at home, mornings preferred.', category: 'beauty', author: 'Tess A.', postedAgo: '5 hours ago', neighborhood: 'Barangay Urdaneta', distanceKm: 4.2, pricePhp: 450, priceUnit: 'hr', status: 'OPEN' },
-  { id: 'req-6', title: 'Kitchen Faucet Leak', description: 'Faucet base leaking under the sink.', category: 'repairs', author: 'Anne T.', postedAgo: 'Yesterday', neighborhood: 'Barangay San Antonio', distanceKm: 2.1, pricePhp: 1500, priceUnit: 'job', status: 'COMPLETED' },
+  { id: 'req-1', title: 'Math Tutor for Grade 8', description: 'Algebra help twice a week after school.', category: 'tutoring', author: 'Mia S.', postedAgo: '2 mins ago', neighborhood: 'Barangay Centro 10', distanceKm: 1.2, pricePhp: 350, priceUnit: 'hr', status: 'OPEN' },
+  { id: 'req-2', title: 'Split AC Water Leak Repair', description: 'Water dripping from indoor unit since this morning.', category: 'repairs', author: 'Carlo B.', postedAgo: '15 mins ago', neighborhood: 'Barangay Ugac Norte', distanceKm: 1.4, pricePhp: 1100, priceUnit: 'job', status: 'URGENT' },
+  { id: 'req-3', title: 'Grocery Pickup — Public Market', description: 'Weekly groceries for a senior resident. List provided.', category: 'errands', author: 'Lola Remy', postedAgo: '1 hour ago', neighborhood: 'Barangay Centro 5', distanceKm: 0.8, pricePhp: 150, priceUnit: 'errand', status: 'OPEN' },
+  { id: 'req-4', title: 'Laptop Setup Assistance', description: 'Set up a new laptop and install school software.', category: 'tech', author: 'Joy F.', postedAgo: '3 hours ago', neighborhood: 'Barangay Tanza', distanceKm: 2.6, pricePhp: 500, priceUnit: 'hr', status: 'ACCEPTED' },
+  { id: 'req-5', title: 'Home Haircut for Lola', description: 'Simple trim at home, mornings preferred.', category: 'beauty', author: 'Tess A.', postedAgo: '5 hours ago', neighborhood: 'Barangay Caritan Centro', distanceKm: 4.2, pricePhp: 450, priceUnit: 'hr', status: 'OPEN' },
+  { id: 'req-6', title: 'Kitchen Faucet Leak', description: 'Faucet base leaking under the sink.', category: 'repairs', author: 'Anne T.', postedAgo: 'Yesterday', neighborhood: 'Barangay Atulayan Sur', distanceKm: 2.1, pricePhp: 1500, priceUnit: 'job', status: 'COMPLETED' },
 ];
 
 export const PAST_ORDERS = [

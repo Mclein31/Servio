@@ -1,0 +1,22 @@
+import { Point } from '../../shared/utils/route-track';
+
+/**
+ * Tuguegarao: near Sts. Peter & Paul Metropolitan Cathedral to residential Ugac Norte.
+ * Street-following driving route via Luna Street and Bassig Street (1,802.3 m).
+ * Generated 2026-10-16 from OpenStreetMap data via the OSRM demo router:
+ * https://router.project-osrm.org/route/v1/driving/121.73025,17.6132;121.7189,17.6184?overview=full&geometries=geojson&steps=true
+ * © OpenStreetMap contributors, ODbL: https://www.openstreetmap.org/copyright
+ * Embedded for offline demo geometry; the public router is development-only.
+ */
+export const TUGUEGARAO_ROUTE: Point[] = [
+  [17.613096, 121.730246], [17.613098, 121.73019], [17.6131, 121.730073], [17.613107, 121.729926],
+  [17.613111, 121.729872], [17.613134, 121.729084], [17.613141, 121.728364], [17.613152, 121.727695],
+  [17.613164, 121.72698], [17.613178, 121.726202], [17.613192, 121.7255], [17.613206, 121.724791],
+  [17.613222, 121.723687], [17.613228, 121.723291], [17.613229, 121.723212], [17.61323, 121.722954],
+  [17.613251, 121.722325], [17.613254, 121.722194], [17.613271, 121.721596], [17.613279, 121.721048],
+  [17.61329, 121.720334], [17.613291, 121.720296], [17.613305, 121.719872], [17.613309, 121.719729],
+  [17.613333, 121.718727], [17.614269, 121.718695], [17.614571, 121.718683], [17.614649, 121.71868],
+  [17.614752, 121.718676], [17.615045, 121.718669], [17.615663, 121.718652], [17.616128, 121.718636],
+  [17.616314, 121.718623], [17.616829, 121.718575], [17.61733, 121.718511], [17.618054, 121.718408],
+  [17.618111, 121.718927],
+];

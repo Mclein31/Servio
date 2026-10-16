@@ -2,6 +2,7 @@
 
 > **Audience:** Codex (or any coding agent) finishing SERVIO from the current state.
 > **Written:** 2026-10-16 by Claude Code, after backend steps 1–2.
+> **Launch city:** Tuguegarao City, Cagayan (owner update 2026-10-16; ADR-008).
 > **Branch to work on:** `feature/app-and-backend` (the app is also on `main`; the API is only on the feature branch until merged).
 > **Work top to bottom.** Each task has acceptance criteria; a task is done only when they all pass.
 
@@ -118,7 +119,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 - Accept: ₱1,100 SKU → booking total 115000, ledger txn balanced, idempotent retry returns the same booking.
 
 **A4. Status machine** — `POST /bookings/:id/status` `{ to }`
-- Allowed (Pro only, assigned Pro only): `ACCEPTED→EN_ROUTE→ARRIVED→IN_PROGRESS`. `COMPLETED` only via PIN (A7). Cancel rules: customer may cancel before `EN_ROUTE` → full refund ledger txn `REFUND`; after `ARRIVED` → trip fee policy (document as ADR; default: no auto-cancel after arrival, admin handles).
+- Allowed (Pro only, assigned Pro only): `ACCEPTED→EN_ROUTE→ARRIVED→IN_PROGRESS`. `COMPLETED` only via PIN (A7). Cancel rules (owner-approved, ADR-009): before `EN_ROUTE`, full refund; `EN_ROUTE`, ₱100 trip fee; `ARRIVED`, ₱200 visit fee (fees 100% to Pro). Customer `IN_PROGRESS` cancellations require an admin dispute. Pro cancellation gives a full refund plus a stored strike. No-show cancellations are free, checked using server time inside the transaction. Store `expected_arrival_at`, fixed `no_show_deadline_at`, and scheduled start/end timestamps. At `EN_ROUTE`, estimate ASAP travel with `CITY_PROFILES.tuguegarao` (20 km/h, road factor 1.3, 15–60 min clamp, 30 min fallback, +30 min grace); accepted-without-departure timeout is 15 min. Scheduled no-show deadline is window end +30 min. Never extend the deadline from live GPS.
 - Every transition writes `booking_events`; illegal transitions → 409 `INVALID_TRANSITION`.
 - `GET /bookings/:id` (customer or assigned Pro only; others 404), `GET /bookings?role=customer|pro&status=…` (cursor pagination). Response includes events (for stepper timestamps), approved add-ons, totals, and for the customer only: `completionPin` (A7).
 - Accept: table-driven transition tests incl. wrong actor and wrong order.
@@ -153,7 +154,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 ### Phase B — Real-time, dispatch, GPS, push
 
 **B1. Dispatch** — `src/dispatch/`
-- On `POST /bookings` without `proId`: find up to 5 Pros: `kyc_status=APPROVED`, `is_online`, has the SKU in `pro_skus`, `last_located_at` < 2 min, within **10 km** (haversine in SQL locally; on Neon enable `postgis` and use `ST_DWithin` on a geography column — gate with a feature check). Order by distance then rating.
+- On `POST /bookings` without `proId`: find up to 5 Pros: `kyc_status=APPROVED`, `is_online`, has the SKU in `pro_skus`, `last_located_at` < 2 min, within **10 km** (Tuguegarao launch radius, configured in `CITY_PROFILES.tuguegarao`; do not increase the radius automatically for rural coverage). Use the Tuguegarao default center `17.613, 121.727` when a demo location is needed. Distance calculation: haversine in SQL locally; on Neon enable `postgis` and use `ST_DWithin` on a geography column — gate with a feature check. Order by distance then rating.
 - Create `dispatch_offers` (expires in 60 s) one Pro at a time (round-robin). `POST /offers/:id/accept|decline`. Expiry handled by a Durable Object alarm (or Cron Trigger every minute as fallback) → next Pro; no Pro → booking `CANCELLED` + `REFUND`.
 - Accept: deterministic tests with fake clock for accept/decline/expiry chain.
 
@@ -165,7 +166,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 
 **B3. App: real GPS + simulator fallback**
 - Add `@capacitor/geolocation` (iOS `NSLocationWhenInUseUsageDescription` in `servio-app/ios/App/App/Info.plist`; Android permissions). Pro app: while booking is `EN_ROUTE`, `watchPosition` → send `gps` over the socket.
-- `TrackingSimService` becomes `TrackingService` with two sources: **live** (WebSocket fixes) and **sim** (current `MAKATI_ROUTE` simulator). Keep `displayDistance(now)` interpolation; for live mode, snap fixes to the remaining route polyline (route from origin→destination fetched once via OSRM `router.project-osrm.org` in dev; document a licensed router for prod) and interpolate between fixes exactly as now.
+- `TrackingSimService` becomes `TrackingService` with two sources: **live** (WebSocket fixes) and **sim** (current `TUGUEGARAO_ROUTE` simulator). Keep `displayDistance(now)` interpolation; for live mode, snap fixes to the remaining route polyline (route from origin→destination fetched once via OSRM `router.project-osrm.org` in dev; document a licensed router for prod) and interpolate between fixes exactly as now.
 - Fallback rules: no fix for 20 s → show "Reconnecting…" chip, keep last position; a **"Demo: simulate route"** toggle (dev/demo builds only) forces sim mode.
 - Accept: unit tests for snapping + source switching; manual: two simulators (customer + Pro) show the marker move.
 
@@ -194,7 +195,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 ### Phase D — Demo readiness (priority for the upcoming demo)
 
 **D1. `npm run db:seed-demo`** (`servio-api/scripts/seed-demo.ts`) — refuses to run unless the DB host is localhost **or** the DB name/Neon branch is `servio_demo`/`demo`; never in `ENVIRONMENT=production`. All rows `is_demo=true`. Creates:
-- Customer **Sophia M.** `demo.customer@servio.test`; Pros **Daniel K.** (`demo.pro@servio.test`, AC/electrical/laptop SKUs), Chris L., Ava L., Kevin T., Sophia (tutor) — KYC approved, online, locations in Bel-Air/Poblacion, Makati; ratings/jobs matching `servio-app/src/app/core/data/mock-data.ts`.
+- Customer **Sophia M.** `demo.customer@servio.test`; Pros **Daniel K.** (`demo.pro@servio.test`, AC/electrical/laptop SKUs), Chris L., Ava L., Kevin T., Sophia (tutor) — KYC approved, online, locations in Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur, Tuguegarao City, Cagayan; ratings/jobs matching `servio-app/src/app/core/data/mock-data.ts`.
 - Active booking **SRV-8821** (`sku-ac-leak`, ₱1,100 + ₱50) `EN_ROUTE`, `HOLD_AUTHORIZED`, events at −11/−7/−1 min, the seeded chat thread.
 - Completed history SRV-8807 / 8790 / 8772 with reviews and released escrow; the 6 bulletin requests.
 - Daniel's wallet ledger reproducing ₱8,640.75 available / ₱1,870.00 pending / ₱3,316.25 today (create balanced historical txns that produce these sums).
@@ -245,7 +246,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 3. **Milestone "Payments":** Phase G.
 
 ## 4. Questions to ask the owner (don't guess)
-- Cancellation/trip-fee policy after the Pro is en route or has arrived (A4).
+- Cancellation/trip-fee and no-show policy (A4): answered 2026-10-16; see ADR-009 and the city profile in ADR-008.
 - Exact demo date and which devices (two iPhones? one Android?) — affects F1/B3 priority.
 - Whether "Sophia" is both the demo customer and a tutor Pro, or two separate demo accounts.
 - Business name/address for the email sender and legal pages.

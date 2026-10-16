@@ -104,7 +104,7 @@ export class PostBulletinModalComponent {
   readonly skuId = signal(BULLETIN_SKUS.find((s) => s.category === 'repairs')!.id);
   readonly desc = signal('');
   readonly urgent = signal(false);
-  readonly area = signal('Barangay Bel-Air, Makati');
+  readonly area = signal('Barangay Ugac Norte, Tuguegarao City');
 
   readonly skus = computed(() => BULLETIN_SKUS.filter((s) => s.category === this.category()));
   readonly sku = computed(() => BULLETIN_SKUS.find((s) => s.id === this.skuId()) ?? null);

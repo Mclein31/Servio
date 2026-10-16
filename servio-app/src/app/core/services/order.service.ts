@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { AddonQuote, AddonSku, Order, OrderStatus, PaymentMethod, ServiceSku } from '../../shared/models/domain.models';
 import { buildMilestones, HelperSummary, StepMilestone } from '../../shared/models/ui.models';
 import { roundCentavos, splitPayout } from '../../shared/utils/money';
+import { DEMO_ADDRESS } from '../data/launch-city';
 import { HELPERS, SKUS } from '../data/mock-data';
 import { clearDemoState, loadDemoState, saveDemoState } from './demo-store';
 import { WalletService } from './wallet.service';
@@ -35,7 +36,7 @@ function minutesAgo(min: number): Date {
 export class OrderService {
   private readonly wallet = inject(WalletService);
 
-  private readonly state = signal<Order>(loadDemoState<Order>('order') ?? this.seedOrder());
+  private readonly state = signal<Order>(this.loadOrder());
   readonly order = this.state.asReadonly();
 
   readonly approvedAddonsPhp = computed(() =>
@@ -145,6 +146,13 @@ export class OrderService {
     this.state.set(this.seedOrder());
   }
 
+  private loadOrder(): Order {
+    const saved = loadDemoState<Order>('order');
+    if (!saved) return this.seedOrder();
+    // Migrate cached prototype addresses without losing escrow or lifecycle progress.
+    return saved.address.city === DEMO_ADDRESS.city ? saved : { ...saved, address: { ...DEMO_ADDRESS } };
+  }
+
   private seedOrder(): Order {
     const daniel = HELPERS.find((h) => h.id === 'daniel')!;
     return {
@@ -153,7 +161,7 @@ export class OrderService {
       helper: daniel,
       customerName: 'Sophia M.',
       customerAvatarUrl: 'assets/avatars/sophia.png',
-      address: { street: '42 Jupiter Street', barangay: 'Barangay Bel-Air', city: 'Makati', landmark: 'Gate 2 · visitor parking beside the lobby' },
+      address: { ...DEMO_ADDRESS },
       schedule: 'Immediate / ASAP',
       paymentMethod: 'GCASH',
       trustFeePhp: TRUST_FEE_PHP,

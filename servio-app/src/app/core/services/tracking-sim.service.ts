@@ -1,6 +1,6 @@
 import { computed, effect, inject, Injectable, NgZone, OnDestroy, signal, untracked } from '@angular/core';
 import { RouteSample, RouteTrack } from '../../shared/utils/route-track';
-import { MAKATI_ROUTE } from '../data/makati-route';
+import { TUGUEGARAO_ROUTE } from '../data/tuguegarao-route';
 import { OrderService } from './order.service';
 
 interface Fix {
@@ -34,10 +34,10 @@ export class TrackingSimService implements OnDestroy {
   private readonly orders = inject(OrderService);
   private readonly zone = inject(NgZone);
 
-  readonly route = new RouteTrack(MAKATI_ROUTE, 'geo');
+  readonly route = new RouteTrack(TUGUEGARAO_ROUTE, 'geo');
   readonly startDistance = Math.max(0, this.route.total - START_REMAINING_M);
-  readonly destination = MAKATI_ROUTE[MAKATI_ROUTE.length - 1];
-  readonly origin = MAKATI_ROUTE[0];
+  readonly destination = TUGUEGARAO_ROUTE[TUGUEGARAO_ROUTE.length - 1];
+  readonly origin = TUGUEGARAO_ROUTE[0];
 
   private prev: Fix = { distance: this.startDistance, at: 0 };
   private readonly latest = signal<Fix>({ distance: this.startDistance, at: 0 });

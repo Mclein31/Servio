@@ -20,6 +20,8 @@
 
 ## Priority: Prototype Demo Readiness (upcoming demo)
 
+- [x] Launch city: Tuguegarao City, Cagayan; verified OSM center/barangays, embedded 1.80 km OSRM route, location data, city ETA profile and pricing caveat.
+
 **Implementation plan — Demo milestone (in required order)**
 - [x] A1: Demo flags and database-generated booking codes (`0002_demo_and_pros`); migrated dev/test and schema assertions pass.
 - [x] A3: Booking creation, mock escrow hold, idempotency (including concurrent retries and rollback tests).
