@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { ApiService } from '../api/api.service';
 import { AuthService } from './auth.service';
 import { OrderService } from './order.service';
+import { LiveService } from './live.service';
+import { TrackingService } from './tracking.service';
 import { WalletService } from './wallet.service';
 
 export interface DispatchOffer {
@@ -13,6 +15,9 @@ export interface DispatchOffer {
 @Injectable({ providedIn: 'root' })
 export class ProService {
   readonly api = inject(ApiService);
+  readonly tracking = inject(TrackingService);
+  private readonly live = inject(LiveService);
+  private lastDemoAvailability = 0;
   readonly auth = inject(AuthService);
   private readonly orders = inject(OrderService);
   private readonly wallet = inject(WalletService);
@@ -26,6 +31,13 @@ export class ProService {
   private polling = false;
 
   constructor() {
+    const room = computed(() => this.api.settings.useMockApi() || this.auth.user()?.role !== 'PRO' ? '' : this.auth.user()?.id ?? '');
+    effect((cleanup) => {
+      const userId=room(); if (!/^[0-9a-f-]{36}$/.test(userId)) return;
+      const stop=this.live.watch(`pro:${userId}`);
+      const subscription=this.live.events.subscribe((event) => { if(event.resource===`pro:${userId}` && ['connected','dispatch'].includes(event.type)) void this.poll(); });
+      cleanup(()=>{ subscription.unsubscribe(); stop(); });
+    });
     effect((cleanup) => {
       const user = this.auth.user(); const mock = this.api.settings.useMockApi();
       this.offer.set(null);
@@ -40,6 +52,10 @@ export class ProService {
     this.polling = true;
     const userId = this.auth.user()!.id;
     try {
+      if(this.online() && this.tracking.mode()==='sim' && Date.now()-this.lastDemoAvailability>30000) {
+        this.lastDemoAvailability=Date.now();
+        await this.api.post('/pro/location',await this.tracking.currentLocation());
+      }
       const result = await this.api.post<{ offer: DispatchOffer | null; serverNow: string }>('/pro/dispatch', {});
       if (this.auth.user()?.id !== userId) return;
       const previous = this.offer()?.id;
@@ -56,8 +72,7 @@ export class ProService {
     try {
       let location: { lat: number; lng: number } | undefined;
       if (online) {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }));
-        location = { lat: position.coords.latitude, lng: position.coords.longitude };
+        location = await this.tracking.currentLocation();
       }
       const result = await this.api.post<{ pro: NonNullable<ReturnType<AuthService['pro']>> }>('/pro/availability', { online, ...location });
       this.auth.pro.set(result.pro); await this.poll();

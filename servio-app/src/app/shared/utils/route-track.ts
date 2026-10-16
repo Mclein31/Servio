@@ -57,6 +57,27 @@ export class RouteTrack {
     return [travelled, remaining];
   }
 
+  /** Closest point on the remaining polyline, in metres (or pixels in screen mode). */
+  project(point: Point, minimumDistance = 0): { distance: number; error: number; point: Point } {
+    let best = { distance: Math.min(this.total, Math.max(0, minimumDistance)), error: Infinity, point: this.sample(minimumDistance).point };
+    for (let i = 0; i < this.points.length - 1; i++) {
+      if (this.cumulative[i + 1] < minimumDistance) continue;
+      const a = this.points[i], b = this.points[i + 1];
+      const longitudeScale = this.mode === 'geo' ? Math.cos(toRad(point[0])) : 1;
+      const x = this.mode === 'geo' ? (b[1] - a[1]) * longitudeScale : b[0] - a[0];
+      const y = this.mode === 'geo' ? b[0] - a[0] : b[1] - a[1];
+      const px = this.mode === 'geo' ? (point[1] - a[1]) * longitudeScale : point[0] - a[0];
+      const py = this.mode === 'geo' ? point[0] - a[0] : point[1] - a[1];
+      const length = this.cumulative[i + 1] - this.cumulative[i];
+      const lower = length ? Math.max(0, (minimumDistance - this.cumulative[i]) / length) : 0;
+      const fraction = Math.max(lower, Math.min(1, x * x + y * y ? (px * x + py * y) / (x * x + y * y) : 0));
+      const snapped: Point = [a[0] + fraction * (b[0] - a[0]), a[1] + fraction * (b[1] - a[1])];
+      const error = this.segmentLength(point, snapped);
+      if (error < best.error) best = { distance: this.cumulative[i] + fraction * length, error, point: snapped };
+    }
+    return best;
+  }
+
   /**
    * 0..1 factor that dips near sharp corners so riders brake into turns and
    * accelerate out — the subtle cue that makes motion read as a real vehicle.

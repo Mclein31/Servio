@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Subscription } from 'rxjs';
+import { LiveService } from '../../../core/services/live.service';
 import { MessageDto } from '../../../core/api/customer.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { Location } from '@angular/common';
 import { AlertController, IonContent, IonFooter, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
 import { SEED_CHAT } from '../../../core/data/mock-data';
 import { OrderService } from '../../../core/services/order.service';
-import { TrackingSimService } from '../../../core/services/tracking-sim.service';
+import { TrackingService } from '../../../core/services/tracking.service';
 import { ChatMessage } from '../../../shared/models/domain.models';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
 
@@ -28,7 +30,7 @@ export class OrderChatPage {
   @ViewChild(IonContent) content?: IonContent;
 
   readonly orders = inject(OrderService);
-  readonly sim = inject(TrackingSimService);
+  readonly sim = inject(TrackingService);
   private readonly location = inject(Location);
   private readonly alerts = inject(AlertController);
 
@@ -37,6 +39,8 @@ export class OrderChatPage {
   readonly messages = signal<ChatMessage[]>(this.orders.api.settings.useMockApi() ? SEED_CHAT : []);
   readonly saving = signal(false);
   readonly error = signal('');
+  private readonly live = inject(LiveService);
+  private subscription?: Subscription;
   private timer?: ReturnType<typeof setInterval>;
   private generation = 0;
   private refreshing = false;
@@ -50,12 +54,14 @@ export class OrderChatPage {
   }
 
   ionViewDidEnter(): void {
+    this.stop();
     this.content?.scrollToBottom(0);
+    this.subscription=this.live.events.subscribe((event)=>{ if(event.resource===`booking:${this.orders.order().id}` && ['connected','message','status'].includes(event.type)) void this.refresh(); });
     if (!this.orders.api.settings.useMockApi()) { void this.refresh(); this.timer = setInterval(() => void this.refresh(), 3000); }
   }
 
   ionViewDidLeave(): void { this.stop(); }
-  private stop(): void { if (this.timer) clearInterval(this.timer); this.timer = undefined; this.generation++; }
+  private stop(): void { this.subscription?.unsubscribe(); this.subscription=undefined; if (this.timer) clearInterval(this.timer); this.timer = undefined; this.generation++; }
   private async refresh(): Promise<void> {
     if (this.refreshing) return;
     this.refreshing = true;

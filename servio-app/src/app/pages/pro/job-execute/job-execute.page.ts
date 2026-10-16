@@ -1,8 +1,9 @@
+import { TrackingControlsComponent } from '../../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ActionSheetController, AlertController, IonContent, IonFooter, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular';
 import { OrderService } from '../../../core/services/order.service';
-import { TrackingSimService } from '../../../core/services/tracking-sim.service';
+import { TrackingService } from '../../../core/services/tracking.service';
 import { OrderStatus } from '../../../shared/models/domain.models';
 import { buildMilestones } from '../../../shared/models/ui.models';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
@@ -23,12 +24,12 @@ const STEP_INDEX: Partial<Record<OrderStatus, number>> = { ACCEPTED: 0, EN_ROUTE
   selector: 'app-job-execute',
   templateUrl: 'job-execute.page.html',
   styleUrl: 'job-execute.page.scss',
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonFooter, IonIcon, RouterLink, AvatarComponent, StepperComponent, PhpPipe],
+  imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonTitle, IonContent, IonFooter, IonIcon, RouterLink, AvatarComponent, StepperComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class JobExecutePage {
   readonly orders = inject(OrderService);
-  readonly sim = inject(TrackingSimService);
+  readonly sim = inject(TrackingService);
   private readonly router = inject(Router);
   private readonly sheets = inject(ActionSheetController);
   private readonly alerts = inject(AlertController);

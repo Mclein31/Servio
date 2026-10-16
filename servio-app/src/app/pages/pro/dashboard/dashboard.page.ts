@@ -1,3 +1,4 @@
+import { TrackingControlsComponent } from '../../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonToggle, IonToolbar } from '@ionic/angular';
@@ -10,7 +11,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
 /** Servio Pro home: availability, today's earnings and the dispatch radar. */
 @Component({
   selector: 'app-pro-dashboard',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, IonToggle, RouterLink, AvatarComponent, PhpPipe],
+  imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonContent, IonIcon, IonToggle, RouterLink, AvatarComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ion-header class="ion-no-border">
@@ -29,6 +30,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
     <ion-content class="servio-page">
       <div class="wrap">
         @if (pro.error()) { <p role="alert">{{ pro.error() }}</p> }
+        <app-tracking-controls></app-tracking-controls>
         <section class="availability" [class.off]="!online()">
           <div>
             <strong>{{ online() ? 'ONLINE · Ready for jobs' : 'OFFLINE' }}</strong>

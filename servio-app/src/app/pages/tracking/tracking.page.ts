@@ -1,10 +1,11 @@
+import { TrackingControlsComponent } from '../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AlertController, IonAccordion, IonAccordionGroup, IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonToolbar } from '@ionic/angular';
 import { CommunityService } from '../../core/services/community.service';
 import { formatPhp } from '../../shared/utils/money';
 import { OrderService } from '../../core/services/order.service';
-import { TrackingSimService } from '../../core/services/tracking-sim.service';
+import { TrackingService } from '../../core/services/tracking.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { StepperComponent } from '../../shared/components/stepper/stepper.component';
 import { TrackingMapComponent } from '../../shared/components/tracking-map/tracking-map.component';
@@ -15,7 +16,7 @@ import { DecimalPipe } from '@angular/common';
   selector: 'app-tracking',
   templateUrl: 'tracking.page.html',
   styleUrl: 'tracking.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, IonAccordionGroup, IonAccordion, IonItem, IonLabel, RouterLink, DecimalPipe,
+  imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonContent, IonIcon, IonAccordionGroup, IonAccordion, IonItem, IonLabel, RouterLink, DecimalPipe,
     TrackingMapComponent, StepperComponent, AvatarComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -24,7 +25,7 @@ export class TrackingPage {
 
   readonly orders = inject(OrderService);
   readonly community = inject(CommunityService);
-  readonly sim = inject(TrackingSimService);
+  readonly sim = inject(TrackingService);
   private readonly alerts = inject(AlertController);
   readonly cancelling = signal(false);
   readonly history = this.orders.history;

@@ -235,3 +235,20 @@
 - **Status:** Accepted
 - **Decision:** Permit a booking peer to download the current avatar that is already returned in their participant booking. Require that the upload belongs to the peer and equals that user’s current avatarKey, with an existing participant booking linking the two accounts. Customer avatars remain unavailable to unrelated users; changing the current avatar revokes peer access to the previous key. Existing public approved-Pro avatars and owner access are unchanged.
 - **Context:** The seeded customer has a photo; the assigned Pro could read her avatar key but the download path previously rejected it and prevented presentation mapping of the booking. The app also falls back to initials when an avatar is temporarily unavailable. Evidence/KYC authorization remains purpose-specific.
+
+
+## ADR-024: Live GPS Sources, Queue-Safe Tracking and Explicit Indoor Fallback
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (B3 implementation; native rehearsal pending F1/D4)
+- **Decision:** Keep one renderer/interpolator for live and simulated sources. Capacitor foreground precise-location watches stream assigned EN_ROUTE fixes through authenticated booking rooms; idle online fixes use a separate conditional /pro/location endpoint that can never reactivate an offline Pro. Track travel bookings independently from the selected booking, so queueing/viewing another job does not stop the current customer’s stream. Preserve geometry through arrival and use the booking’s actual pin.
+- **Transport:** Reference-count booking/Pro sockets, renew ticket connections, reconnect with bounded backoff, and retain the last fix during an outage. Post-commit room events refresh the existing chat/status/add-on/dispatch screens; REST polling remains recovery. A 20-second stale fix shows Reconnecting. Snap to remaining route segments and interpolate along real streets; hide a guessed route when routing fails.
+- **Demo source:** An explicit demo-account/build control runs the embedded Tuguegarao route; a Pro streams it to the customer with a simulated flag. Server rejects that flag for non-demo bookings or production. It never advances a live status or changes money. Reload defaults to live GPS. iOS location strings/SPM binding are present; Android declarations follow in F1.
+- **Routing:** OSRM demo routing is development-only and queried once per source/order. OpenStreetMap/ODbL attribution remains visible. Production requires a licensed/self-hosted provider. See docs/TRACKING.md and [Capacitor Geolocation](https://capacitorjs.com/docs/apis/geolocation).
+
+## ADR-025: Real-User Flows with Mock Payments
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (explicit owner request)
+- **Decision:** Extend the current work to real verified-email customer accounts, editable profile information/photo and saved map-pinned service addresses. Keep escrow, tips and payouts simulated. Complete these flows before the remaining Android/demo checklist work. This does not authorize PayMongo, SMS/social sign-in, cloud resource creation, invented legal details or unverified Pro dispatch.
+- **Dependency:** Real email delivery requires sender credentials configured in the ignored local environment. Ask for provider choice, not credentials in chat; independently finish the account/profile/address implementation. Production deployment, physical signing/GPS and actual email delivery must be reported separately from local/unit verification.

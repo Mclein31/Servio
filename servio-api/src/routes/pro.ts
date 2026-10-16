@@ -30,6 +30,16 @@ pro.post('/pro/availability', validate('json', v.pipe(v.strictObject({ online: v
   return c.json({ pro: profile });
 });
 
+/** Refreshing a fix must never toggle availability back on after an explicit offline request. */
+pro.post('/pro/location', validate('json',v.strictObject({
+  lat:v.pipe(v.number(),v.minValue(-90),v.maxValue(90)),lng:v.pipe(v.number(),v.minValue(-180),v.maxValue(180)),
+})),async(c)=>{
+  const [profile]=await c.get('db').update(proProfiles).set({ lastLat:c.req.valid('json').lat,lastLng:c.req.valid('json').lng,lastLocatedAt:await serverNow(c.get('db')) })
+    .where(and(eq(proProfiles.userId,c.get('userId')),eq(proProfiles.kycStatus,'APPROVED'),eq(proProfiles.isOnline,true))).returning();
+  if(!profile) throw new ApiError(409,'PRO_OFFLINE','Go online before refreshing your dispatch location.');
+  return c.json({ updated:true });
+});
+
 /** Explicit maintenance/write heartbeat while the Pro workspace is open. */
 pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
   const [actor] = await c.get('db').select({ isDemo: users.isDemo }).from(users).where(eq(users.id, c.get('userId')));

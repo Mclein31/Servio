@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SERVIO shares the Pro’s location with their customer while travelling to a booking.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SERVIO shares the Pro’s location with their customer while travelling to a booking.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>SERVIO uses the camera to photograph damaged parts as evidence for add-on quotes.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

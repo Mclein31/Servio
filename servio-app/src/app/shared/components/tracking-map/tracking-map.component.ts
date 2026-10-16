@@ -14,7 +14,7 @@ import { IonIcon } from '@ionic/angular';
 import * as L from 'leaflet';
 import { servioTileLayer } from '../../utils/map-tiles';
 import { OrderService } from '../../../core/services/order.service';
-import { TrackingSimService } from '../../../core/services/tracking-sim.service';
+import { TrackingService } from '../../../core/services/tracking.service';
 import { lerpAngle, prefersReducedMotion } from '../../utils/motion';
 import { Point } from '../../utils/route-track';
 
@@ -56,7 +56,7 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
-  readonly sim = inject(TrackingSimService);
+  readonly sim = inject(TrackingService);
   private readonly orders = inject(OrderService);
   private readonly zone = inject(NgZone);
 
@@ -67,6 +67,8 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
   private remainingCasing?: L.Polyline;
   private remaining?: L.Polyline;
   private rider?: L.Marker;
+  private originMarker?: L.Marker;
+  private destinationMarker?: L.Marker;
   private headingEl: HTMLElement | null = null;
   private frame = 0;
   private visible = true;
@@ -126,8 +128,8 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     this.remainingCasing = L.polyline(toLatLngs(left), { color: '#FFFFFF', weight: 9, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
     this.remaining = L.polyline(toLatLngs(left), { color: '#FF5C00', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
 
-    L.marker(toLatLng(this.sim.origin), { icon: originIcon(), interactive: false, keyboard: false }).addTo(map);
-    L.marker(toLatLng(this.sim.destination), { icon: destinationIcon(), interactive: false, keyboard: false, zIndexOffset: 500 }).addTo(map);
+    this.originMarker = L.marker(toLatLng(this.sim.origin), { icon: originIcon(), interactive: false, keyboard: false }).addTo(map);
+    this.destinationMarker = L.marker(toLatLng(this.sim.destination), { icon: destinationIcon(), interactive: false, keyboard: false, zIndexOffset: 500 }).addTo(map);
 
     const helper = this.orders.order().helper;
     this.rider = L.marker(toLatLng(start.point), {
@@ -168,10 +170,17 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
   private render(now: number): void {
     const route = this.sim.route;
     const d = this.reducedMotion ? route.total - this.sim.remainingM() : this.sim.displayDistance(now);
-    const sample = route.sample(d);
+    const sample = this.sim.sample(d);
     const [done, left] = route.split(d);
 
+    this.rider!.setOpacity(this.sim.mode()==='sim' || this.sim.hasFix() || this.sim.arrived()?1:0);
     this.rider!.setLatLng(toLatLng(sample.point));
+    this.originMarker?.setLatLng(toLatLng(this.sim.origin));
+    this.destinationMarker?.setLatLng(toLatLng(this.sim.destination));
+    const visible = this.sim.routeReady() ? 1 : 0;
+    this.remaining!.setStyle({ opacity: visible });
+    this.remainingCasing!.setStyle({ opacity: visible });
+    this.travelled!.setStyle({ opacity: visible * 0.9 });
     this.travelled!.setLatLngs(toLatLngs(done));
     this.remainingCasing!.setLatLngs(toLatLngs(left));
     this.remaining!.setLatLngs(toLatLngs(left));

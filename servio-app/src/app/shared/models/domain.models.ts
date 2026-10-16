@@ -46,6 +46,7 @@ export interface AddonQuote {
 }
 
 export interface Order {
+  coordinates?: readonly [number, number];
   id: string;
   code?: string;
   customerId?: string;
