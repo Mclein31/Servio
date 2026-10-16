@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { DecimalPipe, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IonContent, IonFooter, IonHeader, IonIcon, IonTitle, IonToolbar, ToastController } from '@ionic/angular';
+import { IonContent, IonFooter, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular';
 import { CommunityService } from '../../core/services/community.service';
 import { HelperProfile, ServiceSku } from '../../shared/models/domain.models';
 import { OrderService } from '../../core/services/order.service';
@@ -9,6 +9,7 @@ import { PaymentMethod } from '../../shared/models/domain.models';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { SlideToConfirmComponent } from '../../shared/components/slide-to-confirm/slide-to-confirm.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
+import { AddressService } from '../../core/services/address.service';
 import { roundCentavos } from '../../shared/utils/money';
 
 /** Resolve Philippine calendar windows independently of the phone timezone. */
@@ -32,7 +33,7 @@ export class CheckoutPage {
   private readonly orders = inject(OrderService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-  private readonly toasts = inject(ToastController);
+  readonly addresses = inject(AddressService);
 
   @ViewChild(SlideToConfirmComponent) slide?: SlideToConfirmComponent;
   readonly community = inject(CommunityService);
@@ -45,14 +46,14 @@ export class CheckoutPage {
   readonly schedules = ['Immediate / ASAP', 'Today (2:00 PM - 4:00 PM)', 'Tomorrow Morning'];
   readonly schedule = signal(this.schedules[0]);
   readonly payment = signal<PaymentMethod>('GCASH');
-  readonly address = this.orders.order().address;
+  readonly address = this.addresses.selected;
 
   readonly feePhp = this.community.trustFeePhp;
   readonly totalPhp = computed(() => roundCentavos((this.sku()?.pricePhp ?? 0) + this.feePhp()));
 
   async ionViewWillEnter(): Promise<void> {
     try {
-      await Promise.all([this.community.catalog(), this.community.directory()]);
+      await Promise.all([this.community.catalog(), this.community.directory(), this.addresses.refresh()]);
       const helper = this.community.helpers().find((h) => h.id === this.query.get('helper'));
       if (this.query.has('helper') && !helper) throw new Error('This helper is no longer available. Choose another helper.');
       this.helper.set(helper ?? null);
@@ -67,18 +68,18 @@ export class CheckoutPage {
   }
 
   async changeAddress(): Promise<void> {
-    const t = await this.toasts.create({ message: 'Saved addresses arrive with the address book. Using Ugac Norte, Tuguegarao City.', duration: 1800, position: 'top' });
-    await t.present();
+    await this.router.navigate(['/addresses'], { queryParams: { choose: '1' } });
   }
 
   async authorize(): Promise<void> {
     if (this.saving() || !this.sku()) return;
+    if (!this.address()) { this.error.set('Choose and confirm your service address first.'); this.slide?.reset(); return; }
     this.saving.set(true); this.error.set('');
     const window = scheduleWindow(this.schedule());
-    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window]);
+    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window, this.address()]);
     if (this.attempt?.fingerprint !== fingerprint) this.attempt = { fingerprint, key: crypto.randomUUID() };
     try {
-      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window);
+      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window, this.address()!);
       await this.router.navigateByUrl('/tabs/tracking', { replaceUrl: true });
       if (this.community.api.settings.useMockApi()) setTimeout(() => {
         if (this.community.api.settings.useMockApi() && this.orders.order().status === 'ACCEPTED') this.orders.setStatus('EN_ROUTE');

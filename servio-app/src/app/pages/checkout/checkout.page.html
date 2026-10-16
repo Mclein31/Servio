@@ -33,9 +33,11 @@
     <section class="servio-card panel row-card">
       <span class="ic"><ion-icon name="location" aria-hidden="true"></ion-icon></span>
       <div class="grow">
+        @if (address(); as address) {
         <strong>{{ address.street }}</strong>
         <span>{{ address.barangay }}, {{ address.city }}</span>
         <span class="landmark">{{ address.landmark }}</span>
+        } @else { <strong>Add your service address</strong><span>Pinpoint your entrance on the map</span> }
       </div>
       <button type="button" class="text-btn" (click)="changeAddress()">Change</button>
     </section>
@@ -90,7 +92,7 @@
 
 <ion-footer class="ion-no-border">
   <div class="servio-action-bar">
-    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="saving() ? 'Authorizing…' : 'Slide to authorize'" [disabled]="!sku() || saving()" (confirmed)="authorize()"></app-slide-to-confirm>
-    <p class="fine">You won't be charged until you share your completion PIN.</p>
+    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="saving() ? 'Authorizing…' : 'Slide to authorize'" [disabled]="!sku() || !address() || saving()" (confirmed)="authorize()"></app-slide-to-confirm>
+    <p class="fine">Demo payment — no real money will be charged.</p>
   </div>
 </ion-footer>

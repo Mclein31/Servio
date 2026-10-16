@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../db/client';
-import { bookingEvents, bookings, bulletinRequests, ledgerEntries, messages, payouts, proProfiles, proSkus, reviews, serviceSkus, uploads, users } from '../db/schema';
+import { bookingEvents, bookings, bulletinRequests, ledgerEntries, messages, payouts, proProfiles, proSkus, reviews, serviceSkus, uploads, userAddresses, users } from '../db/schema';
 import { serverNow } from '../lib/bookings';
 import { splitPayout } from '../lib/money';
 import { DEMO, demoId } from './guard';
@@ -26,6 +26,8 @@ export async function seedDemo(db: Database, imageLengths: Record<string, number
       if (!expected || !row.isDemo || row.email.toLowerCase() !== expected.email || row.role !== expected.role) throw new Error('Demo identity conflicts with an existing account. No existing account was changed.');
     }
     await tx.insert(users).values(accounts.map((a) => ({ ...a, isDemo: true, avatarKey: DEMO_IMAGES.find((i) => i.ownerId === a.id && i.purpose === 'avatar')?.key }))).onConflictDoNothing();
+    const [savedAddress] = await tx.select({ id: userAddresses.id }).from(userAddresses).where(eq(userAddresses.userId, DEMO.customer)).limit(1);
+    if (!savedAddress) await tx.insert(userAddresses).values({ id: demoId(8000), userId: DEMO.customer, label: 'Home', ...DEMO_ADDRESS, lat: 17.618111, lng: 121.718927, isDefault: true });
     for (const p of DEMO_PROS) {
       const loc = DEMO_LOCATIONS[p.location];
       const ratingSum = Math.round(p.rating * p.count);

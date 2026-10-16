@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
+import { AddressService } from '../../core/services/address.service';
 import { OrderService } from '../../core/services/order.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
@@ -25,6 +26,7 @@ interface SettingItem {
 export class ProfilePage {
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  readonly addresses = inject(AddressService);
   private readonly toasts = inject(ToastController);
 
   readonly orders = inject(OrderService);
@@ -47,6 +49,7 @@ export class ProfilePage {
   ];
 
   readonly settings: SettingItem[] = [
+    { label: 'Saved Addresses', caption: 'Pin your home or work on the map', icon: 'location-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/addresses' },
     { label: 'My Requests & Bookings', caption: 'Active and past orders', icon: 'receipt-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/tabs/tracking' },
     { label: 'Saved Helpers', caption: 'Neighbors you trust', icon: 'heart-outline', tint: 'var(--servio-cat-beauty)', ink: '#DB2777', route: '/tabs/directory' },
     { label: 'Payment Methods (GCash / Card)', caption: 'Escrow-protected payments', icon: 'card-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
@@ -55,7 +58,7 @@ export class ProfilePage {
   ];
 
   edit(): void { void this.router.navigateByUrl('/profile/edit'); }
-  ionViewWillEnter(): void { void this.auth.refreshProfile(true); }
+  ionViewWillEnter(): void { void this.auth.refreshProfile(true); void this.addresses.refresh().catch(() => undefined); }
 
   async open(item: SettingItem): Promise<void> {
     if (item.route === '/pro' && !this.mock() && this.auth.user()?.role !== 'PRO') {

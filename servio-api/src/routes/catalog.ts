@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { addonSkus, categories, serviceSkus } from '../db/schema';
 import type { AppEnv } from '../env';
-import { CANCELLATION_FEES } from '../config/cities';
+import { cityProfile, CANCELLATION_FEES } from '../config/cities';
 import { TRUST_FEE_CENTAVOS } from '../lib/money';
 import { withDb } from '../middleware/db';
 
@@ -35,5 +35,8 @@ catalog.get('/catalog', async (c) => {
   ]);
   c.header('Cache-Control', 'public, max-age=300');
   const fee = Number(c.env.TRUST_FEE_CENTAVOS ?? TRUST_FEE_CENTAVOS);
-  return c.json({ categories: cats, skus, addons, cancellationFees: CANCELLATION_FEES, trustFeeCentavos: Number.isInteger(fee) && fee >= 0 ? fee : TRUST_FEE_CENTAVOS });
+  const profile = cityProfile(c.env.LAUNCH_CITY);
+  return c.json({ categories: cats, skus, addons, cancellationFees: CANCELLATION_FEES,
+    serviceArea: { city: profile.addressCity, name: profile.name, center: profile.center, radiusKm: profile.dispatchRadiusKm },
+    trustFeeCentavos: Number.isInteger(fee) && fee >= 0 ? fee : TRUST_FEE_CENTAVOS });
 });

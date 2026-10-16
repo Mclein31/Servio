@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.23] — 2026-10-16
+### Added
+- Account-owned saved addresses with serialized defaults, explicit Tuguegarao map pins, current-location action, Profile address book and checkout location selection. Bookings snapshot the selected coordinates and validate the 10 km city coverage before any mock hold.
+- Migration 0007, seeded Sophia home, demo-reset support, late-refresh/GPS guards and address-sensitive retry keys. Empty optional directions no longer block booking.
+### Verified
+- API typecheck and 165 tests; app build/lint and 48 tests pass with zero warnings. Browser persisted/reopened a Centro 10 pin and showed it at checkout. Payments remain mock.
+
 ## [0.5.22] — 2026-10-16
 ### Added
 - Gmail SMTP local setup and real-account verification guide, owner-selected sender configuration, serialized OTP attempt/expiry/one-time checks and bounded SMTP cleanup.

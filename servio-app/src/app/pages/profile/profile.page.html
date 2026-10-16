@@ -21,7 +21,7 @@
         <div class="who">
           <h2>{{ auth.user()?.fullName }}</h2>
           <span class="role">{{ mock() ? 'Community Helper & Customer' : auth.user()?.role === 'PRO' ? 'Servio Pro' : 'Customer' }}</span>
-          <span class="loc"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>Ugac Norte, Tuguegarao City</span>
+          <span class="loc"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ addresses.selected() ? addresses.selected()!.barangay + ', ' + addresses.selected()!.city : 'Add a service address' }}</span>
         </div>
         <button type="button" class="edit" (click)="edit()">
           <ion-icon name="create-outline" aria-hidden="true"></ion-icon>Edit
