@@ -27,6 +27,12 @@ auth.use('/auth/*', withDb);
 export const generateCode = (): string => String(randomInt(1_000_000)).padStart(6, '0');
 export const codeHash = (email: string, code: string) => sha256Hex(`${email}:${code}`);
 
+/** Explicit development-only capability; never enables account creation or staff login. */
+function demoCode(c: Context<AppEnv>): string | undefined {
+  if (['production', 'prod'].includes(c.env.ENVIRONMENT?.trim().toLowerCase())) return;
+  return /^\d{6}$/.test(c.env.DEMO_LOGIN_CODE ?? '') ? c.env.DEMO_LOGIN_CODE : undefined;
+}
+
 async function limit(c: Context<AppEnv>, email: string) {
   const limiter = c.env.AUTH_LIMITER;
   if (!limiter) return;
@@ -41,6 +47,11 @@ auth.post('/auth/request-code', validate('json', v.strictObject({ email: EmailSc
   const { email } = c.req.valid('json');
   await limit(c, email);
   const db = c.get('db');
+  if (demoCode(c)) {
+    const [demo] = await db.select({ id: users.id }).from(users)
+      .where(and(sql`lower(${users.email}) = ${email}`, eq(users.isDemo, true), eq(users.isActive, true), sql`${users.role} <> 'ADMIN'`)).limit(1);
+    if (demo) return c.json({ sent: true, expiresInMinutes: CODE_TTL_MS / 60_000, devNote: 'Use the configured demo sign-in code.' }, 202);
+  }
   const [recent] = await db
     .select({ n: count() })
     .from(loginCodes)
@@ -81,6 +92,17 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
   await limit(c, email);
   const db = c.get('db');
   const wrong = () => new ApiError(401, 'CODE_INVALID', 'That code is wrong or has expired. Check the newest email, or ask for a new code.');
+  const fixed = demoCode(c);
+  if (fixed && timingSafeEqualString(entered, fixed)) {
+    const result = await db.transaction(async (tx) => {
+      const [user] = await tx.select().from(users).where(sql`lower(${users.email}) = ${email}`).limit(1).for('update');
+      if (!user?.isDemo) return;
+      if (!user.isActive) throw new ApiError(403, 'ACCOUNT_DISABLED', 'This account is turned off. Please contact SERVIO support.');
+      if (user.role === 'ADMIN') throw new ApiError(403, 'USE_ADMIN_CONSOLE', 'Staff accounts sign in through the admin console.');
+      return { ...await issueSession(tx, user.id, c.req.header('User-Agent')), user: { id: user.id, email, role: user.role, isNew: false } };
+    });
+    if (result) return c.json(result);
+  }
   const [code] = await db
     .select()
     .from(loginCodes)

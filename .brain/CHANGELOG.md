@@ -4,6 +4,12 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.16] — 2026-10-16
+### Added
+- D2: Optional six-digit DEMO_LOGIN_CODE skips email delivery for existing active demo customer/Pro accounts. Fixed-code login never creates accounts, never signs in staff, and is disabled in production; normal single-use codes and rate limits remain available.
+### Verified
+- API typecheck and 140 tests pass. Coverage includes normalized identity/session, no-email delivery despite hourly mail quota, production/unset/malformed guards, wrong code, non-demo/missing accounts, disabled/staff rejection and unchanged normal email-code authentication. No money paths changed.
+
 ## [0.5.15] — 2026-10-16
 ### Added
 - D1: `npm run db:seed-demo` creates guarded, idempotent separate accounts, five approved Tuguegarao Pros, eight bookings including SRV-8821 and completed history, six catalog-priced bulletin posts, reviews/chat and four local R2 images. Script files now participate in API typechecking.

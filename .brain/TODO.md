@@ -36,7 +36,7 @@
 - [x] C3: Live catalog/directory/bulletin, checkout with stable retry keys, participant tracking/history/chat/photos, add-on decisions, customer PIN, cancellation and review/tip.
 - [x] C4: Approved availability, foreground nearest-Pro offers/accept/decline/expiry, server job status/cancel, evidence quotes, PIN completion and ledger wallet/cashout. B2 adds socket events; B3 adds native GPS.
 - [x] D1: Guarded idempotent demo seed, separate accounts, Tuguegarao catalog history/feed, reconciled ledger balances and local R2 images.
-- [ ] D2: Demo sign-in.
+- [x] D2: Guarded fixed-code sign-in for existing active demo customers/Pros; production and staff blocked.
 - [ ] D3: Reset and backup.
 - [ ] B2: OrderRoom live sockets.
 - [ ] B3: Real GPS and simulator fallback.
@@ -44,7 +44,7 @@
 - [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
-- [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sofia R. (separate tutor account), and an admin.
+- [x] Demo customer/Pro accounts with fixed sign-in codes only outside production: Sophia M., Daniel K., Chris L., Ava L., Kevin T., Sofia R. Staff account is seeded but cannot use mobile sign-in.
 - [x] Pro profiles: KYC approved, online, locations around Centro / Ugac Norte, Tuguegarao City; SKUs each Pro offers; ratings and jobs done matching the app.
 - [x] Active order **#SRV-8821** (Split AC Water Leak Repair, ₱1,100 + ₱50 fee) in `EN_ROUTE` with escrow `HOLD_AUTHORIZED`, its event timeline and the seeded chat thread.
 - [x] Order history: #SRV-8807, #SRV-8790, #SRV-8772 (completed, with reviews and released escrow).
