@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.15] — 2026-10-16
+### Added
+- D1: `npm run db:seed-demo` creates guarded, idempotent separate accounts, five approved Tuguegarao Pros, eight bookings including SRV-8821 and completed history, six catalog-priced bulletin posts, reviews/chat and four local R2 images. Script files now participate in API typechecking.
+- Wallet reconciles to ₱8,640.75 available / ₱1,870 pending / ₱3,316.25 today using existing SKUs, balanced settlements/tips/cashout and internally marked opening earnings. Wallet labels use “Previous earnings”, per owner; no invented SKU or service price (ADR-019).
+- Offline tutor renamed Sofia R., separate from customer Sophia M., with initials rather than the customer's avatar.
+### Verified
+- API typecheck and 135 tests pass, including database scope/production guards and catalog-only demo data. App build/lint and 31 tests pass with zero warnings. Seed ran locally with image uploads; second run preserved existing rows and ledger transaction IDs. Baseline checks assert all three wallet amounts, and every local ledger transaction remains balanced.
+
 ## [0.5.14] — 2026-10-16
 ### Fixed
 - Demo dispatch permits an approved online Pro to queue another job while finishing a current booking, consistent with the owner's EN_ROUTE-based no-show policy. Removed the extra busy-Pro restriction; acceptance still changes no money and keeps all authorization/expiry locks. Regression test covers a second acceptance while another job is in progress.

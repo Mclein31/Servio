@@ -79,7 +79,7 @@ export const ADDON_CATALOG: AddonSku[] = [
 
 export const HELPERS: HelperProfile[] = [
   {
-    id: 'sophia', name: 'Sophia M.', avatarUrl: 'assets/avatars/sophia.png', category: 'Math Tutor',
+    id: 'sofia', name: 'Sofia R.', avatarUrl: '', category: 'Math Tutor',
     rating: 5.0, reviewCount: 14, distanceKm: 1.2, hourlyRatePhp: 350, isAvailable: true, badgeLabel: 'Verified',
     bio: 'Licensed teacher helping Grade 1–12 students in Centro and Ugac Norte with math, homework and test prep.',
     credentials: ['NBI Clearance', 'LET Passer', 'ID Verified'],
@@ -147,7 +147,7 @@ export const HELPERS: HelperProfile[] = [
 
 /** Directory category membership (helper id → category ids). */
 export const HELPER_CATEGORIES: Record<string, string[]> = {
-  sophia: ['tutoring'],
+  sofia: ['tutoring'],
   daniel: ['repairs', 'tech'],
   chris: ['repairs'],
   ava: ['beauty'],

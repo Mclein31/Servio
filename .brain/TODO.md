@@ -35,7 +35,7 @@
 - [x] C2: Live email-code sign-in, profile setup, role landing, demo connection sheet and prototype legal links.
 - [x] C3: Live catalog/directory/bulletin, checkout with stable retry keys, participant tracking/history/chat/photos, add-on decisions, customer PIN, cancellation and review/tip.
 - [x] C4: Approved availability, foreground nearest-Pro offers/accept/decline/expiry, server job status/cancel, evidence quotes, PIN completion and ledger wallet/cashout. B2 adds socket events; B3 adds native GPS.
-- [ ] D1: Guarded demo seed.
+- [x] D1: Guarded idempotent demo seed, separate accounts, Tuguegarao catalog history/feed, reconciled ledger balances and local R2 images.
 - [ ] D2: Demo sign-in.
 - [ ] D3: Reset and backup.
 - [ ] B2: OrderRoom live sockets.
@@ -45,13 +45,13 @@
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
 - [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sofia R. (separate tutor account), and an admin.
-- [ ] Pro profiles: KYC approved, online, locations around Centro / Ugac Norte, Tuguegarao City; SKUs each Pro offers; ratings and jobs done matching the app.
-- [ ] Active order **#SRV-8821** (Split AC Water Leak Repair, ₱1,100 + ₱50 fee) in `EN_ROUTE` with escrow `HOLD_AUTHORIZED`, its event timeline and the seeded chat thread.
-- [ ] Order history: #SRV-8807, #SRV-8790, #SRV-8772 (completed, with reviews and released escrow).
-- [ ] Bulletin feed: the 6 sample requests (Open / Urgent / Accepted / Completed).
-- [ ] Daniel's wallet ledger: ₱8,640.75 available, ₱1,870.00 in escrow, today's net ₱3,316.25, and the sample credits, cashout and in-escrow rows.
-- [ ] Demo photos uploaded to the dev R2 bucket (sample drain-hose evidence, avatars).
-- [ ] Every demo row marked as demo data (`is_demo` flag or a fixed demo id range) so cleanup can never touch real data.
+- [x] Pro profiles: KYC approved, online, locations around Centro / Ugac Norte, Tuguegarao City; SKUs each Pro offers; ratings and jobs done matching the app.
+- [x] Active order **#SRV-8821** (Split AC Water Leak Repair, ₱1,100 + ₱50 fee) in `EN_ROUTE` with escrow `HOLD_AUTHORIZED`, its event timeline and the seeded chat thread.
+- [x] Order history: #SRV-8807, #SRV-8790, #SRV-8772 (completed, with reviews and released escrow).
+- [x] Bulletin feed: the 6 sample requests (Open / Urgent / Accepted / Completed).
+- [x] Daniel's wallet ledger: ₱8,640.75 available, ₱1,870.00 in escrow, today's net ₱3,316.25, and the sample credits, cashout and in-escrow rows.
+- [x] Demo photos uploaded to the dev R2 bucket (sample drain-hose evidence, avatars).
+- [x] Every demo row marked as demo data (`is_demo` flag or a fixed demo id range) so cleanup can never touch real data.
 
 **Reset and backup**
 - [ ] `npm run db:demo-reset`: deletes only demo rows (respecting the append-only ledger, using a guarded cleanup path), then re-runs the catalog seed and the demo seed, leaving a clean known state in one command.

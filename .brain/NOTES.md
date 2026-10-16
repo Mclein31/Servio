@@ -33,3 +33,5 @@ When an agent is asked to implement or design a feature:
 - Leaflet maps inside Ionic pages need explicit width/height and `invalidateSize()` on `ionViewDidEnter`; tab pages are attached late.
 - Do not put `maxlength="1"` on OTP cells: iOS one-time-code autofill inserts the whole code into the first cell (`app-code-input` distributes it).
 - `ion-title` is absolutely positioned in iOS mode; `.servio-detail-bar` insets it past the back button.
+
+- `cd servio-api && npm run db:seed-demo` seeds the catalog and presentation baseline into local servio_dev and uploads four bundled PNGs to the local servio-uploads-dev R2 binding. It is idempotent, preserves ongoing bookings and refuses production/other-project databases or conflicting seed identities/codes. D3 reset restores the baseline; seeding alone does not reset the clock or progress. Internal demo IDs start `de000000-0000-4000-8000-`; opening wallet credits display as Previous earnings.
