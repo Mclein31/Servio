@@ -42,7 +42,7 @@
 - [x] B2: Hibernatable participant OrderRoom/Pro sockets, short-lived single-use session-bound tickets, validated/throttled Pro GPS and post-commit invalidations.
 - [/] B3: Native Geolocation, socket tracking/chat/dispatch, street snapping and explicit route fallback implemented; API/app checks and two-browser rehearsal pass. Native iPhone API sign-in/map loading verified; source replay regression fixed. Two-device GPS rehearsal remains with F1/D4.
 - [/] F1: Android/iOS demo packaging, permissions, icons/splash, strict Release network guards and LAN setup implemented. Android APK/iOS simulator builds pass; Android emulator installer failed (package-service broken pipe). Physical installs/permissions remain for owner rehearsal.
-- [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
+- [/] D4: docs/DEMO_CHECKLIST.md includes reset/sign-in/full flow, LAN/API settings, native installs, branding and verification record. Full two-device rehearsal remains pending physical devices/Android installer recovery.
 
 **Owner-added real-user readiness (payments remain mock)**
 - [/] Gmail SMTP implementation, setup guide and code/concurrency tests pass; actual inbox delivery awaits owner-configured local credentials. Normal verified-email account creation stays separate from demo identities.
