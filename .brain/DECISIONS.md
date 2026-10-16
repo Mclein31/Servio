@@ -246,6 +246,8 @@
 - **Demo source:** An explicit demo-account/build control runs the embedded Tuguegarao route; a Pro streams it to the customer with a simulated flag. Server rejects that flag for non-demo bookings or production. It never advances a live status or changes money. Reload defaults to live GPS. iOS location strings/SPM binding are present; Android declarations follow in F1.
 - **Routing:** OSRM demo routing is development-only and queried once per source/order. OpenStreetMap/ODbL attribution remains visible. Production requires a licensed/self-hosted provider. See docs/TRACKING.md and [Capacitor Geolocation](https://capacitorjs.com/docs/apis/geolocation).
 
+- **Rehearsal correction:** A remote simulated sender can restart without changing booking status. Reset interpolation when its new route fix restarts behind the previous endpoint; reject late live-routing responses after switching to the embedded route. Preserve the simulated source label even if routing is unavailable.
+
 ## ADR-025: Real-User Flows with Mock Payments
 
 - **Date:** 2026-10-16

@@ -44,6 +44,24 @@ describe('live tracking source and native GPS lifecycle',()=>{
     expect(tracking.route.project(tracking.sample(distance).point).error).toBeLessThan(0.01);
     vi.advanceTimersByTime(21000); expect(tracking.reconnecting()).toBe(true); expect(tracking.displayDistance()).toBe(distance);
   });
+  it('restarts a remote demo route after receiving the previous run at its endpoint',()=>{
+    const tracking=TestBed.inject(TrackingService); TestBed.tick();
+    const send=(point:readonly [number,number])=>{gps.set({resource:`booking:${id}`,fix:{type:'gps',lat:point[0],lng:point[1],accuracy:5,ts:Date.now(),receivedAt:Date.now(),simulated:true}});TestBed.tick();};
+    send(TUGUEGARAO_ROUTE[TUGUEGARAO_ROUTE.length-1]); vi.advanceTimersByTime(1000);
+    send(TUGUEGARAO_ROUTE[8]); vi.advanceTimersByTime(1000);
+    expect(tracking.routeReady()).toBe(true); expect(tracking.etaLabel()).toContain('Simulated route');
+    expect(tracking.route.project(tracking.sample(tracking.displayDistance()).point).distance).toBeLessThan(tracking.route.total-500);
+  });
+  it('ignores a delayed live routing response after the remote source switches to simulation',async()=>{
+    let resolve!: (response:Response)=>void;
+    const fetcher=vi.spyOn(globalThis,'fetch').mockReturnValue(new Promise((r)=>resolve=r));
+    const tracking=TestBed.inject(TrackingService); TestBed.tick();
+    gps.set({resource:`booking:${id}`,fix:{type:'gps',lat:17.613,lng:121.727,accuracy:5,ts:Date.now(),receivedAt:Date.now()}}); TestBed.tick();
+    const point=TUGUEGARAO_ROUTE[8]; gps.set({resource:`booking:${id}`,fix:{type:'gps',lat:point[0],lng:point[1],accuracy:5,ts:Date.now(),receivedAt:Date.now(),simulated:true}}); TestBed.tick();
+    resolve({ok:true,json:async()=>({routes:[{geometry:{coordinates:[[121.74,17.63],[121.75,17.64]]}}]})} as Response);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(tracking.route.points).toEqual(TUGUEGARAO_ROUTE); expect(tracking.routeReady()).toBe(true); fetcher.mockRestore();
+  });
   it('keeps GPS attached to an en-route job while a queued booking is selected',async()=>{
     user.set({ role:'PRO',isDemo:true }); travelBookings.set([order()]);
     TestBed.inject(TrackingService); TestBed.tick(); await Promise.resolve();

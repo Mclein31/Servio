@@ -79,8 +79,8 @@ export class TrackingService implements OnDestroy {
       if(o.status==='CANCELLED') return 'Booking cancelled';
       if(this.mode()==='sim') return `Simulated route · ${formatDistance(this.remainingM())}`;
       if(this.reconnecting()) return 'Reconnecting…';
+      if(this.live.gps()?.fix.simulated) return this.routeReady() ? `Simulated route · ${formatDistance(this.remainingM())}` : 'Simulated location · route unavailable';
       if(!this.routeReady()) return 'Live location · route unavailable';
-      if(this.live.gps()?.fix.simulated) return `Simulated route · ${formatDistance(this.remainingM())}`;
       return o.expectedArrivalAt?`Expected at ${new Date(o.expectedArrivalAt).toLocaleTimeString('en-PH',{ hour:'numeric',minute:'2-digit' })}`:'Live location';
     }
     return this.arrived()?'Your helper has arrived':`Arriving in ${this.etaMinutes()} min${this.etaMinutes()===1?'':'s'} (${formatDistance(this.remainingM())})`;
@@ -192,7 +192,12 @@ export class TrackingService implements OnDestroy {
       if(destination && !environment.production) void this.fetchRoute([fix.lat,fix.lng],destination,generation);
       this.routeReady.set(false);
     }
-    const projected=this.route.project([fix.lat,fix.lng],Math.max(0,this.latest().distance-30));
+    let projected=this.route.project([fix.lat,fix.lng],Math.max(0,this.latest().distance-30));
+    // A demo sender may replay from the start while the receiver still holds its previous last fix.
+    if(fix.simulated && environment.demo && projected.error>80) {
+      const replay=this.route.project([fix.lat,fix.lng]);
+      if(replay.error<=80 && replay.distance<this.latest().distance-30) { this.park(replay.distance); projected=replay; }
+    }
     if(projected.error<=Math.max(80,Math.min(fix.accuracy,150)) && this.roadGeometry) {
       this.routeReady.set(true);
       this.prev={ distance:this.displayDistance(),at:performance.now() };
@@ -205,7 +210,7 @@ export class TrackingService implements OnDestroy {
       if(!response.ok) return;
       const body=await response.json() as { routes?:{ geometry:{ coordinates:number[][] } }[] };
       const points=body.routes?.[0]?.geometry.coordinates;
-      if(generation!==this.generation || !points || points.length<2 || points.some((p)=>!Number.isFinite(p[0]) || !Number.isFinite(p[1]) || Math.abs(p[0])>180 || Math.abs(p[1])>90)) return;
+      if(generation!==this.generation || this.routeAttempt!==this.context().id || this.mode()!=='live' || !points || points.length<2 || points.some((p)=>!Number.isFinite(p[0]) || !Number.isFinite(p[1]) || Math.abs(p[0])>180 || Math.abs(p[1])>90)) return;
       this.roadGeometry=true; this.track.set(new RouteTrack(points.map((p)=>[p[1],p[0]] as Point),'geo')); this.park(0); this.routeReady.set(true);
       const latest=this.live.gps(); if(latest?.resource===`booking:${this.context().id}`) this.ingest(latest.fix);
     } catch { /* Keep the actual fix; never invent a street route after a router failure. */ }
