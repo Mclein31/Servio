@@ -23,7 +23,9 @@ ion-tab-button {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  width: 72px;
+  width: 100%;
+  max-width: 72px;
+  min-width: 54px;
   height: 52px;
   border-radius: 16px;
   transition: background-color 0.2s ease;
@@ -48,3 +50,22 @@ ion-tab-button.tab-selected .tab-pill {
     font-weight: 700;
   }
 }
+
+@media (max-width: 360px) {
+  .servio-tab-bar {
+    padding: 0 4px var(--ion-safe-area-bottom, 0px);
+  }
+
+  .tab-pill {
+    height: 48px;
+
+    ion-icon {
+      font-size: 20px;
+    }
+
+    ion-label {
+      font-size: 10px;
+    }
+  }
+}
+

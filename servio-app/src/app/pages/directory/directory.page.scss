@@ -12,11 +12,13 @@
   gap: 12px;
 }
 
-@media (max-width: 340px) {
+@media (max-width: 360px) {
   .grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
+
 
 .empty {
   display: grid;

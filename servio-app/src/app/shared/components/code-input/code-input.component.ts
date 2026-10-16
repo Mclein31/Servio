@@ -64,6 +64,20 @@ import {
     .large input { width: 64px; height: 72px; border-radius: 16px; font-size: 32px; }
     .error input { border-color: #EF4444; animation: shake 0.36s ease; }
     @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+    @media (max-width: 360px) {
+      .cells { gap: 6px; }
+      input { width: 42px; height: 50px; font-size: 20px; border-radius: 10px; }
+      .large { gap: 8px; }
+      .large input { width: 52px; height: 60px; font-size: 26px; }
+    }
+
+    @media (max-width: 330px) {
+      .cells { gap: 4px; }
+      input { width: 38px; height: 46px; font-size: 18px; border-radius: 8px; }
+      .large { gap: 6px; }
+      .large input { width: 46px; height: 54px; font-size: 22px; }
+    }
   `,
 })
 export class CodeInputComponent implements OnInit {

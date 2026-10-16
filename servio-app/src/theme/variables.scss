@@ -101,3 +101,12 @@
   --ion-color-medium-shade: #4B5563;
   --ion-color-medium-tint: #9CA3AF;
 }
+
+@media (max-width: 375px) {
+  :root {
+    --servio-gutter: 14px;
+    --servio-radius-hero: 20px;
+    --servio-radius-card: 16px;
+  }
+}
+
