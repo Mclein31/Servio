@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { env } from 'cloudflare:test';
+import { count, eq, sql } from 'drizzle-orm';
+import { connectDb } from '../src/db/client';
+import { loginCodes, users } from '../src/db/schema';
 import { MAX_CODE_ATTEMPTS } from '../src/routes/auth';
 import { api, hasDb, json, testEmail } from './helpers';
 
@@ -63,6 +67,52 @@ describe.runIf(hasDb)('email-code sign-in', () => {
     const fresh = lastCode();
     if (old !== fresh) expect((await api('/auth/verify-code', json({ email, code: old }))).status).toBe(401);
     expect((await api('/auth/verify-code', json({ email, code: fresh }))).status).toBe(200);
+  });
+
+  it('issues only one session when the same code is verified concurrently', async () => {
+    const email = testEmail('parallel-once');
+    await api('/auth/request-code', json({ email }));
+    const code = lastCode();
+    const results = await Promise.all([
+      api('/auth/verify-code', json({ email, code })), api('/auth/verify-code', json({ email, code })),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 401]);
+    const client = (await connectDb(env))!;
+    try {
+      const result = await client.db.execute(sql`select count(*)::int as n from sessions s join users u on u.id = s.user_id where u.email = ${email}`);
+      expect(result.rows[0]).toMatchObject({ n: 1 });
+    } finally { await client.close(); }
+  });
+
+  it('serializes concurrent wrong attempts and never accepts an exhausted code', async () => {
+    const email = testEmail('parallel-lock');
+    await api('/auth/request-code', json({ email }));
+    const right = lastCode();
+    const wrong = right === '000000' ? '111111' : '000000';
+    const results = await Promise.all(Array.from({ length: MAX_CODE_ATTEMPTS + 2 },
+      () => api('/auth/verify-code', json({ email, code: wrong }))));
+    expect(results.every((r) => r.status === 401)).toBe(true);
+    expect((await api('/auth/verify-code', json({ email, code: right }))).status).toBe(401);
+    const client = (await connectDb(env))!;
+    try {
+      const [row] = await client.db.select().from(loginCodes).where(eq(loginCodes.email, email));
+      expect(row?.attempts).toBe(MAX_CODE_ATTEMPTS);
+      const [created] = await client.db.select({ n: count() }).from(users).where(eq(users.email, email));
+      expect(created?.n).toBe(0);
+    } finally { await client.close(); }
+  });
+
+  it('does not create an account from an expired code', async () => {
+    const email = testEmail('expired');
+    await api('/auth/request-code', json({ email }));
+    const code = lastCode();
+    const client = (await connectDb(env))!;
+    try {
+      await client.db.update(loginCodes).set({ expiresAt: new Date(Date.now() - 1) }).where(eq(loginCodes.email, email));
+      expect((await api('/auth/verify-code', json({ email, code }))).status).toBe(401);
+      const [created] = await client.db.select({ n: count() }).from(users).where(eq(users.email, email));
+      expect(created?.n).toBe(0);
+    } finally { await client.close(); }
   });
 
   it('locks the code after too many wrong tries', async () => {

@@ -4,6 +4,12 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.22] — 2026-10-16
+### Added
+- Gmail SMTP local setup and real-account verification guide, owner-selected sender configuration, serialized OTP attempt/expiry/one-time checks and bounded SMTP cleanup.
+### Verified
+- API typecheck and 161 tests pass, including fake SMTP delivery/failure/timeout and concurrent code checks. Actual inbox delivery remains pending owner-configured credentials; no email was sent.
+
 ## [0.5.21] — 2026-10-16
 ### Added
 - Functional profile Edit: persisted name, optional PH mobile, photo upload/removal and signed current-avatar display. Reuses the profile setup design, prefills the account, preserves failed edits and keeps the sign-in email read-only.

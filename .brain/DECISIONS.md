@@ -261,3 +261,12 @@
 - **Decision:** Reuse the profile setup layout for profile editing. Save trimmed names, optional E.164 Philippine mobile numbers and a current avatar via authenticated PATCH /me. A photo must be a completed avatar-purpose upload owned by the same account; no KYC/evidence/other-owner key can be attached. Null removes the current avatar. Reject empty patches and unknown identity/role/demo fields. Keep the sign-in email read-only until a separate verified email-change flow is specified.
 - **UX:** Preserve edits on failure, disable save while uploading/saving, prefill the signed-in account and refresh signed avatar URLs on profile entry. The existing Edit button now opens this flow. First-time users still complete their profile after email verification. Phone numbers are contact details, not SMS-verified identity; all payment operations remain mock.
 - **Consequences:** No new secret/environment variable or schema migration. API tests cover persistence, owner/session/purpose validation, invalid identity changes and unchanged ledger rows; app tests cover prefill, validation, photo removal and failed-save recovery.
+
+
+## ADR-027: Gmail Delivery and Serialized Email-Code Verification
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (owner selected Gmail SMTP)
+- **Decision:** Deliver six-digit sign-in codes over Gmail implicit TLS on port 465 using an owner-configured App Password in the ignored local environment. Use SERVIO as sender display name and retain the prototype address footer. Missing credentials only permit the explicit development log fallback; production fails closed. Demo codes remain restricted to seeded demo identities.
+- **Security:** Serialize verification attempts and one-time consumption on the code row, rechecking expiry and attempt limits at consumption. SMTP closes on timeout and clears its timer after completion. Normal verified-email sign-in creates a customer account; no real payment integration is enabled.
+- **Verification:** Fake SMTP and database tests pass. Actual Gmail inbox delivery requires the owner's local credentials and inbox check in docs/EMAIL_SETUP.md; no credentials were inspected or messages sent during implementation.
