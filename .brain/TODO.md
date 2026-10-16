@@ -25,7 +25,7 @@
 **Implementation plan — Demo milestone (in required order)**
 - [x] A1: Demo flags and database-generated booking codes (`0002_demo_and_pros`); migrated dev/test and schema assertions pass.
 - [x] A3: Booking creation, mock escrow hold, idempotency (including concurrent retries and rollback tests).
-- [ ] A4: Status machine and participant reads (owner fee and no-show policy received; implementation next).
+- [x] A4: Authorized status machine, participant reads/pagination, compensating cancellation fees/refunds, Pro strikes and server no-show deadlines.
 - [ ] A5: Catalog add-on quotes and approval holds.
 - [ ] A6: Authorized R2 uploads.
 - [ ] A7: Completion PIN and escrow release.
@@ -40,7 +40,8 @@
 - [ ] D3: Reset and backup.
 - [ ] B2: OrderRoom live sockets.
 - [ ] B3: Real GPS and simulator fallback.
-- [ ] D4: Demo checklist.
+- [ ] F1 (demo-required): Android packaging, permissions, icons/splash and dev/demo LAN access; iPhone Personal Team install instructions.
+- [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
 - [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sophia (tutor role), and an admin.

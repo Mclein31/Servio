@@ -29,6 +29,13 @@
       "when": 1792112890491,
       "tag": "0003_booking_idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792113596815,
+      "tag": "0004_booking_status_and_deadlines",
+      "breakpoints": true
     }
   ]
 }

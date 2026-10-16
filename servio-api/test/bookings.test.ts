@@ -81,7 +81,7 @@ describe.runIf(hasDb)('booking creation and mock escrow (A3)', () => {
 
   it('rejects reuse of the key for a changed request and scopes keys per customer', async () => {
     const first = await (await create()).json() as CreatedBooking;
-    expect((await create({ ...bookingInput, schedule: 'Tomorrow morning' })).status).toBe(409);
+    expect((await create({ ...bookingInput, paymentMethod: 'CARD' })).status).toBe(409);
     const [other] = await client.db.insert(users).values({ email: testEmail('book-other') }).returning();
     const session = await issueSession(client.db, other!.id, undefined);
     const second = await create(bookingInput, { ...headers, Authorization: `Bearer ${session.accessToken}` });
