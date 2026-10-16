@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { OrderService } from './core/services/order.service';
 import { Routes } from '@angular/router';
-import { authGuard, entryGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, entryGuard, guestGuard, proGuard } from './core/guards/auth.guard';
 
 const loadOrder = async (route: { paramMap: { get(name: string): string | null } }) => {
   const orders = inject(OrderService);
@@ -40,14 +40,14 @@ export const routes: Routes = [
   { path: 'order/:id/review', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/rating-tip-modal/rating-tip-modal.component').then((m) => m.RatingTipModalComponent) },
 
   // Servio Pro
-  { path: 'pro', canActivate: [authGuard], loadComponent: () => import('./pages/pro/dashboard/dashboard.page').then((m) => m.ProDashboardPage) },
-  { path: 'pro/radar-alert', canActivate: [authGuard], loadComponent: () => import('./pages/pro/radar-alert/radar-alert.page').then((m) => m.RadarAlertPage) },
+  { path: 'pro', canActivate: [proGuard], loadComponent: () => import('./pages/pro/dashboard/dashboard.page').then((m) => m.ProDashboardPage) },
+  { path: 'pro/radar-alert', canActivate: [proGuard], loadComponent: () => import('./pages/pro/radar-alert/radar-alert.page').then((m) => m.RadarAlertPage) },
   { path: 'pro/radar', redirectTo: 'pro/radar-alert' },
-  { path: 'pro/order/:id/execute', canActivate: [authGuard], loadComponent: () => import('./pages/pro/job-execute/job-execute.page').then((m) => m.JobExecutePage) },
-  { path: 'pro/order/:id/add-quote', canActivate: [authGuard], loadComponent: () => import('./pages/pro/add-quote/add-quote.page').then((m) => m.AddQuotePage) },
+  { path: 'pro/order/:id/execute', canActivate: [proGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/pro/job-execute/job-execute.page').then((m) => m.JobExecutePage) },
+  { path: 'pro/order/:id/add-quote', canActivate: [proGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/pro/add-quote/add-quote.page').then((m) => m.AddQuotePage) },
   { path: 'pro/order/:id/quote', redirectTo: 'pro/order/:id/add-quote' },
-  { path: 'pro/order/:id/verify-otp', canActivate: [authGuard], loadComponent: () => import('./pages/pro/verify-otp/verify-otp.page').then((m) => m.ProVerifyOtpPage) },
-  { path: 'pro/wallet', canActivate: [authGuard], loadComponent: () => import('./pages/pro/wallet/wallet.page').then((m) => m.WalletPage) },
+  { path: 'pro/order/:id/verify-otp', canActivate: [proGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/pro/verify-otp/verify-otp.page').then((m) => m.ProVerifyOtpPage) },
+  { path: 'pro/wallet', canActivate: [proGuard], loadComponent: () => import('./pages/pro/wallet/wallet.page').then((m) => m.WalletPage) },
 
   { path: '**', redirectTo: '' },
 ];

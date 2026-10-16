@@ -16,6 +16,8 @@ export class WalletPage {
   readonly wallet = inject(WalletService);
   private readonly toasts = inject(ToastController);
 
+  readonly saving = signal(false);
+  ionViewWillEnter(): void { void this.wallet.refresh(); }
   readonly minCashout = MIN_CASHOUT_PHP;
   readonly fee = INSTAPAY_FEE_PHP;
   readonly cashoutOpen = signal(false);
@@ -44,11 +46,14 @@ export class WalletPage {
   }
 
   async confirm(): Promise<void> {
-    const err = this.wallet.cashout(this.amount(), this.gcash());
+    if (this.saving()) return;
+    this.saving.set(true);
+    const err = await this.wallet.cashout(this.amount(), this.gcash());
+    this.saving.set(false);
     this.error.set(err);
     if (err) return;
     this.cashoutOpen.set(false);
-    const t = await this.toasts.create({ message: `₱${this.amount().toLocaleString('en-PH', { minimumFractionDigits: 2 })} sent to GCash via InstaPay.`, duration: 2200, position: 'top', color: 'success' });
+    const t = await this.toasts.create({ message: `₱${this.amount().toLocaleString('en-PH', { minimumFractionDigits: 2 })} mock cashout recorded for GCash.`, duration: 2200, position: 'top', color: 'success' });
     await t.present();
   }
 }

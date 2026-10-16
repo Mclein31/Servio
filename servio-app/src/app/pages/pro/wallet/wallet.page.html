@@ -9,6 +9,7 @@
 
 <ion-content class="servio-page">
   <div class="wrap">
+    @if (wallet.error()) { <p role="alert">{{ wallet.error() }} <button class="text-btn" (click)="wallet.refresh()">Retry</button></p> }
     <section class="balance">
       <span class="eyebrow">Available Balance</span>
       <strong class="big price">{{ wallet.availablePhp() | php }}</strong>
@@ -23,7 +24,7 @@
 
     <div class="head">
       <h2>Transaction Ledger</h2>
-      <span class="servio-caption">Credits post only after a verified completion PIN</span>
+      <span class="servio-caption">Service earnings post after a verified completion PIN</span>
     </div>
 
     <ul class="ledger servio-card">
@@ -40,6 +41,7 @@
         </li>
       }
     </ul>
+    @if (wallet.nextCursor()) { <button class="text-btn" (click)="wallet.refresh(true)">Load older entries</button> }
   </div>
 
   <ion-modal [isOpen]="cashoutOpen()" (didDismiss)="cashoutOpen.set(false)" [initialBreakpoint]="0.78" [breakpoints]="[0, 0.78]" class="servio-sheet">
@@ -66,10 +68,10 @@
           </span>
         </label>
 
-        <p class="note"><ion-icon name="flash" aria-hidden="true"></ion-icon>Transferred in real-time via InstaPay (₱{{ fee }} transfer fee).</p>
+        <p class="note"><ion-icon name="flash" aria-hidden="true"></ion-icon>Demo mock payout (₱{{ fee }} transfer fee).</p>
         @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
 
-        <button type="button" class="pill-btn block" [disabled]="!amountValid() || !numberValid()" (click)="confirm()">
+        <button type="button" class="pill-btn block" [disabled]="!amountValid() || !numberValid() || saving()" (click)="confirm()">
           Cash out <span class="price">{{ amount() | php }}</span>
         </button>
       </div>

@@ -9,6 +9,7 @@
 
 <ion-content class="servio-page">
   <div class="wrap">
+    @if (error()) { <p role="alert">{{ error() }}</p> }
     <p class="lead">Show the issue, pick the standard part. The customer approves every extra charge before you start.</p>
 
     <!-- Camera capture -->
@@ -28,7 +29,7 @@
           <strong>Capture damaged part</strong>
           <span>Clear, well-lit photo of the defect</span>
         </button>
-        <button type="button" class="text-btn sample" (click)="useSample()">Use sample evidence photo (demo)</button>
+        @if (demo) { <button type="button" class="text-btn sample" (click)="useSample()">Use sample evidence photo (demo)</button> }
       }
     </section>
 
@@ -37,11 +38,11 @@
       <span class="label">Standardized part (approved catalog)</span>
       <ion-select class="select" interface="action-sheet" [value]="partId()" (ionChange)="partId.set($any($event).detail.value)"
         [interfaceOptions]="{ header: 'Approved parts catalog' }" aria-label="Standardized part">
-        @for (p of catalog; track p.id) {
+        @for (p of catalog(); track p.id) {
           <ion-select-option [value]="p.id">{{ optionLabel(p.name, p.pricePhp) }}</ion-select-option>
         }
       </ion-select>
-      <span class="hint">{{ part().detail }}</span>
+      <span class="hint">{{ part()?.detail }}</span>
     </label>
 
     <label class="field">

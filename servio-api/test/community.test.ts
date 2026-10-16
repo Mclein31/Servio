@@ -90,6 +90,17 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
     expect((await postMessage({ body: 'Too late' })).status).toBe(409);
   });
 
+  it('persists a two-way customer/Pro conversation across independent sessions without moving money', async () => {
+    const before = await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id));
+    expect((await postMessage({ body: 'Please meet at the entrance.' }, f.headers.customer)).status).toBe(201);
+    const proRead = await (await api(`/bookings/${f.booking.id}/messages`, { headers: f.headers.pro })).json() as { messages: { body: string; senderId: string | null }[] };
+    expect(proRead.messages).toContainEqual(expect.objectContaining({ body: 'Please meet at the entrance.', senderId: f.customer.id }));
+    expect((await postMessage({ body: 'Understood, I am on my way.' }, f.headers.pro)).status).toBe(201);
+    const customerRead = await (await api(`/bookings/${f.booking.id}/messages`, { headers: f.headers.customer })).json() as { messages: { body: string; senderId: string | null }[] };
+    expect(customerRead.messages).toContainEqual(expect.objectContaining({ body: 'Understood, I am on my way.', senderId: f.pro.id }));
+    expect(await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id))).toEqual(before);
+  });
+
   it('supports owned photo chat and never repurposes KYC or another user’s file', async () => {
     expect((await postMessage({ photoKey: f.evidenceKey }, f.headers.pro)).status).toBe(201);
     expect((await postMessage({ photoKey: f.evidenceKey })).status).toBe(404);

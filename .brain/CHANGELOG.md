@@ -4,6 +4,16 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.13] — 2026-10-16
+### Added
+- C4: API-backed Pro availability, offer radar/acceptance, job status/cancellation, owned photo evidence/add-on quotes, customer PIN completion, ledger wallet/pagination and mock GCash cashout. Pro routes require a Pro account; chat shows the correct peer and both parties' actual messages.
+- Minimal A2/B1 demo dependency: foreground dispatch heartbeat, fresh qualified nearby Pros, one 60-second offer at a time, acceptance locks, decline/expiry chain and balanced refund on exhaustion. Demo and non-demo pools remain separate (ADR-018).
+- Session rejection stops foreground work; switching offline/live modes cannot persist live PINs or copy server balances into mock state. Completion receipt distinguishes the Pro's 85% from platform/trust fees; illustrative QR and sample evidence controls are restricted appropriately.
+### Verified
+- App build/lint and 31 tests pass with zero warnings; API typecheck and 132 tests pass, including dispatch auth/validation/privacy, concurrent acceptance, stale/offline/unapproved/unqualified/future/distant exclusions, expiry/refund balance, two-way chat and server-owned wallet/PIN behavior.
+- Two independent browser accounts: customer → Pro message, Pro → customer reply, reload persistence; booking → Pro status → local R2 evidence PUT → customer ₱350 approval → PIN → Pro ₱1,232.50 / platform ₱267.50 / escrow zero → ₱100 tip → ₱500 mock cashout + ₱15 fee, leaving ₱817.50. Live radar also accepted an unassigned job; Pro cancellation refunded it and recorded a strike. Every local ledger transaction remains balanced.
+- Temporary `demo.*.verify@servio.test` accounts/rows are explicitly demo data for local validation. D1/D3 provide the presentation baseline/reset. Physical GPS, camera capture and phone installation remain for B3/F1/D4.
+
 ## [0.5.12] — 2026-10-16
 ### Added
 - C3: API catalog/directory/bulletin and posting, stable-key checkout with scheduled timestamps, participant booking/history, customer-only PIN, add-on approval, cancellation, review/100% tip submission and persisted photo/text chat. Live screens use API snapshots and identity; offline content remains separately usable.

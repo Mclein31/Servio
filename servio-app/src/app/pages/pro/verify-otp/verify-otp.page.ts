@@ -20,6 +20,9 @@ export class ProVerifyOtpPage implements AfterViewInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
 
+  readonly saving = signal(false);
+  readonly message = signal('');
+  readonly locked = signal(false);
   readonly pin = signal('');
   readonly error = signal(false);
   readonly scanning = signal(false);
@@ -33,10 +36,12 @@ export class ProVerifyOtpPage implements AfterViewInit {
     this.location.back();
   }
 
-  submit(): void {
-    if (this.pin().length !== 4) return;
+  async submit(): Promise<void> {
+    if (this.pin().length !== 4 || this.saving() || this.locked()) return;
+    this.saving.set(true); this.message.set('');
+    try {
     const payout = this.orders.proPayoutPhp();
-    if (this.orders.verifyCompletionPin(this.pin())) {
+    if (await this.orders.complete(this.pin())) {
       navigator.vibrate?.([20, 40, 20]);
       this.credited.set(payout);
     } else {
@@ -44,10 +49,13 @@ export class ProVerifyOtpPage implements AfterViewInit {
       setTimeout(() => this.error.set(false), 400);
       this.codeInput?.clear();
     }
+    } catch (error) { this.error.set(true); this.codeInput?.clear(); this.message.set(error instanceof Error ? error.message : 'Could not verify the PIN.'); if ((error as { status?: number }).status === 423) this.locked.set(true); }
+    finally { this.saving.set(false); }
   }
 
   /** Simulated QR scan: a real build would use a barcode-scanner plugin; the token carries the PIN. */
   scan(): void {
+    if (!this.orders.api.settings.useMockApi()) return;
     this.scanning.set(true);
     setTimeout(() => {
       this.scanning.set(false);

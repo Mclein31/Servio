@@ -10,6 +10,7 @@
 
 <ion-content class="servio-page">
   <div class="wrap">
+    @if (error()) { <p role="alert">{{ error() }}</p> }
     <section class="servio-card panel">
       <div class="customer">
         <app-avatar [src]="o.customerAvatarUrl" [name]="o.customerName" [size]="48"></app-avatar>
@@ -72,19 +73,21 @@
       <p class="servio-caption center">Add-ons unlock once you’re on site.</p>
     }
 
+    @if (orders.isActive()) { <button type="button" class="text-btn" [disabled]="saving()" (click)="cancel()">Cancel job</button> }
+    @if (o.escrow === 'REFUNDED') { <p>Booking cancelled. The customer refund is recorded.</p> } @else {
     <section class="payout">
       <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
       <div>
         <strong>Guaranteed payout <span class="price">{{ orders.proPayoutPhp() | php }}</span></strong>
         <span>Held in escrow. Released only after the customer’s 4-digit PIN.</span>
       </div>
-    </section>
+    </section> }
   </div>
 </ion-content>
 
 <ion-footer class="ion-no-border">
   <div class="servio-action-bar">
-    <button type="button" class="pill-btn block" [class.success]="o.status === 'IN_PROGRESS'" (click)="advance()">{{ action().label }}</button>
+    <button type="button" class="pill-btn block" [class.success]="o.status === 'IN_PROGRESS'" [disabled]="saving()" (click)="advance()">{{ action().label }}</button>
     <p class="hint">{{ action().hint }}</p>
   </div>
 </ion-footer>

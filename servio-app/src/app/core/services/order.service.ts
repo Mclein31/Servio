@@ -49,7 +49,9 @@ export class OrderService {
   readonly history = computed(() => this.api.settings.useMockApi() ? PAST_ORDERS : this.liveHistory());
   private revision = 0;
   private polling = false;
+  private identity = '';
 
+  private readonly stateMode = signal(this.api.settings.useMockApi());
   private readonly state = signal<Order>(this.loadOrder());
   readonly order = this.state.asReadonly();
 
@@ -86,13 +88,16 @@ export class OrderService {
   readonly isActive = computed(() => this.hasOrder() && !['COMPLETED', 'CANCELLED'].includes(this.state().status));
 
   constructor() {
-    effect(() => { if (this.api.settings.useMockApi()) saveDemoState('order', this.state()); });
+    effect(() => { if (this.api.settings.useMockApi() && this.stateMode()) saveDemoState('order', this.state()); });
     effect((cleanup) => {
       const user = this.auth.user();
       const mock = this.api.settings.useMockApi();
-      this.revision++;
-      if (mock) { this.state.set(this.loadOrder()); return; }
-      this.state.set(this.emptyOrder()); this.liveHistory.set([]);
+      const identity = `${mock}:${user?.id ?? ''}:${user?.role ?? ''}`;
+      if (this.identity !== identity) {
+        this.identity = identity; this.revision++; this.stateMode.set(mock);
+        this.state.set(mock ? this.loadOrder() : this.emptyOrder()); this.liveHistory.set([]);
+      }
+      if (mock) return;
       if (!user) return;
       const refresh = async () => {
         if (this.polling) return;
@@ -227,6 +232,22 @@ export class OrderService {
       if (revision === this.revision) { this.state.set(order); this.error.set(''); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
     finally { this.loading.set(false); }
+  }
+
+  async advance(status: OrderStatus): Promise<void> {
+    if (this.api.settings.useMockApi()) { this.setStatus(status); return; }
+    await this.api.post(`/bookings/${this.state().id}/status`, { to: status }); await this.load(this.state().id);
+  }
+  async quote(sku: AddonSku, photoUrl: string, note: string): Promise<void> {
+    if (this.api.settings.useMockApi()) { this.pushAddonQuote(sku, photoUrl, note); return; }
+    const blob = await (await fetch(photoUrl)).blob();
+    const photoKey = await this.api.upload(blob, 'addon_evidence');
+    await this.api.post(`/bookings/${this.state().id}/addons`, { addonSkuId: sku.id, photoKey, note }); await this.load(this.state().id);
+  }
+  async complete(pin: string): Promise<boolean> {
+    if (this.api.settings.useMockApi()) return this.verifyCompletionPin(pin);
+    await this.api.post(`/bookings/${this.state().id}/verify-pin`, { pin }); await this.load(this.state().id); await this.auth.refreshProfile(true); await this.wallet.refresh();
+    return this.state().escrow === 'COMPLETED';
   }
 
   async cancel(reason: string): Promise<void> {

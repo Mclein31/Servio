@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
 import { ApiService } from '../api/api.service';
 import { SessionService } from '../api/session.service';
@@ -33,6 +33,12 @@ export class AuthService {
   readonly needsProfile = computed(() => !this.user()?.fullName);
   private loadedToken?: string;
   private profileLoading?: { token: string; promise: Promise<void> };
+
+  constructor() {
+    effect(() => {
+      if (!this.sessions.token()) { this.user.set(null); this.pro.set(null); this.loadedToken = undefined; }
+    });
+  }
 
   async hasSeenOnboarding(): Promise<boolean> { return (await Preferences.get({ key: ONBOARDING_KEY })).value === 'true'; }
   async markOnboardingSeen(): Promise<void> { await Preferences.set({ key: ONBOARDING_KEY, value: 'true' }); }
@@ -92,7 +98,11 @@ export class AuthService {
   }
   async updateProfile(fullName: string, phoneNumber: string | null): Promise<void> {
     if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber } : u);
-    else this.user.set((await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber })).me);
+    else {
+      const token = this.sessions.token();
+      const result = await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber });
+      if (this.sessions.token() === token) this.user.set(result.me);
+    }
   }
   landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
 

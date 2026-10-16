@@ -35,6 +35,8 @@ describe('email-code auth', () => {
     await auth.updateProfile('Example Person', '+639171234567');
     expect(api.patch).toHaveBeenCalledWith('/me', { fullName: 'Example Person', phoneNumber: '+639171234567' });
     expect(auth.landingPath()).toBe('/tabs/home');
+    token.set(null); TestBed.tick();
+    expect(auth.user()).toBeNull(); expect(auth.pro()).toBeNull();
   });
 
   it('routes an existing Pro to the Pro app and does not treat a mock token as live auth', async () => {

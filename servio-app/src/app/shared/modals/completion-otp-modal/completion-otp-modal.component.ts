@@ -44,7 +44,7 @@ function qrCells(seed: string): boolean[] {
             <div class="released">
               <span class="check"><ion-icon name="checkmark" aria-hidden="true"></ion-icon></span>
               <h1 class="sheet-title">Job complete</h1>
-              <p><span class="price">{{ orders.escrowTotalPhp() | php }}</span> was released from escrow to {{ o.helper.name }}.</p>
+              <p><span class="price">{{ orders.escrowTotalPhp() | php }}</span> was settled from escrow. {{ o.helper.name }} received <span class="price">{{ orders.proPayoutPhp() | php }}</span>; the remainder covers the platform share and trust fee.</p>
               <a class="pill-btn block" [routerLink]="['/order', o.id, 'review']">Rate & Tip {{ o.helper.name }}</a>
             </div>
           } @else {
@@ -58,9 +58,10 @@ function qrCells(seed: string): boolean[] {
                     <span class="digit" [style.--i]="$index" aria-hidden="true">{{ d }}</span>
                   }
                 </div>
-                <button type="button" class="qr-toggle" (click)="showQr.set(!showQr())" [attr.aria-expanded]="showQr()">
+                @if (orders.api.settings.useMockApi()) { <button type="button" class="qr-toggle" (click)="showQr.set(!showQr())" [attr.aria-expanded]="showQr()">
                   <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>{{ showQr() ? 'Hide QR code' : 'Show QR code instead' }}
                 </button>
+                }
                 @if (showQr()) {
                   <svg class="qr" viewBox="0 0 21 21" shape-rendering="crispEdges" role="img" aria-label="Completion QR code (sample)">
                     @for (on of qr; track $index) {

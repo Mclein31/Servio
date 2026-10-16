@@ -18,16 +18,17 @@
       <app-code-input [length]="4" size="large" [error]="error()" label="Customer completion PIN"
         (codeChange)="pin.set($event)" (completed)="pin.set($event)"></app-code-input>
       @if (error()) {
-        <p class="err" role="alert">Incorrect PIN. Ask the customer to check their SERVIO app.</p>
+        <p class="err" role="alert">{{ message() || 'Incorrect PIN. Ask the customer to check their SERVIO app.' }}</p>
       }
 
-      <button type="button" class="pill-btn-outline block scan" (click)="scan()" [disabled]="scanning()">
+      @if (orders.api.settings.useMockApi()) { <button type="button" class="pill-btn-outline block scan" (click)="scan()" [disabled]="scanning()">
         <ion-icon name="scan-outline" aria-hidden="true"></ion-icon> {{ scanning() ? 'Scanning…' : 'Scan Customer QR Code' }}
       </button>
       @if (scanning()) {
         <div class="scanner" aria-hidden="true"><span class="beam"></span></div>
       }
 
+      }
       <div class="escrow">
         <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
         <span><strong class="price">{{ orders.proPayoutPhp() | php }}</strong> is held in escrow and released the moment the PIN matches.</span>
@@ -49,7 +50,7 @@
 @if (credited() === null) {
   <ion-footer class="ion-no-border">
     <div class="servio-action-bar">
-      <button type="button" class="pill-btn block success" [disabled]="pin().length !== 4" (click)="submit()">Verify PIN & Release Funds</button>
+      <button type="button" class="pill-btn block success" [disabled]="pin().length !== 4 || saving() || locked()" (click)="submit()">Verify PIN & Release Funds</button>
     </div>
   </ion-footer>
 }

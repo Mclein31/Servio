@@ -188,7 +188,7 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 
 **C3. Customer flows** — Home/Directory/Bulletin/Checkout/Tracking/Chat/Add-on/Completion/Review call the API (A3–A9). Prices from API centavos ÷ 100 into existing pipes. Keep all UI.
 
-**C4. Pro flows** — Dashboard (availability toggle → A2), Radar (dispatch offer from push/WebSocket → B1), Job execute (A4), Add-quote (camera → presign → R2 PUT → A5), Verify PIN (A7), Wallet/Cashout (A8). `DispatchAlertService` unchanged.
+**C4. Pro flows** — Demo dependency implemented with approved availability and foreground `POST /pro/dispatch` offer maintenance (ADR-018); B2 supplies socket events. Dashboard (availability toggle → A2), Radar (dispatch offer from push/WebSocket → B1), Job execute (A4), Add-quote (camera → presign → R2 PUT → A5), Verify PIN (A7), Wallet/Cashout (A8). `DispatchAlertService` unchanged.
 
 **C5. Role switching** — Profile "Switch to Servio Pro" goes to `/pro/apply` flow if not a Pro yet, else `/pro`.
 

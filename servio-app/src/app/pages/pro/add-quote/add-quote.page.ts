@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { IonContent, IonFooter, IonHeader, IonIcon, IonSelect, IonSelectOption, IonSpinner, IonTitle, IonToolbar, ToastController } from '@ionic/angular';
-import { ADDON_CATALOG } from '../../../core/data/mock-data';
+import { CommunityService } from '../../../core/services/community.service';
 import { OrderService } from '../../../core/services/order.service';
+import { AddonSku } from '../../../shared/models/domain.models';
 import { PhpPipe } from '../../../shared/pipes/php.pipe';
 import { formatPhp, splitPayout } from '../../../shared/utils/money';
 
@@ -23,16 +25,21 @@ export class AddQuotePage {
   private readonly location = inject(Location);
   private readonly toasts = inject(ToastController);
 
-  readonly catalog = ADDON_CATALOG;
-  readonly partId = signal(ADDON_CATALOG[0].id);
+  readonly community = inject(CommunityService);
+  readonly catalog = this.community.addons;
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly demo = environment.demo;
+  async ionViewWillEnter(): Promise<void> { try { await this.community.catalog(); this.partId.set(this.catalog()[0]?.id ?? ''); } catch { this.error.set('Could not load the add-on catalog.'); } }
+  readonly partId = signal('');
   readonly photo = signal<string | null>(null);
   readonly capturing = signal(false);
   readonly note = signal('Exposed drain hose is cracked and causing wall moisture.');
 
-  readonly part = computed(() => this.catalog.find((p) => p.id === this.partId())!);
+  readonly part = computed<AddonSku | null>(() => this.catalog().find((p) => p.id === this.partId()) ?? this.catalog()[0] ?? null);
   /** 85% / 15% split of the add-on (e.g. ₱350 → ₱297.50 Pro / ₱52.50 platform). */
-  readonly split = computed(() => splitPayout(this.part().pricePhp));
-  readonly canSubmit = computed(() => !!this.photo() && this.note().trim().length >= 10);
+  readonly split = computed(() => splitPayout(this.part()?.pricePhp ?? 0));
+  readonly canSubmit = computed(() => !!this.photo() && !!this.part() && this.note().trim().length >= 10 && !this.saving());
 
   optionLabel(name: string, price: number): string {
     return `${name} — ${formatPhp(price)}`;
@@ -77,7 +84,10 @@ export class AddQuotePage {
   async submit(): Promise<void> {
     if (!this.canSubmit()) return;
     const o = this.orders.order();
-    this.orders.pushAddonQuote(this.part(), this.photo()!, this.note().trim());
+    this.saving.set(true); this.error.set('');
+    try { await this.orders.quote(this.part()!, this.photo()!, this.note().trim()); }
+    catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not send quote.'); return; }
+    finally { this.saving.set(false); }
     const t = await this.toasts.create({ message: `Quote sent to ${o.customerName}. Waiting for approval.`, duration: 2000, position: 'top', color: 'success' });
     await t.present();
     this.router.navigate(['/pro/order', o.id, 'execute'], { replaceUrl: true });

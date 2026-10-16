@@ -20,24 +20,25 @@
     <h1 id="radar-title">A nearby home needs your expertise.</h1>
 
     <section class="job" id="radar-desc">
-      <div class="row"><ion-icon name="construct-outline" aria-hidden="true"></ion-icon><div><span>Service SKU</span><strong>{{ o.sku.name }}</strong></div></div>
-      <div class="row"><ion-icon name="location-outline" aria-hidden="true"></ion-icon><div><span>Location</span><strong>Barangay Ugac Norte, Tuguegarao City (1.4 km away)</strong></div></div>
-      <div class="row"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><div><span>Customer</span><strong>{{ o.customerName }}</strong></div></div>
+      <div class="row"><ion-icon name="construct-outline" aria-hidden="true"></ion-icon><div><span>Service SKU</span><strong>{{ title() }}</strong></div></div>
+      <div class="row"><ion-icon name="location-outline" aria-hidden="true"></ion-icon><div><span>Location</span><strong>{{ area() }}</strong></div></div>
+      <div class="row"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><div><span>Customer</span><strong>{{ pro.api.settings.useMockApi() ? o.customerName : 'Details shared after acceptance' }}</strong></div></div>
     </section>
 
     <section class="payout">
       <span class="label">Guaranteed Payout (85% Net)</span>
-      <strong class="value price">{{ orders.basePayout().proPhp | php }}</strong>
-      <span class="sub">Total Customer Escrow: <span class="price">{{ o.sku.pricePhp | php }}</span> · No bidding</span>
+      <strong class="value price">{{ payout() | php }}</strong>
+      <span class="sub">Total Customer Escrow: <span class="price">{{ total() | php }}</span> · No bidding</span>
     </section>
 
+    @if (error()) { <p role="alert">{{ error() }}</p> }
     <div class="actions">
       @if (!expired()) {
-        <button type="button" class="accept" (click)="accept()">Accept Job ({{ secondsLeft() }}s)</button>
-        <button type="button" class="decline" (click)="decline()">Decline</button>
+        <button type="button" class="accept" [disabled]="saving()" (click)="accept()">Accept Job ({{ secondsLeft() }}s)</button>
+        <button type="button" class="decline" [disabled]="saving()" (click)="decline()">Decline</button>
       } @else {
         <p class="expired">This request timed out and was offered to the next nearby Pro. Passing won't affect your rating.</p>
-        <button type="button" class="decline" (click)="decline()">Back to radar</button>
+        <button type="button" class="decline" [disabled]="saving()" (click)="decline()">Back to radar</button>
       }
     </div>
   </div>
