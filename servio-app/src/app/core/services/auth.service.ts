@@ -111,6 +111,52 @@ export class AuthService {
     if(this.sessions.token()===token && this.user()?.avatarKey===user.avatarKey) this.avatarUrl.set(url);
   }
 
+  async upgradeToPro(): Promise<void> {
+    if (this.settings.useMockApi()) {
+      this.user.update((u) => u ? { ...u, role: 'PRO' } : u);
+      this.pro.set({
+        userId: this.user()?.id ?? 'mock-customer',
+        isOnline: false,
+        kycStatus: 'APPROVED',
+        jobsDone: 0,
+        ratingAvg: '5.00',
+        ratingCount: 1,
+      });
+      return;
+    }
+    const token = this.sessions.token();
+    const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/upgrade-pro', {});
+    if (this.sessions.token() === token) {
+      this.user.set(result.me);
+      this.pro.set(result.pro);
+    }
+  }
+
+  async switchRole(role: 'CUSTOMER' | 'PRO'): Promise<void> {
+    if (this.settings.useMockApi()) {
+      this.user.update((u) => u ? { ...u, role } : u);
+      if (role === 'PRO') {
+        this.pro.update((p) => p ? { ...p, isOnline: false } : {
+          userId: this.user()?.id ?? 'mock-customer',
+          isOnline: false,
+          kycStatus: 'APPROVED',
+          jobsDone: 0,
+          ratingAvg: '5.00',
+          ratingCount: 1,
+        });
+      } else {
+        this.pro.update((p) => p ? { ...p, isOnline: false } : null);
+      }
+      return;
+    }
+    const token = this.sessions.token();
+    const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/switch-role', { role });
+    if (this.sessions.token() === token) {
+      this.user.set(result.me);
+      this.pro.set(result.pro);
+    }
+  }
+
   landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
 
   async clearLocal(): Promise<void> {

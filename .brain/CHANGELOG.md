@@ -2,7 +2,18 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
----
+## [0.5.30] — 2026-10-16
+### Added
+- Servio Pro onboarding and dual-persona mode switching across `servio-api` and `servio-app` (ADR-030).
+- `servio-api`: `POST /me/upgrade-pro` activates a customer account into an approved Pro, initializes `isOnline: false`, and batch links catalog SKUs. `POST /me/switch-role` enables toggling between `CUSTOMER` and `PRO` modes.
+- `servio-api`: Added active booking guard on `switch-role` rejecting exit to Customer mode when assigned to in-progress jobs (`ACCEPTED`, `EN_ROUTE`, `ARRIVED`, `IN_PROGRESS`) to protect escrow integrity. Protected staff accounts from role mutation.
+- `servio-api`: `GET /me` now returns `proProfiles` unconditionally when present, decoupling Pro standing from active mode.
+- `servio-app`: `ProfilePage` dynamically presents "Switch to Servio Pro" (direct mode toggle) for approved Pros in Customer mode, or "Become a Servio Pro" (onboarding modal) for non-pro customers. In Pro mode, displays "Servio Pro Dashboard" and "Switch to Customer Mode".
+### Verified
+- Automated code-reviewer subagent audit completed; all 9 prioritized findings addressed and verified.
+- `servio-app` unit tests: all 15 test files (53 tests) pass. Angular and API TypeScript checks pass with 0 errors.
+- `servio-api` deployed to production Cloudflare Worker (`https://servio-api.mcleinonza0531.workers.dev`).
+- Native iOS assets re-built and synchronized via `npm run native:production`.
 
 ## [0.5.29] — 2026-10-16
 ### Deployed

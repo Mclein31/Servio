@@ -76,4 +76,54 @@ describe('email-code auth', () => {
     await expect(auth.verifyOtp('person@example.test', '000000')).rejects.toThrow('Invalid code');
     expect(token()).toBeNull(); expect(sessions.set).not.toHaveBeenCalled();
   });
+
+  it('upgrades a customer to Pro and switches role via API and mock mode', async () => {
+    const auth = TestBed.inject(AuthService);
+    token.set('valid-token');
+    auth.user.set({ ...newUser, fullName: 'Test User' });
+    const approvedPro = { userId: 'customer-id', isOnline: false, kycStatus: 'APPROVED', jobsDone: 0, ratingAvg: '5.00', ratingCount: 1 };
+    api.post.mockResolvedValueOnce({
+      me: { ...newUser, fullName: 'Test User', role: 'PRO' },
+      pro: approvedPro,
+    });
+    await auth.upgradeToPro();
+    expect(api.post).toHaveBeenCalledWith('/me/upgrade-pro', {});
+    expect(auth.user()?.role).toBe('PRO');
+    expect(auth.pro()?.kycStatus).toBe('APPROVED');
+    expect(auth.pro()?.isOnline).toBe(false);
+
+    api.post.mockResolvedValueOnce({
+      me: { ...newUser, fullName: 'Test User', role: 'CUSTOMER' },
+      pro: { ...approvedPro, isOnline: false },
+    });
+    await auth.switchRole('CUSTOMER');
+    expect(api.post).toHaveBeenCalledWith('/me/switch-role', { role: 'CUSTOMER' });
+    expect(auth.user()?.role).toBe('CUSTOMER');
+    expect(auth.pro()?.kycStatus).toBe('APPROVED');
+    expect(auth.pro()?.isOnline).toBe(false);
+
+    api.post.mockResolvedValueOnce({
+      me: { ...newUser, fullName: 'Test User', role: 'PRO' },
+      pro: { ...approvedPro, isOnline: false },
+    });
+    await auth.switchRole('PRO');
+    expect(api.post).toHaveBeenCalledWith('/me/switch-role', { role: 'PRO' });
+    expect(auth.user()?.role).toBe('PRO');
+    expect(auth.pro()?.kycStatus).toBe('APPROVED');
+
+    // Test in mock mode
+    settings.useMockApi.set(true);
+    await auth.upgradeToPro();
+    expect(auth.user()?.role).toBe('PRO');
+    expect(auth.pro()?.kycStatus).toBe('APPROVED');
+    expect(auth.pro()?.isOnline).toBe(false);
+
+    await auth.switchRole('CUSTOMER');
+    expect(auth.user()?.role).toBe('CUSTOMER');
+    expect(auth.pro()?.isOnline).toBe(false);
+
+    await auth.switchRole('PRO');
+    expect(auth.user()?.role).toBe('PRO');
+    expect(auth.pro()?.isOnline).toBe(false);
+  });
 });

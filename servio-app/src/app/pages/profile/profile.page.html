@@ -62,7 +62,7 @@
   }
   <div class="servio-section">
     <nav class="settings servio-card" aria-label="Account settings">
-      @for (item of settings; track item.label) {
+      @for (item of settings(); track item.label) {
         <button type="button" class="setting" (click)="open(item)">
           <span class="set-icon" [style.background]="item.tint" [style.color]="item.ink"><ion-icon [name]="item.icon" aria-hidden="true"></ion-icon></span>
           <span class="set-text">
