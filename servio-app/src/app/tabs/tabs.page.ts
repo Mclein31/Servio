@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular';
+import { Capacitor } from '@capacitor/core';
 
 interface TabItem {
   tab: string;
@@ -15,6 +16,8 @@ interface TabItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TabsPage {
+  readonly isIos = Capacitor.getPlatform() === 'ios';
+
   readonly tabs: TabItem[] = [
     { tab: 'home', label: 'Home', icon: 'home-outline' },
     { tab: 'directory', label: 'Directory', icon: 'grid-outline' },

@@ -1,5 +1,5 @@
 <ion-tabs>
-  <ion-tab-bar slot="bottom" class="servio-tab-bar">
+  <ion-tab-bar slot="bottom" class="servio-tab-bar" [class.is-ios]="isIos">
     @for (item of tabs; track item.tab) {
       <ion-tab-button [tab]="item.tab">
         <span class="tab-pill">
