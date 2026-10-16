@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.8] — 2026-10-16
+### Added
+- A8: Pro-only wallet with ledger-derived available balance, 85% pending base/add-on earnings excluding trust fee, earnings since Philippine midnight, and stable pagination across posted/pending rows.
+- Mock GCash cashout (₱500 minimum, ₱15 fee) checks balance while holding a per-Pro transaction lock, writes balanced payout/fee entries and a REQUESTED→PAID mock payout, and retains only the masked number (ADR-013).
+### Verified
+- API typecheck and wallet tests cover pending/completed balances, approved add-ons, locked concurrent cashouts, fee-aware insufficiency, auth/input validation, masked destinations, balanced entries, pagination and Philippine-day boundaries.
+
 ## [0.5.7] — 2026-10-16
 ### Added
 - A7: Customer-only HMAC-derived completion PIN, assigned-Pro verification in ARRIVED/IN_PROGRESS, constant-time compare and persisted five-attempt 423 lockout. PINs are neither stored nor logged.
