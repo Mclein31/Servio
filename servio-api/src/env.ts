@@ -20,6 +20,8 @@ export interface Bindings {
   R2_SECRET_ACCESS_KEY?: string;
   /** Sign-in code requests/attempts per IP and per email (wrangler.toml [[ratelimits]]). */
   AUTH_LIMITER?: RateLimit;
+  /** Six-digit fixed login code; existing demo accounts only, ignored in production. */
+  DEMO_LOGIN_CODE?: string;
   /** Outgoing email (sign-in codes). Gmail: smtp.gmail.com, 465, the address, and an App Password. */
   SMTP_HOST?: string;
   SMTP_PORT?: string;

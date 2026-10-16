@@ -199,3 +199,11 @@
 - **Wallet reconciliation:** Preserve required totals: available 864075, pending 187000, today 331625 centavos. Pending consists of the active AC job and a queued scheduled AC job, each with an 85% ₱935 share. Replace the unsupported AC Cleaning sample with the existing AC repair SKU. Existing fixed prices/trust fees and 85/15 math are unchanged. Historical opening credits represent prior earnings: 656450 centavos before the recorded history and 57375 credited today. UI labels say **Previous earnings**; internal markers identify the prototype seed. These are seed-only imported balances, not an API path to arbitrary credits.
 - **History:** Recorded catalog settlements/tips plus the opening credits and a ₱2,500 cashout + ₱15 fee reconcile exactly. Rating sums are integers; the two-decimal stored average rounds to the original one-decimal card ratings. Historical profile totals already include the seeded completions/reviews.
 - **Idempotency:** Stable record/transaction IDs preserve ongoing state on repeated seeding. No ledger/event rows are edited/deleted. Explicit order codes advance the normal sequence beyond all existing codes. Reset is a separate D3 operation.
+
+
+## ADR-020: Explicit Demo Login Capability
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (D2, owner-authorized no-email demo)
+- **Decision:** An optional six-digit DEMO_LOGIN_CODE enables reusable sign-in only for an existing active is_demo customer or Pro outside production. Never create an identity through this path, bypass disabled accounts, or admit ADMIN mobile sign-in. Request-code avoids SMTP and the hourly email-code quota for eligible demo accounts while retaining IP/email rate limits. Responses mention the configured code without returning its value. Normal single-use email codes remain valid for other accounts.
+- **Consequences:** Configure the code in ignored local environment, never committed source. Production ignores it even if configured accidentally. This capability does not affect completion PINs or money permissions.
