@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.7] — 2026-10-16
+### Added
+- A7: Customer-only HMAC-derived completion PIN, assigned-Pro verification in ARRIVED/IN_PROGRESS, constant-time compare and persisted five-attempt 423 lockout. PINs are neither stored nor logged.
+- One locked transaction captures mock escrow, completes the booking/event, credits aggregate service value at 85/15 (trust fee to platform), empties escrow and increments jobs_done. Concurrent/replayed PINs cannot release twice; failure rolls everything back. Completion event uses server clock after the booking lock (ADR-012).
+### Verified
+- Known independent HMAC vector, ₱1,100 + ₱350 → Pro ₱1,232.50 / platform ₱267.50 / escrow zero, auth/PIN visibility, input/state validation, committed lockout, capture rollback, missing secret, replay and concurrent release tests.
+
 ## [0.5.6] — 2026-10-16
 ### Added
 - A6: Owned upload intents (`0005_upload_ownership`, migrated dev/test), strict purpose/type/size/key validation, 15-minute R2 PUT signatures covering type+length, and authorized 60-second downloads. Add-on evidence must be the Pro's own fully uploaded image.

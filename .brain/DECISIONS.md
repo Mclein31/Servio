@@ -124,3 +124,12 @@
 - **Local demo:** `UPLOADS_MODE=local` signs key/method/type/length/expiry capabilities with domain-separated HMAC using PIN_SECRET and reads/writes the local Wrangler R2 binding. Production rejects local mode. The PUT stream is bounded to the declared length; URLs use the incoming API origin so LAN phones can reach them. `UPLOADS_MODE=r2` uses S3 presigning and the actual SERVIO bucket binding; no cloud resources are created by this task.
 - **Authorization:** Upload owners may read their files. Booking participants may read attached evidence/chat photos; bulletin photos are readable with the bulletin; approved Pro avatars are directory-visible. KYC files are owner-only until an audited admin path is implemented. No file purpose may be repurposed into chat/evidence to disclose KYC.
 - **Consequences:** Demo upload behavior is verifiable without cloud accounts; remote R2 operation remains a later integration check. The local bucket is persistent dev data, distinct from the Postgres ledger.
+
+
+## ADR-012: Derived PIN Encoding and Atomic Completion
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Decode the 32+ byte base64 PIN_SECRET, HMAC-SHA256 the booking UUID, interpret the full digest as an unsigned integer and use its first four decimal digits (left-pad short values). Never store or log a PIN; return it only in authenticated customer booking reads. Verify only for the assigned Pro in ARRIVED/IN_PROGRESS, using constant-time comparison. Wrong attempts commit before returning an error; the fifth locks with 423.
+- **Settlement:** Hold the booking row lock while checking state/attempts and escrow balance, capturing mock payment, appending one balanced release, marking completion, logging the event and incrementing jobs_done. Compute 85/15 on aggregate base + approved add-ons; platform receives its remainder plus the trust fee. Timestamp completion with server clock after acquiring the lock so concurrent lifecycle events remain ordered.
+- **Consequences:** Retries/concurrent PIN submissions cannot double-credit the Pro; capture failure rolls back settlement. Cancellation fees remain the explicit ADR-009 exception. Secret rotation changes active derived PINs and must be coordinated.

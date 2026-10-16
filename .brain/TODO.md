@@ -28,7 +28,7 @@
 - [x] A4: Authorized status machine, participant reads/pagination, compensating cancellation fees/refunds, Pro strikes and server no-show deadlines.
 - [x] A5: Assigned-Pro catalog add-on quotes, one pending quote, customer approval holds, decline and concurrency/rollback checks.
 - [x] A6: Owned upload metadata, R2 signed PUT/GET, local Wrangler demo adapter, participant access and add-on evidence ownership checks.
-- [ ] A7: Completion PIN and escrow release.
+- [x] A7: Customer-only HMAC PIN, committed five-attempt lockout, atomic completion/release and replay/concurrency guards.
 - [ ] A8: Wallet and cashout.
 - [ ] A9: Tips, reviews, bulletin, chat, directory.
 - [ ] C1: App API client.
