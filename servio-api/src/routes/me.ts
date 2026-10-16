@@ -36,7 +36,21 @@ me.patch('/me', validate('json', PatchProfile), async (c) => {
   return c.json({ me: user });
 });
 
-me.post('/me/upgrade-pro', validate('json', v.strictObject({})), async (c) => {
+const UpgradeProSchema = v.strictObject({
+  categoryId: v.optional(v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech'])),
+  headline: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(80))),
+});
+
+const DEFAULT_TRADE_HEADLINES: Record<string, string> = {
+  repairs: 'Repairs Specialist',
+  tutoring: 'Academic Tutor',
+  errands: 'Errands & Delivery',
+  beauty: 'Beauty & Care',
+  tech: 'Tech Specialist',
+};
+
+me.post('/me/upgrade-pro', validate('json', UpgradeProSchema), async (c) => {
+  const input = c.req.valid('json');
   const db = c.get('db');
   const userId = c.get('userId');
   const result = await db.transaction(async (tx) => {
@@ -49,12 +63,15 @@ me.post('/me/upgrade-pro', validate('json', v.strictObject({})), async (c) => {
       .where(eq(users.id, userId))
       .returning(profileFields);
 
+    const targetCategory = input.categoryId ?? 'repairs';
+    const headline = input.headline ?? DEFAULT_TRADE_HEADLINES[targetCategory] ?? 'Repairs Specialist';
+
     const [existingPro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
     let pro = existingPro;
     if (!existingPro) {
       const [newPro] = await tx.insert(proProfiles).values({
         userId,
-        headline: 'Community Service Professional',
+        headline,
         bio: 'Verified local service provider on SERVIO.',
         credentials: ['Verified Identity'],
         yearsExperience: 2,
@@ -66,22 +83,66 @@ me.post('/me/upgrade-pro', validate('json', v.strictObject({})), async (c) => {
         jobsDone: 0,
       }).returning();
       pro = newPro;
-    } else if (existingPro.kycStatus !== 'APPROVED') {
+    } else {
       const [updatedPro] = await tx.update(proProfiles)
-        .set({ kycStatus: 'APPROVED' })
+        .set({
+          kycStatus: 'APPROVED',
+          headline: input.headline ?? (existingPro.headline && existingPro.headline !== 'Community Service Professional' ? existingPro.headline : headline),
+        })
         .where(eq(proProfiles.userId, userId))
         .returning();
       pro = updatedPro;
     }
 
-    const allSkus = await tx.select({ id: serviceSkus.id }).from(serviceSkus).where(eq(serviceSkus.isActive, true));
-    if (allSkus.length > 0) {
+    // Assign only SKUs belonging to the chosen category
+    await tx.delete(proSkus).where(eq(proSkus.proId, userId));
+    const catSkus = await tx.select({ id: serviceSkus.id })
+      .from(serviceSkus)
+      .where(and(eq(serviceSkus.categoryId, targetCategory), eq(serviceSkus.isActive, true)));
+    if (catSkus.length > 0) {
       await tx.insert(proSkus)
-        .values(allSkus.map((sku) => ({ proId: userId, skuId: sku.id })))
+        .values(catSkus.map((sku) => ({ proId: userId, skuId: sku.id })))
         .onConflictDoNothing();
     }
 
     return { me: updatedUser!, pro: pro! };
+  });
+
+  return c.json(result);
+});
+
+const SetProTradeSchema = v.strictObject({
+  categoryId: v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech']),
+  headline: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(80))),
+});
+
+me.post('/me/pro-trade', validate('json', SetProTradeSchema), async (c) => {
+  const { categoryId, headline: customHeadline } = c.req.valid('json');
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const result = await db.transaction(async (tx) => {
+    const [current] = await tx.select(profileFields).from(users).where(eq(users.id, userId)).limit(1);
+    if (!current) throw new ApiError(404, 'NOT_FOUND', 'User not found.');
+    const [pro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
+    if (!pro) throw new ApiError(403, 'PRO_REQUIRED', 'Pro profile required.');
+
+    const headline = customHeadline ?? DEFAULT_TRADE_HEADLINES[categoryId] ?? 'Service Professional';
+    const [updatedPro] = await tx.update(proProfiles)
+      .set({ headline })
+      .where(eq(proProfiles.userId, userId))
+      .returning();
+
+    await tx.delete(proSkus).where(eq(proSkus.proId, userId));
+    const catSkus = await tx.select({ id: serviceSkus.id })
+      .from(serviceSkus)
+      .where(and(eq(serviceSkus.categoryId, categoryId), eq(serviceSkus.isActive, true)));
+    if (catSkus.length > 0) {
+      await tx.insert(proSkus)
+        .values(catSkus.map((sku) => ({ proId: userId, skuId: sku.id })))
+        .onConflictDoNothing();
+    }
+
+    return { me: current, pro: updatedPro! };
   });
 
   return c.json(result);
