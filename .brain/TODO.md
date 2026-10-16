@@ -32,7 +32,7 @@
 - [x] A8: Ledger-derived Pro wallet, pending earnings, Philippine daily income, mixed ledger pagination and locked mock GCash cashouts.
 - [x] A9: Completed-customer reviews and 100% tips, strict SKU bulletin, participant chat with system messages/photos, approved directory and filtered/ranked queries.
 - [x] C1: Fetch HttpClient, scoped auth/request IDs/error toasts, Preferences sessions, app API/mock flags and persisted demo LAN configuration.
-- [ ] C2: Email code auth screens.
+- [x] C2: Live email-code sign-in, profile setup, role landing, demo connection sheet and prototype legal links.
 - [ ] C3: Customer API flows.
 - [ ] C4: Pro API flows.
 - [ ] D1: Guarded demo seed.
@@ -44,8 +44,8 @@
 - [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
-- [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sophia (tutor role), and an admin.
-- [ ] Pro profiles: KYC approved, online, locations around Bel-Air / Poblacion, Makati; SKUs each Pro offers; ratings and jobs done matching the app.
+- [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sofia R. (separate tutor account), and an admin.
+- [ ] Pro profiles: KYC approved, online, locations around Centro / Ugac Norte, Tuguegarao City; SKUs each Pro offers; ratings and jobs done matching the app.
 - [ ] Active order **#SRV-8821** (Split AC Water Leak Repair, ₱1,100 + ₱50 fee) in `EN_ROUTE` with escrow `HOLD_AUTHORIZED`, its event timeline and the seeded chat thread.
 - [ ] Order history: #SRV-8807, #SRV-8790, #SRV-8772 (completed, with reviews and released escrow).
 - [ ] Bulletin feed: the 6 sample requests (Open / Urgent / Accepted / Completed).
@@ -79,7 +79,7 @@
 - [x] Gmail SMTP mailer over `cloudflare:sockets` (dev: code printed to log).
 - [x] `POST /auth/request-code`, `POST /auth/verify-code`, `POST /auth/sign-out`, `GET/PATCH /me` (hashed codes + sessions, rate limits, attempt lockout).
 - [ ] Profile endpoints (name, phone, avatar), Pro profile + KYC submission.
-- [ ] App: switch login screen from phone to email code; `AuthService` calls the API and stores the session token.
+- [x] App: email-code login, API session persistence and first sign-in profile setup (C2).
 
 **Step 3 — Booking, escrow & wallet**
 - [ ] Booking create (price snapshot, ₱50 fee, escrow hold ledger entries) + status transitions with event log.

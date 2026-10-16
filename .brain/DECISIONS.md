@@ -162,3 +162,11 @@
 - **Decision:** Use Angular HttpClient with Fetch and an interceptor scoped to the configured SERVIO API base. Store opaque bearer sessions in Capacitor Preferences via a separate SessionService to avoid an AuthService/interceptor dependency cycle. Add a request UUID and auth header only for the API; never transmit offline mock tokens or API bearer credentials to signed upload URLs. Map safe API error envelopes to Ionic toasts and clear rejected sessions.
 - **Configuration:** App environment declares apiUrl/useMockApi/demo. Development defaults to localhost:8787/api/v1; Android emulator may select 10.0.2.2 and physical devices the Mac's LAN IP. Demo builds can persist a validated base URL and offline mock selection in Preferences; production does not load overrides. The subsequent auth task exposes this in a small demo-only connection sheet. Production API URL remains unset until an owner-approved deployment exists.
 - **Consequences:** Existing mock mode remains usable offline. Live app callers use one typed Promise API wrapper; Blob uploads obtain a presign then PUT without API authentication headers. Tokens/connection settings never enter committed source.
+
+
+## ADR-016: Email Sign-In and Prototype Identity Setup
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Retain the existing login/code-input layouts while switching identity to normalized email and the API's single-use six-digit code. Persist the API session, load `/me`, collect a name and optional `+639…` mobile on first sign-in, and land Pros in their workspace. Offline mode alone accepts `123456`; live mode displays the API development note rather than a test-code hint. Ignore profile responses belonging to a cleared/replaced session.
+- **Demo/legal:** Login exposes demo-only API/LAN/offline connection settings. Short Terms, Privacy and Escrow pages use the owner's prototype label and placeholder business address; sign-in email footers use the same address. These pages are prototype copy pending legal review. No email provider credentials or fixed live demo code are introduced by C2.

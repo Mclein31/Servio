@@ -1,62 +1,107 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
+import { ApiService } from '../api/api.service';
+import { SessionService } from '../api/session.service';
+import { clearDemoState } from './demo-store';
 
+export { AUTH_TOKEN_KEY } from '../api/session.service';
 export const ONBOARDING_KEY = 'hasSeenOnboarding';
-export const AUTH_TOKEN_KEY = 'servioAuthToken';
 export const TEST_OTP = '123456';
-
-/** Philippine mobile: 10 national digits starting with 9 (e.g. 917 123 4567). */
 export const PH_MOBILE_PATTERN = /^9\d{9}$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** "9171234567" → "917 123 4567" (partial input formats progressively). */
 export function formatPhLocal(digits: string): string {
   const d = digits.replace(/\D/g, '').slice(0, 10);
   return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 10)].filter(Boolean).join(' ');
 }
+export interface AppUser {
+  id: string; email: string; role: 'CUSTOMER' | 'PRO' | 'ADMIN'; fullName: string | null; phoneNumber: string | null; avatarKey: string | null;
+}
+export interface AppPro {
+  userId: string; isOnline: boolean; kycStatus: string; jobsDone: number; ratingAvg: string; ratingCount: number;
+}
 
-/**
- * Mock passwordless auth. sendOtp/verifyOtp stand in for the SMS provider;
- * the token is a local placeholder, not a credential.
- */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  readonly pendingPhone = signal<string | null>(null);
-  private cachedToken: string | null | undefined;
+  private readonly api = inject(ApiService);
+  private readonly sessions = inject(SessionService);
+  readonly settings = this.api.settings;
+  readonly pendingEmail = signal<string | null>(null);
+  readonly devNote = signal<string | null>(null);
+  readonly user = signal<AppUser | null>(null);
+  readonly pro = signal<AppPro | null>(null);
+  readonly needsProfile = computed(() => !this.user()?.fullName);
+  private loadedToken?: string;
+  private profileLoading?: { token: string; promise: Promise<void> };
 
-  async hasSeenOnboarding(): Promise<boolean> {
-    const { value } = await Preferences.get({ key: ONBOARDING_KEY });
-    return value === 'true';
-  }
-
-  async markOnboardingSeen(): Promise<void> {
-    await Preferences.set({ key: ONBOARDING_KEY, value: 'true' });
-  }
+  async hasSeenOnboarding(): Promise<boolean> { return (await Preferences.get({ key: ONBOARDING_KEY })).value === 'true'; }
+  async markOnboardingSeen(): Promise<void> { await Preferences.set({ key: ONBOARDING_KEY, value: 'true' }); }
 
   async isAuthenticated(): Promise<boolean> {
-    if (this.cachedToken === undefined) {
-      this.cachedToken = (await Preferences.get({ key: AUTH_TOKEN_KEY })).value;
+    await this.settings.ready;
+    const token = await this.sessions.get();
+    if (!token || (!this.settings.useMockApi() && token.startsWith('mock.'))) return false;
+    try { await this.refreshProfile(); return this.sessions.token() === token && this.user() !== null; } catch { return false; }
+  }
+  async refreshProfile(force = false): Promise<void> {
+    const token = await this.sessions.get();
+    if (!token) { this.user.set(null); this.pro.set(null); return; }
+    if (!force && this.loadedToken === token && this.user()) return;
+    if (this.profileLoading?.token !== token) {
+      const promise = (async () => {
+        if (this.settings.useMockApi()) {
+          this.user.set({ id: 'mock-customer', email: this.pendingEmail() ?? 'demo.customer@servio.test', fullName: 'Sophia M.', role: 'CUSTOMER', phoneNumber: null, avatarKey: null });
+          this.pro.set(null);
+        } else {
+          const result = await this.api.get<{ me: AppUser; pro: AppPro | null }>('/me');
+          if (this.sessions.token() !== token) return;
+          this.user.set(result.me); this.pro.set(result.pro);
+        }
+        this.loadedToken = token;
+      })().finally(() => { if (this.profileLoading?.token === token) this.profileLoading = undefined; });
+      this.profileLoading = { token, promise };
     }
-    return !!this.cachedToken;
+    await this.profileLoading.promise;
   }
 
-  /** `phone` is E.164, e.g. +639171234567. */
-  async sendOtp(phone: string): Promise<void> {
-    this.pendingPhone.set(phone);
-    await new Promise((r) => setTimeout(r, 450)); // simulated SMS gateway latency
+  async sendOtp(email: string): Promise<void> {
+    await this.settings.ready;
+    const normalized = email.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(normalized)) throw new Error('Enter a valid email address.');
+    this.devNote.set(null);
+    if (!this.settings.useMockApi()) {
+      const result = await this.api.post<{ devNote?: string }>('/auth/request-code', { email: normalized });
+      this.devNote.set(result.devNote ?? null);
+    }
+    this.pendingEmail.set(normalized);
   }
-
-  /** Mock: accepts any 6 digits (test code 123456). */
-  async verifyOtp(phone: string, code: string): Promise<boolean> {
-    await new Promise((r) => setTimeout(r, 350));
+  async verifyOtp(email: string, code: string): Promise<boolean> {
     if (!/^\d{6}$/.test(code)) return false;
-    const token = `mock.${btoa(phone)}.${Date.now()}`;
-    await Preferences.set({ key: AUTH_TOKEN_KEY, value: token });
-    this.cachedToken = token;
+    await this.settings.ready;
+    if (this.settings.useMockApi()) {
+      if (code !== TEST_OTP) return false;
+      await this.sessions.set(`mock.${crypto.randomUUID()}`);
+    }
+    else {
+      const session = await this.api.post<{ accessToken: string }>('/auth/verify-code', { email: email.trim().toLowerCase(), code });
+      await this.sessions.set(session.accessToken);
+    }
+    this.loadedToken = undefined;
+    await this.refreshProfile(true);
     return true;
   }
+  async updateProfile(fullName: string, phoneNumber: string | null): Promise<void> {
+    if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber } : u);
+    else this.user.set((await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber })).me);
+  }
+  landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
 
+  async clearLocal(): Promise<void> {
+    this.loadedToken = undefined; this.user.set(null); this.pro.set(null);
+    await this.sessions.clear(); clearDemoState();
+  }
   async logout(): Promise<void> {
-    await Preferences.remove({ key: AUTH_TOKEN_KEY });
-    this.cachedToken = null;
+    try { if (!this.settings.useMockApi()) await this.api.post('/auth/sign-out', {}); }
+    finally { await this.clearLocal(); }
   }
 }

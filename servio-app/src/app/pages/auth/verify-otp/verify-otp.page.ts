@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonSpinner, IonToolbar } from '@ionic/angular';
-import { AuthService, formatPhLocal, TEST_OTP } from '../../../core/services/auth.service';
+import { AuthService, TEST_OTP } from '../../../core/services/auth.service';
 import { CodeInputComponent } from '../../../shared/components/code-input/code-input.component';
 
 const RESEND_SECONDS = 60;
@@ -16,11 +16,10 @@ const RESEND_SECONDS = 60;
 export class VerifyOtpPage implements AfterViewInit {
   @ViewChild(CodeInputComponent) codeInput?: CodeInputComponent;
 
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  readonly phone: string;
-  readonly displayPhone: string;
+  readonly email: string;
   readonly testCode = TEST_OTP;
   readonly remaining = signal(RESEND_SECONDS);
   readonly verifying = signal(false);
@@ -33,9 +32,7 @@ export class VerifyOtpPage implements AfterViewInit {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    const raw = inject(ActivatedRoute).snapshot.queryParamMap.get('phone') ?? this.auth.pendingPhone() ?? '';
-    this.phone = raw.startsWith('+63') ? raw : `+63${raw.replace(/\D/g, '')}`;
-    this.displayPhone = `+63 ${formatPhLocal(this.phone.slice(3))}`;
+    this.email = inject(ActivatedRoute).snapshot.queryParamMap.get('email') ?? this.auth.pendingEmail() ?? '';
     this.startTimer();
     inject(DestroyRef).onDestroy(() => this.stopTimer());
   }
@@ -52,21 +49,19 @@ export class VerifyOtpPage implements AfterViewInit {
     if (this.verifying()) return;
     this.error.set(false);
     this.verifying.set(true);
-    const ok = await this.auth.verifyOtp(this.phone, code);
-    this.verifying.set(false);
-    if (ok) {
-      this.stopTimer();
-      this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
-    } else {
-      this.error.set(true);
-      this.codeInput?.clear();
-    }
+    try {
+      const ok = await this.auth.verifyOtp(this.email, code);
+      if (ok) {
+        this.stopTimer();
+        await this.router.navigateByUrl(this.auth.landingPath(), { replaceUrl: true });
+      } else { this.error.set(true); this.codeInput?.clear(); }
+    } catch { this.error.set(true); this.codeInput?.clear(); }
+    finally { this.verifying.set(false); }
   }
 
   async resend(): Promise<void> {
-    await this.auth.sendOtp(this.phone);
-    this.codeInput?.clear();
-    this.startTimer();
+    try { await this.auth.sendOtp(this.email); this.codeInput?.clear(); this.startTimer(); }
+    catch { this.error.set(true); }
   }
 
   private startTimer(): void {
