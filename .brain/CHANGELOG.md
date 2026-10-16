@@ -4,6 +4,15 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.29] — 2026-10-16
+### Deployed
+- `servio-api` production Worker at https://servio-api.mcleinonza0531.workers.dev (Hyperdrive `servio-neon` → Neon `servio`/production, R2 `servio-uploads`, `preview_urls = false`). Ten production secrets uploaded with `npm run secrets:production` from ignored `PROD_*` values.
+- `servio-uploads` CORS (`servio-api/r2-cors.json`): GET/PUT/HEAD with `content-type` from capacitor://localhost, http://localhost, https://localhost.
+- App `environment.prod.ts` points at the production Worker; `npm run native:production` builds against it. Demo builds still use the LAN API.
+### Verified
+- Live health: production, database ok via Hyperdrive. Catalog returns 5/9/3. CORS preflight from capacitor://localhost allowed; wrong codes and unauthenticated presign rejected. Signed R2 PUT (with app-origin preflight), signed GET and delete succeeded with the production keys.
+- Not yet verified: real Gmail delivery from the Worker and a full signed-in phone flow against production. Production has no demo accounts (demo login is disabled there).
+
 ## [0.5.28] — 2026-10-16
 ### Added
 - Neon project `servio` (sparkling-shadow-22356922, Singapore, Postgres 17), branch `production`, linked via `servio-api/neon.ts` (`neon init`). All 8 migrations applied over the direct URL; catalog seeded (5 categories, 9 SKUs, 3 add-ons). No demo data on Neon.
