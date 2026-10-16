@@ -127,6 +127,13 @@ uploads.get('/uploads/:key{.+}', requireUser, async (c) => {
       .where(and(eq(users.avatarKey, key), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'))).limit(1);
     allowed = !!pro;
   }
+  if (!allowed && row.purpose === 'avatar') {
+    // The same current avatar included in a participant booking may be read by its peer.
+    const [peer] = await db.select({ id: users.id }).from(users).innerJoin(bookings,
+      or(and(eq(bookings.customerId, users.id), eq(bookings.proId, userId)), and(eq(bookings.proId, users.id), eq(bookings.customerId, userId))))
+      .where(and(eq(users.id, row.ownerId), eq(users.avatarKey, key))).limit(1);
+    allowed = !!peer;
+  }
   if (!allowed || !(await c.env.UPLOADS.head(key))) throw missing();
   const downloadUrl = localMode(c.env) ? await localUrl(new URL(c.req.url).origin + '/api/v1', c.env, row, 'GET', DOWNLOAD_TTL_SECONDS)
     : await getSignedUrl(s3(c.env), new GetObjectCommand({ Bucket: c.env.R2_BUCKET_NAME, Key: key }), { expiresIn: DOWNLOAD_TTL_SECONDS });

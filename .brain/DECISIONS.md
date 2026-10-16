@@ -227,3 +227,11 @@
 - **GPS:** Only the assigned EN_ROUTE Pro can send bounded fresh GPS coordinates. Persist profile location conditionally at most once per 15 seconds across rooms. The socket never changes booking status, money or fixed no-show deadlines. Invalid/malformed/customer GPS yields safe errors. Location broadcasts contain no completion PIN.
 - **Events:** After a successful committed REST write, send status/message/addon invalidations so clients fetch their authorized snapshots. Pro dispatch offer IDs are deduplicated in its room, avoiding a poll/event feedback loop. A notification outage cannot turn a committed financial write into an HTTP error; retain REST polling as recovery. Dispatch maintenance remains foreground for this demo; launch alarms/PostGIS remain deferred.
 - **Consequences:** No new credential or cloud resource is created. Local Wrangler supplies the SQLite-backed namespace. App connection/reconnect and native location consumption are implemented in B3. Database reset clears the latest room GPS through a post-commit notification; old ledger/events stay append-only.
+
+
+## ADR-023: Participant Avatar Access
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Permit a booking peer to download the current avatar that is already returned in their participant booking. Require that the upload belongs to the peer and equals that user’s current avatarKey, with an existing participant booking linking the two accounts. Customer avatars remain unavailable to unrelated users; changing the current avatar revokes peer access to the previous key. Existing public approved-Pro avatars and owner access are unchanged.
+- **Context:** The seeded customer has a photo; the assigned Pro could read her avatar key but the download path previously rejected it and prevented presentation mapping of the booking. The app also falls back to initials when an avatar is temporarily unavailable. Evidence/KYC authorization remains purpose-specific.

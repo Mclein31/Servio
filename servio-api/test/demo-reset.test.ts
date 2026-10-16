@@ -50,7 +50,9 @@ describe.runIf(hasDb)('demo order reset', () => {
     expect((await api(`/bookings/${DEMO.active}/verify-pin`,json({ pin:booking.completionPin },pro))).status).toBe(200);
     expect((await api(`/bookings/${DEMO.active}/review`,json({ rating:5,compliments:[],tipCentavos:10000 },customer))).status).toBe(201);
     const resetResult=await reset(); expect(resetResult.status).toBe(200);
-    expect(await resetResult.json()).toMatchObject({ booking:{ status:'EN_ROUTE',escrow:'HOLD_AUTHORIZED',tipCentavos:0,totalCentavos:115000,reviewed:false,addons:[] } });
+    const resetBody=await resetResult.json() as { booking:{ events:{status:string}[] } };
+    expect(resetBody.booking.events.slice(-3).map((e)=>e.status)).toEqual(['PENDING_ACCEPTANCE','ACCEPTED','EN_ROUTE']);
+    expect(resetBody).toMatchObject({ booking:{ status:'EN_ROUTE',escrow:'HOLD_AUTHORIZED',tipCentavos:0,totalCentavos:115000,reviewed:false,addons:[] } });
     const now=await client.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId,DEMO.active));
     for (const old of original) expect(now.find((r)=>r.id===old.id)).toEqual(old);
     const events=await client.db.select().from(bookingEvents).where(eq(bookingEvents.bookingId,DEMO.active));

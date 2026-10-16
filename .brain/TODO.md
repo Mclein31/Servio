@@ -35,6 +35,7 @@
 - [x] C2: Live email-code sign-in, profile setup, role landing, demo connection sheet and prototype legal links.
 - [x] C3: Live catalog/directory/bulletin, checkout with stable retry keys, participant tracking/history/chat/photos, add-on decisions, customer PIN, cancellation and review/tip.
 - [x] C4: Approved availability, foreground nearest-Pro offers/accept/decline/expiry, server job status/cancel, evidence quotes, PIN completion and ledger wallet/cashout. B2 adds socket events; B3 adds native GPS.
+- [x] Demo rehearsal fixes: participant current-avatar access, strictly ordered reset timeline and persistent-directory fixture isolation.
 - [x] D1: Guarded idempotent demo seed, separate accounts, Tuguegarao catalog history/feed, reconciled ledger balances and local R2 images.
 - [x] D2: Guarded fixed-code sign-in for existing active demo customers/Pros; production and staff blocked.
 - [x] D3: Dedicated demo DB reset/backup/restore and authenticated compensating order reset; docs/DEMO_DATA.md.

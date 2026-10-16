@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.19] — 2026-10-16
+### Fixed
+- Booking peers may read the current avatar already included in their participant booking, while other customer photos remain private. Regression tests cover assigned Pro, stranger, missing auth and an old avatar. This unblocks loading Sophia’s seeded booking in the Pro app.
+- Reset events now have strictly increasing timestamps after prior history, so the reset marker cannot hide Accepted/En Route when operations fall in the same millisecond.
+- Directory tests use a distinct local origin so accumulated persistent test fixtures cannot displace the fixture at an identical-coordinate tie.
+### Verified
+- API typecheck and 151 tests pass; customer/Pro browser views load SRV-8821 after the permission fix. Ledger and event history remain append-only.
+
 ## [0.5.18] — 2026-10-16
 ### Added
 - B2: Hibernatable booking and Pro dispatch rooms with short-lived signed session-bound single-use tickets, active-participant authorization, bounded connection lifetime and GPS validation/throttling. Profile location writes are conditional at 15-second intervals; status/money/no-show deadlines remain server-owned.

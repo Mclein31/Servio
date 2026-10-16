@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import app from '../src/index';
-import { ledgerEntries, uploads as files } from '../src/db/schema';
+import { ledgerEntries, uploads as files, users } from '../src/db/schema';
 import { UPLOAD_KEY } from '../src/lib/uploads';
 import { api, bookingFixture, hasDb, json } from './helpers';
 
@@ -54,6 +54,18 @@ describe.runIf(hasDb)('owned and signed uploads (A6)', () => {
     expect(quote.status).toBe(201);
     expect((await read(f.evidenceKey, f.headers.customer)).status).toBe(200);
     expect((await read(f.evidenceKey, f.headers.other)).status).toBe(404);
+  });
+
+  it('shares only a booking peer’s current avatar, without making customer photos public',async()=>{
+    const key=`uploads/avatar/2026/10/${crypto.randomUUID()}.png`;
+    await f.db.insert(files).values({ key,ownerId:f.customer.id,purpose:'avatar',contentType:'image/png',contentLength:3 });
+    await env.UPLOADS.put(key,new Uint8Array([1,2,3]),{ httpMetadata:{ contentType:'image/png' } });
+    await f.db.update(users).set({ avatarKey:key }).where(eq(users.id,f.customer.id));
+    expect((await read(key,f.headers.pro)).status).toBe(200);
+    expect((await read(key,f.headers.other)).status).toBe(404);
+    expect((await read(key,{})).status).toBe(401);
+    await f.db.update(users).set({ avatarKey:null }).where(eq(users.id,f.customer.id));
+    expect((await read(key,f.headers.pro)).status).toBe(404);
   });
 
   it.each([
