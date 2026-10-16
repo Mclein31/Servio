@@ -133,3 +133,13 @@
 - **Decision:** Decode the 32+ byte base64 PIN_SECRET, HMAC-SHA256 the booking UUID, interpret the full digest as an unsigned integer and use its first four decimal digits (left-pad short values). Never store or log a PIN; return it only in authenticated customer booking reads. Verify only for the assigned Pro in ARRIVED/IN_PROGRESS, using constant-time comparison. Wrong attempts commit before returning an error; the fifth locks with 423.
 - **Settlement:** Hold the booking row lock while checking state/attempts and escrow balance, capturing mock payment, appending one balanced release, marking completion, logging the event and incrementing jobs_done. Compute 85/15 on aggregate base + approved add-ons; platform receives its remainder plus the trust fee. Timestamp completion with server clock after acquiring the lock so concurrent lifecycle events remain ordered.
 - **Consequences:** Retries/concurrent PIN submissions cannot double-credit the Pro; capture failure rolls back settlement. Cancellation fees remain the explicit ADR-009 exception. Secret rotation changes active derived PINs and must be coordinated.
+
+
+## ADR-013: Ledger-Derived Wallet and Serialized Mock Cashouts
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Available balance is the sum of the Pro wallet account. Pending earnings are the rounded 85% share of base + approved add-ons for assigned open held bookings, excluding the trust fee; they appear as derived pending rows, never spendable wallet credits. Today's net earnings sum wallet credits since Philippine midnight (`Asia/Manila`), so withdrawing earnings does not change today's earnings metric.
+- **Cashout:** Require integer centavos, minimum 50000, fee 1500, and a valid PH GCash number. Acquire a transaction advisory lock per Pro before reading the balance and debiting amount + fee. Append a balanced PAYOUT (wallet → clearing + fee) and create REQUESTED then mock PAID payout in the same transaction. Store only the masked destination.
+- **Read consistency:** Return wallet totals, pending items and entries from one repeatable-read, read-only transaction, so a concurrent release cannot disappear between separate response queries.
+- **Consequences:** Concurrent requests cannot overdraw; escrow cannot be cashed out before PIN completion (or an owner-authorized cancellation fee). No real payout provider or real transfer is implemented.
