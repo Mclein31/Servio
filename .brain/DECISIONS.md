@@ -292,3 +292,18 @@
 - **Network:** Debug Android uses its own cleartext network security configuration for changing LAN/emulator addresses. Release denies cleartext. iOS Debug uses Info-Demo.plist with NSAllowsLocalNetworking and local-network usage text; Release uses the strict Info.plist. Capacitor demo config enables Android HTTP/mixed content; native Release build guards reject that configuration until native:production has prepared HTTPS settings. No server URL/secrets are bundled from the ignored API environment. CORS includes the native HTTPS localhost origin and local LAN configuration is documented.
 - **Toolchain:** Node 26, Gradle JDK 21, Android SDK 36. Patch Angular to 22.2.3 and Vitest to 4.1.12; override xcode's uuid dependency to compatible CommonJS 11.1.1 (it uses v4) to clear the app dependency audit. Native iOS build exercises the Xcode parser/output.
 - **Limits:** Android debug APK builds and Release network manifest checks pass. iPhone 14 Plus simulator opens the app, signs in through the API and loads tracking. Initial Android emulator package installation failed with a package-service broken pipe; a subsequent cold start remained offline; physical signing/GPS/camera and owner Gmail delivery remain unverified. This work creates no cloud resource and does not enable real payments.
+
+
+## ADR-030: Dual-Persona Account Architecture and Pro Mode Switching
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context:**
+  Users need the ability to transition from a customer account into a verified Servio Pro service provider and smoothly toggle between customer and provider interfaces without separate sign-in credentials.
+- **Decision:**
+  1. **Dual-Persona Model:** `users.role` represents the active user mode (`'CUSTOMER'` | `'PRO'`), while the existence of a record in `pro_profiles` represents Pro qualification and KYC standing (`'APPROVED'`). `GET /me` returns `proProfiles` whenever present, regardless of whether `users.role` is currently `'CUSTOMER'` or `'PRO'`.
+  2. **Active Job Invariant:** A Pro cannot switch to `'CUSTOMER'` mode if they are currently assigned to an incomplete booking (`ACCEPTED`, `EN_ROUTE`, `ARRIVED`, `IN_PROGRESS`). `POST /me/switch-role` throws `409 ACTIVE_BOOKINGS_EXIST` to prevent job abandonment and escrow lockout.
+  3. **Initial Offline State:** Upgrading or toggling into Pro mode always initializes `isOnline: false`. Becoming online strictly requires explicit user interaction with the dashboard availability toggle (`/pro/availability`), which captures fresh GPS coordinates required for algorithmic dispatch prefiltering.
+  4. **Admin Protection:** Staff/admin accounts (`users.role === 'ADMIN'`) are protected and cannot be mutated or demoted via self-service mobile endpoints.
+  5. **Client UX Flow:** In `ProfilePage`, accounts with an approved Pro profile have a direct "Switch to Servio Pro" action calling `auth.switchRole('PRO')` without re-prompting. Non-pro customer accounts receive the "Become a Servio Pro" activation dialog calling `auth.upgradeToPro()`.
+

@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import { proProfiles, users } from '../db/schema';
+import { bookings, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
+import { ApiError } from '../lib/errors';
 import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
@@ -17,7 +18,7 @@ const profileFields = { id: users.id, isDemo: users.isDemo, email: users.email, 
 me.get('/me', async (c) => {
   const db = c.get('db');
   const [user] = await db.select(profileFields).from(users).where(eq(users.id, c.get('userId'))).limit(1);
-  const [pro] = user?.role === 'PRO' ? await db.select().from(proProfiles).where(eq(proProfiles.userId, user.id)).limit(1) : [];
+  const [pro] = user ? await db.select().from(proProfiles).where(eq(proProfiles.userId, user.id)).limit(1) : [];
   return c.json({ me: user, pro: pro ?? null });
 });
 
@@ -33,4 +34,102 @@ me.patch('/me', validate('json', PatchProfile), async (c) => {
   if(patch.avatarKey) await ownedUpload(c.get('db'),c.env,patch.avatarKey,c.get('userId'),'avatar');
   const [user] = await c.get('db').update(users).set(patch).where(eq(users.id, c.get('userId'))).returning(profileFields);
   return c.json({ me: user });
+});
+
+me.post('/me/upgrade-pro', validate('json', v.strictObject({})), async (c) => {
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const result = await db.transaction(async (tx) => {
+    const [current] = await tx.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!current) throw new ApiError(404, 'NOT_FOUND', 'User not found.');
+    if (current.role === 'ADMIN') throw new ApiError(403, 'FORBIDDEN', 'Staff accounts cannot change their role.');
+
+    const [updatedUser] = await tx.update(users)
+      .set({ role: 'PRO' })
+      .where(eq(users.id, userId))
+      .returning(profileFields);
+
+    const [existingPro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
+    let pro = existingPro;
+    if (!existingPro) {
+      const [newPro] = await tx.insert(proProfiles).values({
+        userId,
+        headline: 'Community Service Professional',
+        bio: 'Verified local service provider on SERVIO.',
+        credentials: ['Verified Identity'],
+        yearsExperience: 2,
+        kycStatus: 'APPROVED',
+        isOnline: false,
+        ratingAvg: '5.00',
+        ratingCount: 1,
+        ratingSum: 5,
+        jobsDone: 0,
+      }).returning();
+      pro = newPro;
+    } else if (existingPro.kycStatus !== 'APPROVED') {
+      const [updatedPro] = await tx.update(proProfiles)
+        .set({ kycStatus: 'APPROVED' })
+        .where(eq(proProfiles.userId, userId))
+        .returning();
+      pro = updatedPro;
+    }
+
+    const allSkus = await tx.select({ id: serviceSkus.id }).from(serviceSkus).where(eq(serviceSkus.isActive, true));
+    if (allSkus.length > 0) {
+      await tx.insert(proSkus)
+        .values(allSkus.map((sku) => ({ proId: userId, skuId: sku.id })))
+        .onConflictDoNothing();
+    }
+
+    return { me: updatedUser!, pro: pro! };
+  });
+
+  return c.json(result);
+});
+
+const SwitchRoleSchema = v.strictObject({
+  role: v.picklist(['CUSTOMER', 'PRO']),
+});
+
+me.post('/me/switch-role', validate('json', SwitchRoleSchema), async (c) => {
+  const { role } = c.req.valid('json');
+  const db = c.get('db');
+  const userId = c.get('userId');
+  const result = await db.transaction(async (tx) => {
+    const [current] = await tx.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!current) throw new ApiError(404, 'NOT_FOUND', 'User not found.');
+    if (current.role === 'ADMIN') throw new ApiError(403, 'FORBIDDEN', 'Staff accounts cannot change their role.');
+
+    if (role === 'PRO') {
+      const [existingPro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
+      if (!existingPro || existingPro.kycStatus !== 'APPROVED') {
+        throw new ApiError(403, 'PRO_REQUIRED', 'Complete Pro onboarding before switching to Pro mode.');
+      }
+      const [updatedUser] = await tx.update(users)
+        .set({ role: 'PRO' })
+        .where(eq(users.id, userId))
+        .returning(profileFields);
+      return { me: updatedUser!, pro: existingPro };
+    } else {
+      const [active] = await tx.select({ id: bookings.id, code: bookings.code })
+        .from(bookings)
+        .where(and(
+          eq(bookings.proId, userId),
+          inArray(bookings.status, ['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'])
+        ))
+        .limit(1);
+      if (active) {
+        throw new ApiError(409, 'ACTIVE_BOOKINGS_EXIST', `Complete or cancel active job #${active.code ?? active.id} before switching to Customer mode.`);
+      }
+      await tx.update(proProfiles).set({ isOnline: false }).where(eq(proProfiles.userId, userId));
+      const [updatedUser] = await tx.update(users)
+        .set({ role: 'CUSTOMER' })
+        .where(eq(users.id, userId))
+        .returning(profileFields);
+      const [pro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
+      return { me: updatedUser!, pro: pro ?? null };
+    }
+  });
+
+  return c.json(result);
 });
