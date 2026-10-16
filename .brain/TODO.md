@@ -34,7 +34,7 @@
 - [x] C1: Fetch HttpClient, scoped auth/request IDs/error toasts, Preferences sessions, app API/mock flags and persisted demo LAN configuration.
 - [x] C2: Live email-code sign-in, profile setup, role landing, demo connection sheet and prototype legal links.
 - [x] C3: Live catalog/directory/bulletin, checkout with stable retry keys, participant tracking/history/chat/photos, add-on decisions, customer PIN, cancellation and review/tip.
-- [ ] C4: Pro API flows.
+- [x] C4: Approved availability, foreground nearest-Pro offers/accept/decline/expiry, server job status/cancel, evidence quotes, PIN completion and ledger wallet/cashout. B2 adds socket events; B3 adds native GPS.
 - [ ] D1: Guarded demo seed.
 - [ ] D2: Demo sign-in.
 - [ ] D3: Reset and backup.

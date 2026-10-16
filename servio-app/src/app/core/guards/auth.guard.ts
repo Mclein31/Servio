@@ -23,3 +23,9 @@ export const guestGuard: CanActivateFn = async () => {
   const router = inject(Router);
   return !(await auth.isAuthenticated()) || router.parseUrl(auth.landingPath());
 };
+
+export const proGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService); const router = inject(Router);
+  if (!(await auth.isAuthenticated())) return router.parseUrl('/auth/login');
+  return auth.settings.useMockApi() || auth.user()?.role === 'PRO' || router.parseUrl('/tabs/profile');
+};

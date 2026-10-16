@@ -5,9 +5,9 @@
       <button type="button" class="icon-btn" (click)="back()" aria-label="Back">
         <ion-icon name="arrow-back" aria-hidden="true"></ion-icon>
       </button>
-      <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="42" [online]="o.helper.isAvailable"></app-avatar>
+      <app-avatar [src]="peer().avatarUrl" [name]="peer().name" [size]="42" [online]="peer().online"></app-avatar>
       <div class="who">
-        <strong>{{ o.helper.name }}</strong>
+        <strong>{{ peer().name }}</strong>
         <span>{{ o.sku.name }} · #{{ o.code ?? o.id }}</span>
       </div>
       <button type="button" class="icon-btn tinted" (click)="call()" aria-label="Masked call">

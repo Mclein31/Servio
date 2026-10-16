@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { MessageDto } from '../../../core/api/customer.models';
 import { AuthService } from '../../../core/services/auth.service';
@@ -33,6 +33,7 @@ export class OrderChatPage {
   private readonly alerts = inject(AlertController);
 
   readonly auth = inject(AuthService);
+  readonly peer = computed(() => { const o = this.orders.order(); return this.auth.user()?.role === 'PRO' ? { name: o.customerName, avatarUrl: o.customerAvatarUrl, online: false } : { name: o.helper.name, avatarUrl: o.helper.avatarUrl, online: o.helper.isAvailable }; });
   readonly messages = signal<ChatMessage[]>(this.orders.api.settings.useMockApi() ? SEED_CHAT : []);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -106,7 +107,7 @@ export class OrderChatPage {
   async call(): Promise<void> {
     const a = await this.alerts.create({
       header: 'Masked call',
-      subHeader: `Connecting to ${this.orders.order().helper.name}…`,
+      subHeader: `Contact ${this.peer().name}`,
       message: 'Voice calls are not available in this demo. Use the booking chat.',
       buttons: [{ text: 'End call', role: 'cancel' }],
     });

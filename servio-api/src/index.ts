@@ -10,6 +10,7 @@ import { catalog } from './routes/catalog';
 import { health } from './routes/health';
 import { uploads } from './routes/uploads';
 import { wallet } from './routes/wallet';
+import { pro } from './routes/pro';
 import { me } from './routes/me';
 
 const app = new Hono<AppEnv>();
@@ -28,6 +29,7 @@ v1.route('/', bookings);
 v1.route('/', uploads);
 v1.route('/', wallet);
 v1.route('/', community);
+v1.route('/', pro);
 app.route('/api/v1', v1);
 
 export default app;
