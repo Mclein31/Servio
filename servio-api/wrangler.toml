@@ -42,11 +42,10 @@ new_sqlite_classes = ["OrderRoom"]
 name = "servio-api"
 vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "r2", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost", R2_BUCKET_NAME = "servio-uploads" }
 
-# Create once you have the Neon URL, then paste the printed id here:
-#   npx wrangler hyperdrive create servio-neon --connection-string="<DATABASE_URL_UNPOOLED>"
-# [[env.production.hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "REPLACE_WITH_HYPERDRIVE_ID"
+# Hyperdrive `servio-neon` → Neon project `servio`, branch production (direct URL, caching disabled).
+[[env.production.hyperdrive]]
+binding = "HYPERDRIVE"
+id = "4eab0f2670a64b40a6252e442965bd5e"
 
 [[env.production.ratelimits]]
 name = "AUTH_LIMITER"

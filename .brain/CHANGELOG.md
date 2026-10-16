@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.28] — 2026-10-16
+### Added
+- Neon project `servio` (sparkling-shadow-22356922, Singapore, Postgres 17), branch `production`, linked via `servio-api/neon.ts` (`neon init`). All 8 migrations applied over the direct URL; catalog seeded (5 categories, 9 SKUs, 3 add-ons). No demo data on Neon.
+- Neon URLs live in ignored `servio-api/.env` as `NEON_DATABASE_URL` / `NEON_DATABASE_URL_UNPOOLED`; local `DATABASE_URL` stays on `servio_dev`. Run `neon deploy --no-env-pull` so the CLI does not overwrite the local URL.
+### Verified
+- Worker build dry-run passes; local Worker pointed at Neon's pooled URL returned health `database: ok` and the seeded catalog. Driver stays `pg` (node-postgres), Neon's recommendation for Cloudflare + Hyperdrive. Hyperdrive `servio-neon` (4eab0f26…, direct URL, caching disabled) created and bound in `[env.production]`; production dry-run shows the binding. R2 bucket `servio-uploads` exists. Worker deploy, production secrets and bucket CORS still pending.
+
 ## [0.5.27] — 2026-10-16
 ### Fixed
 - Saved Addresses opened directly after an app reload showed an empty list: the address book's identity effect ran after the first refresh started and discarded it. Identity now syncs before each refresh (regression test added).
