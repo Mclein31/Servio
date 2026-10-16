@@ -23,7 +23,7 @@ export const testEmail = (tag: string) => `${tag}.${crypto.randomUUID().slice(0,
 /** Real DB/session/escrow fixture shared by booking feature suites. */
 export async function bookingFixture(status: 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' = 'ARRIVED') {
   const { connectDb } = await import('../src/db/client');
-  const { bookings, proProfiles, proSkus, users } = await import('../src/db/schema');
+  const { bookings, proProfiles, proSkus, uploads, users } = await import('../src/db/schema');
   const { issueSession } = await import('../src/middleware/auth');
   const { eq } = await import('drizzle-orm');
   const client = (await connectDb(env))!;
@@ -43,6 +43,9 @@ export async function bookingFixture(status: 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED'
     if (res.status !== 201) throw new Error(`Fixture creation failed: ${res.status}`);
     const { booking } = await res.json() as { booking: typeof bookings.$inferSelect };
     await client.db.update(bookings).set({ status }).where(eq(bookings.id, booking.id));
-    return { ...client, customer, pro, other, headers, booking: { ...booking, status } };
+    const evidenceKey = `uploads/addon_evidence/2026/10/${crypto.randomUUID()}.jpg`;
+    await client.db.insert(uploads).values({ key: evidenceKey, ownerId: pro.id, purpose: 'addon_evidence', contentType: 'image/jpeg', contentLength: 3 });
+    await env.UPLOADS.put(evidenceKey, new Uint8Array([1, 2, 3]), { httpMetadata: { contentType: 'image/jpeg' } });
+    return { ...client, evidenceKey, customer, pro, other, headers, booking: { ...booking, status } };
   } catch (error) { await client.close(); throw error; }
 }

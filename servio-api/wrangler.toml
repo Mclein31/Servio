@@ -9,6 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "development"
 LAUNCH_CITY = "tuguegarao"
+UPLOADS_MODE = "local"
 # Capacitor apps: iOS serves from capacitor://localhost, Android from http://localhost.
 # In development any http://localhost:<port> is also allowed (see src/middleware/cors.ts).
 ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,http://localhost:8100"
@@ -31,7 +32,7 @@ simple = { limit = 10, period = 60 }
 
 [env.production]
 name = "servio-api"
-vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost", R2_BUCKET_NAME = "servio-uploads" }
+vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "r2", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost", R2_BUCKET_NAME = "servio-uploads" }
 
 # Create once you have the Neon URL, then paste the printed id here:
 #   npx wrangler hyperdrive create servio-neon --connection-string="<DATABASE_URL_UNPOOLED>"

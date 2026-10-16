@@ -338,6 +338,7 @@ export const bulletinRequests = pgTable(
       .notNull()
       .references(() => serviceSkus.id),
     description: text('description').notNull(),
+    photoKey: text('photo_key'),
     urgent: boolean('urgent').notNull().default(false),
     neighborhood: text('neighborhood').notNull(),
     lat: doublePrecision('lat'),
@@ -436,3 +437,14 @@ export const payouts = pgTable(
   },
   (t) => [check('payouts_min_chk', sql`${t.amountCentavos} >= 50000`)],
 );
+
+
+/** Upload intent and ownership; object bytes are stored in SERVIO's R2 binding. */
+export const uploads = pgTable('uploads', {
+  key: text('key').primaryKey(),
+  ownerId: uuid('owner_id').notNull().references(() => users.id),
+  purpose: text('purpose').notNull().$type<'addon_evidence' | 'kyc' | 'request_photo' | 'avatar'>(),
+  contentType: text('content_type').notNull(),
+  contentLength: integer('content_length').notNull(),
+  createdAt: created(),
+}, (t) => [index('uploads_owner_idx').on(t.ownerId), check('uploads_length_chk', sql`${t.contentLength} > 0 AND ${t.contentLength} <= 10485760`)]);

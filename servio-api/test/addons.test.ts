@@ -7,7 +7,7 @@ import { api, bookingFixture, hasDb, json } from './helpers';
 
 describe.runIf(hasDb)('catalog add-on quotes (A5)', () => {
   let f: Awaited<ReturnType<typeof bookingFixture>>;
-  const input = () => ({ addonSkuId: 'addon-drain-hose', photoKey: `uploads/addon_evidence/2026/10/${crypto.randomUUID()}.jpg`, note: 'The drain hose is split; this catalog replacement includes installation.' });
+  const input = () => ({ addonSkuId: 'addon-drain-hose', photoKey: f.evidenceKey, note: 'The drain hose is split; this catalog replacement includes installation.' });
   const quote = (body: unknown = input(), headers: Record<string, string> = f.headers.pro) => api(`/bookings/${f.booking.id}/addons`, json(body, headers));
   const decide = (id: string, approve: boolean, headers: Record<string, string> = f.headers.customer) => api(`/bookings/${f.booking.id}/addons/${id}/decision`, json({ approve }, headers));
   const escrow = async () => Number((await f.db.execute<{ n: string }>(sql`SELECT sum(amount_centavos)::text AS n FROM ledger_entries WHERE account = ${`escrow:${f.booking.id}`}`)).rows[0]!.n);

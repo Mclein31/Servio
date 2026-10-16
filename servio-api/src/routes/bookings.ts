@@ -8,6 +8,7 @@ import type { AppEnv } from '../env';
 import { sha256Hex } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
 import { TRUST_FEE_CENTAVOS } from '../lib/money';
+import { ownedUpload } from '../lib/uploads';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
 import { withDb } from '../middleware/db';
@@ -239,6 +240,7 @@ bookings.post('/bookings/:id/addons', validate('param', idSchema), validate('jso
     const input = c.req.valid('json');
     const [sku] = await tx.select().from(addonSkus).where(and(eq(addonSkus.id, input.addonSkuId), eq(addonSkus.isActive, true))).for('share');
     if (!sku) throw new ApiError(422, 'SKU_UNAVAILABLE', 'Choose an available add-on from the catalog.');
+    await ownedUpload(tx, c.env, input.photoKey, c.get('userId'), 'addon_evidence');
     const [created] = await tx.insert(addonQuotes).values({ ...input, bookingId: row.id, addonName: sku.name, priceCentavos: sku.priceCentavos, createdBy: c.get('userId') }).returning();
     return created!;
   });

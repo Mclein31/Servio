@@ -36,6 +36,13 @@
       "when": 1792113596815,
       "tag": "0004_booking_status_and_deadlines",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792114118225,
+      "tag": "0005_upload_ownership",
+      "breakpoints": true
     }
   ]
 }
