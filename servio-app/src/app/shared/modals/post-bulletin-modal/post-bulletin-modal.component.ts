@@ -14,6 +14,7 @@ import {
 } from '@ionic/angular';
 import { CATEGORIES } from '../../../core/data/mock-data';
 import { CommunityService } from '../../../core/services/community.service';
+import { AddressService } from '../../../core/services/address.service';
 import { CategoryId } from '../../models/ui.models';
 import { PhpPipe } from '../../pipes/php.pipe';
 import { formatPhp } from '../../utils/money';
@@ -110,7 +111,8 @@ export class PostBulletinModalComponent {
   readonly skuId = signal('');
   readonly desc = signal('');
   readonly urgent = signal(false);
-  readonly area = signal('Barangay Ugac Norte, Tuguegarao City');
+  private readonly saved = inject(AddressService).selected();
+  readonly area = signal(this.saved ? `${this.saved.barangay}, ${this.saved.city}` : 'Barangay Ugac Norte, Tuguegarao City');
 
   readonly skus = computed(() => this.community.skus().filter((s) => s.category === this.category()));
   readonly sku = computed(() => this.community.skus().find((s) => s.id === this.skuId()) ?? null);

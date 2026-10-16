@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.27] — 2026-10-16
+### Fixed
+- Saved Addresses opened directly after an app reload showed an empty list: the address book's identity effect ran after the first refresh started and discarded it. Identity now syncs before each refresh (regression test added).
+- Editing the default address no longer offers an "unset default" checkbox the API rejects (422 DEFAULT_REQUIRED); it explains how to change the default instead.
+- Bulletin post neighborhood prefills from the customer's selected saved address instead of a fixed Ugac Norte value.
+### Verified
+- Browser rehearsal against the local API: add address, edit label/text and move the pin of an existing address, reload; PATCH persisted the new coordinates. API 165 tests, app lint/build and 52 tests pass.
+
 ## [0.5.26] — 2026-10-16
 ### Documented
 - D4 runbook: Monday October 19 device/account setup, dedicated reset/backup, LAN reachability and CORS, Android JDK21/APK and free Apple Personal Team install, complete booking/add-on/PIN/wallet/review/reset flow, indoor route fallback and Gmail real-account steps.

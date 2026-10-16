@@ -28,7 +28,8 @@ import { servioTileLayer } from '../../shared/utils/map-tiles';
           <label>Barangay<input name="barangay" [(ngModel)]="barangay" maxlength="100" required placeholder="e.g. Ugac Norte"></label>
           <label>City<input value="Tuguegarao City" readonly></label>
           <label>Directions (optional)<input name="landmark" [(ngModel)]="landmark" maxlength="200" placeholder="How your Pro can find you"></label>
-          <label class="check"><input type="checkbox" name="default" [(ngModel)]="isDefault">Use as default address</label>
+          <label class="check"><input type="checkbox" name="default" [(ngModel)]="isDefault" [disabled]="wasDefault">Use as default address</label>
+          @if (wasDefault) { <p class="pin-status">This is your default. Make another address the default to change it.</p> }
           <button class="pill-btn" type="submit" [disabled]="saving() || !pin() || !label.trim() || !street.trim() || !barangay.trim()">{{ saving() ? 'Saving…' : 'Confirm pin & save address' }}</button>
           <button class="text-btn" type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button>
         </form>
@@ -63,7 +64,7 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   @ViewChild('mapHost') host?: ElementRef<HTMLElement>;
   readonly editing = signal(false); readonly saving = signal(false); readonly locating = signal(false); readonly error = signal('');
   readonly pin = signal<readonly [number,number] | null>(null);
-  label = 'Home'; street = ''; barangay = ''; landmark = ''; isDefault = false;
+  label = 'Home'; street = ''; barangay = ''; landmark = ''; isDefault = false; wasDefault = false;
   private editorRevision = 0; private locationRevision = 0;
   private id?: string; private map?: L.Map; private marker?: L.Marker;
   async ionViewWillEnter(): Promise<void> { try { await this.addresses.refresh(); } catch (e) { this.fail(e); } }
@@ -71,7 +72,7 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   ionViewWillLeave(): void { this.closeEditor(); }
   edit(a?: SavedAddress): void {
     this.closeEditor(); this.error.set(''); this.id = a?.id; this.label = a?.label ?? 'Home'; this.street = a?.street ?? '';
-    this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length;
+    this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length; this.wasDefault = a?.isDefault ?? false;
     this.pin.set(a ? [a.lat,a.lng] : null); this.editing.set(true);
   }
   ngAfterViewChecked(): void {

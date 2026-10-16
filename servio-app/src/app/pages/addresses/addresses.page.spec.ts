@@ -31,4 +31,12 @@ describe('address pin confirmation', () => {
     book.save.mockRejectedValue(new Error('Outside service area')); await page.save();
     expect(page.error()).toBe('Outside service area'); expect(page.pin()).toEqual([17.61,121.72]); expect(page.street).toBe('My entrance'); expect(page.editing()).toBe(true); expect(back).not.toHaveBeenCalled();
   });
+  it('edits every field and re-pins an existing address under the same id', async () => {
+    const page=TestBed.runInInjectionContext(() => new AddressesPage());
+    page.edit({id:'a1',label:'Home',street:'Old gate',barangay:'Centro 10',city:'Tuguegarao City',landmark:null,lat:17.61,lng:121.72,isDefault:true});
+    expect(page.wasDefault).toBe(true); expect(page.pin()).toEqual([17.61,121.72]);
+    page.label='Work'; page.street='New gate'; page.barangay='Ugac Norte'; page.landmark='Blue door'; page.selectPin(17.62,121.73);
+    book.save.mockResolvedValue(undefined); await page.save();
+    expect(book.save).toHaveBeenCalledWith({label:'Work',street:'New gate',barangay:'Ugac Norte',city:'Tuguegarao City',landmark:'Blue door',lat:17.62,lng:121.73,isDefault:true},'a1');
+  });
 });

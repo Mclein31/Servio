@@ -19,6 +19,12 @@ describe('account address book', () => {
     await book.save(input); expect(api.post).toHaveBeenCalledWith('/me/addresses',input); expect(book.selected()?.lat).toBe(17.613);
     user.set({id:'other'}); TestBed.tick(); expect(book.addresses()).toEqual([]); expect(book.selected()).toBeNull();
   });
+  it('keeps the first refresh when the identity effect runs after it starts', async () => {
+    const book=TestBed.inject(AddressService);
+    let resolve!: (data: {addresses:SavedAddress[]}) => void;
+    api.get.mockReturnValue(new Promise((r) => resolve=r)); const first=book.refresh(); TestBed.tick();
+    resolve({addresses:[home]}); await first; expect(book.addresses()).toEqual([home]);
+  });
   it('ignores an old address refresh arriving after a successful pin edit', async () => {
     const book=TestBed.inject(AddressService); TestBed.tick();
     let resolve!: (data: {addresses:SavedAddress[]}) => void;

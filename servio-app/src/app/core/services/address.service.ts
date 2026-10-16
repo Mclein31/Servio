@@ -19,12 +19,15 @@ export class AddressService {
   private identity = '';
   private revision = 0;
   constructor() {
-    effect(() => {
-      const identity = `${this.api.settings.useMockApi()}:${this.auth.user()?.id ?? ''}`;
-      if (identity !== this.identity) { this.identity = identity; this.revision++; this.addresses.set([]); this.selectedId.set(''); }
-    });
+    effect(() => this.syncIdentity());
+  }
+  // Runs synchronously before a refresh too: the effect alone fires after the first fetch has started and would discard it.
+  private syncIdentity(): void {
+    const identity = `${this.api.settings.useMockApi()}:${this.auth.user()?.id ?? ''}`;
+    if (identity !== this.identity) { this.identity = identity; this.revision++; this.addresses.set([]); this.selectedId.set(''); }
   }
   async refresh(): Promise<void> {
+    this.syncIdentity();
     const identity = this.auth.user()?.id;
     const revision = this.revision;
     if (!identity) { this.addresses.set([]); return; }
