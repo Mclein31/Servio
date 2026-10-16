@@ -43,7 +43,7 @@ export class CommunityService {
     if (this.api.settings.useMockApi()) return;
     const { pros } = await this.api.get<{ pros: ProDto[] }>('/pros');
     this.liveHelpers.set(await Promise.all(pros.map(async (p): Promise<HelperProfile> => ({
-      id: p.id, name: p.name, avatarUrl: await this.image(p.avatarKey), category: p.headline ?? p.skus[0]?.categoryId ?? '',
+      id: p.id, name: p.name, avatarUrl: await this.image(p.avatarKey).catch(() => ''), category: p.headline ?? p.skus[0]?.categoryId ?? '',
       rating: p.rating, reviewCount: p.ratingCount, distanceKm: Math.round((p.distanceKm ?? 0) * 10) / 10,
       hourlyRatePhp: p.fromPriceCentavos / 100, rateUnit: p.skus.find((s) => s.priceCentavos === p.fromPriceCentavos)?.unit, isAvailable: p.isOnline, bio: p.bio ?? '', credentials: p.credentials,
       skus: p.skus.map(skuFromApi), reviews: p.reviews.map((r) => ({ author: r.author ?? 'Neighbor', rating: r.rating, when: postedAgo(r.createdAt), text: r.body ?? '' })),

@@ -6,7 +6,7 @@ import { CommunityService } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
 import { OrderService } from '../../core/services/order.service';
 import { SheetsService } from '../../core/services/sheets.service';
-import { TrackingSimService } from '../../core/services/tracking-sim.service';
+import { TrackingService } from '../../core/services/tracking.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { HelperCardComponent } from '../../shared/components/helper-card/helper-card.component';
 import { SearchFilterComponent } from '../../shared/components/search-filter/search-filter.component';
@@ -26,7 +26,7 @@ export class HomePage {
   private readonly router = inject(Router);
   private readonly sheets = inject(SheetsService);
   readonly orders = inject(OrderService);
-  readonly sim = inject(TrackingSimService);
+  readonly sim = inject(TrackingService);
 
   readonly community = inject(CommunityService);
   readonly auth = inject(AuthService);

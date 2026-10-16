@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bookings, ledgerEntries, proProfiles } from '../src/db/schema';
+import { simulatedGpsAllowed } from '../src/live/order-room';
 import { mintLiveTicket, readLiveTicket } from '../src/live/tickets';
 import { api, bookingFixture, hasDb, json } from './helpers';
 
@@ -20,6 +21,11 @@ function reader(ws:WebSocket) {
 }
 
 describe('live ticket capability',()=>{
+  it('permits simulated fixes only for demo bookings outside production',()=>{
+    expect(simulatedGpsAllowed('development',true)).toBe(true);
+    for(const name of ['production',' PRODUCTION ','prod']) expect(simulatedGpsAllowed(name,true)).toBe(false);
+    expect(simulatedGpsAllowed('development',false)).toBe(false);
+  });
   it('expires and binds the session/resource with a signature',async()=>{
     const token=await mintLiveTicket(env.PIN_SECRET,'booking:00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','a'.repeat(64));
     expect(await readLiveTicket(env.PIN_SECRET,token)).toMatchObject({ sessionHash:'a'.repeat(64) });
@@ -65,6 +71,7 @@ describe.runIf(hasDb)('OrderRoom sockets in Miniflare',()=>{
     const before=await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId,f.booking.id));
     const gps={ type:'gps',lat:17.613,lng:121.727,accuracy:8,heading:90,ts:Date.now() };
     customer.ws.send(JSON.stringify(gps)); expect(await customer.next('error')).toMatchObject({ code:'GPS_FORBIDDEN' });
+    pro.ws.send(JSON.stringify({ ...gps,simulated:true })); expect(await pro.next('error')).toMatchObject({ code:'GPS_FORBIDDEN' });
     pro.ws.send(JSON.stringify({ ...gps,lat:999 })); expect(await pro.next('error')).toMatchObject({ code:'GPS_INVALID' });
     pro.ws.send(JSON.stringify(gps)); expect(await customer.next('gps')).toMatchObject({ lat:17.613,lng:121.727 }); await pro.next('gps');
     const [first]=await f.db.select().from(proProfiles).where(eq(proProfiles.userId,f.pro.id));

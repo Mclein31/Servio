@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.20] — 2026-10-16
+### Added
+- B3 implementation: native foreground Geolocation, shared live socket lifecycle, immediate booking/chat/add-on/dispatch refresh, remaining-street snapping/interpolation, 20-second reconnect indicator and explicit Tuguegarao route fallback. Real booking pins survive arrival; queued-job selection preserves the current customer’s GPS stream.
+- Separate conditional Pro location refresh prevents a delayed heartbeat from switching an offline Pro back online. Simulated GPS is accepted only for demo bookings outside production. iOS location descriptions and plugin binding included.
+- Owner added real-user account/profile/map-address readiness while retaining mock payments; implementation plan/TODO updated. docs/TRACKING.md documents sources and current native verification limits.
+### Verified
+- API typecheck and 152 tests pass; app build/lint and 40 tests pass with zero warnings. Tests cover native watch cleanup, queue-safe GPS identity, arbitrary arrival coordinates, explicit source switching, reconnect retention, socket leases, street snapping and offline heartbeat guards. Two-browser rehearsal receives the Pro’s simulated source on the customer map. Native GPS/device rehearsal remains pending F1/D4.
+
 ## [0.5.19] — 2026-10-16
 ### Fixed
 - Booking peers may read the current avatar already included in their participant booking, while other customer photos remain private. Regression tests cover assigned Pro, stranger, missing auth and an old avatar. This unblocks loading Sophia’s seeded booking in the Pro app.

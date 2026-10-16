@@ -8,8 +8,9 @@ import { participantBooking, serverNow } from '../lib/bookings';
 import { readLiveTicket, type LiveTicket } from './tickets';
 import { ApiError } from '../lib/errors';
 
+export const simulatedGpsAllowed=(environment:string,isDemo:boolean)=>isDemo && !['production','prod'].includes(environment.trim().toLowerCase());
 const Gps=v.strictObject({ type:v.literal('gps'),lat:v.pipe(v.number(),v.minValue(-90),v.maxValue(90)),lng:v.pipe(v.number(),v.minValue(-180),v.maxValue(180)),
-  accuracy:v.pipe(v.number(),v.minValue(0),v.maxValue(10000)),heading:v.optional(v.nullable(v.pipe(v.number(),v.minValue(0),v.maxValue(360)))),ts:v.pipe(v.number(),v.integer()) });
+  accuracy:v.pipe(v.number(),v.minValue(0),v.maxValue(10000)),heading:v.optional(v.nullable(v.pipe(v.number(),v.minValue(0),v.maxValue(360)))),simulated:v.optional(v.boolean()),ts:v.pipe(v.number(),v.integer()) });
 type Attachment=LiveTicket & { validUntil:number };
 export type GpsFix=v.InferOutput<typeof Gps> & { receivedAt:number };
 
@@ -77,6 +78,7 @@ export class OrderRoom extends DurableObject<Bindings> {
       if(!connection) throw new ApiError(503,'LIVE_UNAVAILABLE','Live updates unavailable.');
       const booking=await this.authorize(connection.db,actor);
       if(!booking || booking.proId!==actor.userId || booking.status!=='EN_ROUTE') throw new ApiError(403,'GPS_FORBIDDEN','Only the assigned en-route Pro may share location.');
+      if(parsed.output.simulated && !simulatedGpsAllowed(this.env.ENVIRONMENT,booking.isDemo)) throw new ApiError(403,'GPS_FORBIDDEN','Simulated GPS is limited to demo bookings outside production.');
       const last=await this.ctx.storage.get<GpsFix>('gps');
       if(last && (Date.now()-last.receivedAt<1000 || parsed.output.ts<=last.ts)) throw new ApiError(429,'GPS_THROTTLED','Wait for the next location fix.');
       const now=await serverNow(connection.db);

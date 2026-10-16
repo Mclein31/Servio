@@ -6,6 +6,7 @@ import { roundCentavos, splitPayout } from '../../shared/utils/money';
 import { DEMO_ADDRESS } from '../data/launch-city';
 import { HELPERS, SKUS } from '../data/mock-data';
 import { clearDemoState, loadDemoState, saveDemoState } from './demo-store';
+import { LiveService } from './live.service';
 import { WalletService } from './wallet.service';
 import { ApiService } from '../api/api.service';
 import { BookingDto } from '../api/customer.models';
@@ -41,6 +42,7 @@ function minutesAgo(min: number): Date {
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private readonly wallet = inject(WalletService);
+  private readonly live = inject(LiveService);
   readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly community = inject(CommunityService);
@@ -48,6 +50,7 @@ export class OrderService {
   readonly error = signal('');
   private readonly liveHistory = signal<{ id: string; title: string; helper: string; when: string; amountPhp: number }[]>([]);
   readonly history = computed(() => this.api.settings.useMockApi() ? PAST_ORDERS : this.liveHistory());
+  readonly travelBookings = signal<Pick<Order, 'id' | 'coordinates' | 'status' | 'expectedArrivalAt'>[]>([]);
   private revision = 0;
   private polling = false;
   private identity = '';
@@ -89,6 +92,19 @@ export class OrderService {
   readonly isActive = computed(() => this.hasOrder() && !['COMPLETED', 'CANCELLED'].includes(this.state().status));
 
   constructor() {
+    const room = computed(() => this.api.settings.useMockApi() ? '' : `${this.auth.user()?.id ?? ''}:${this.order().id}`);
+    effect((cleanup) => {
+      const [userId,id] = room().split(':');
+      if (!/^[0-9a-f-]{36}$/.test(userId ?? '') || !/^[0-9a-f-]{36}$/.test(id ?? '')) return;
+      const stop = this.live.watch(`booking:${id}`);
+      const subscription = this.live.events.subscribe((event) => {
+        if (event.resource === `booking:${id}` && ['connected','status','addon','message'].includes(event.type)) {
+          void this.load(id).catch(() => undefined);
+          if (event.type === 'status' && this.auth.user()?.role === 'PRO') void this.wallet.refresh();
+        }
+      });
+      cleanup(() => { subscription.unsubscribe(); stop(); });
+    });
     effect(() => { if (this.api.settings.useMockApi() && this.stateMode()) saveDemoState('order', this.state()); });
     effect((cleanup) => {
       const user = this.auth.user();
@@ -96,7 +112,7 @@ export class OrderService {
       const identity = `${mock}:${user?.id ?? ''}:${user?.role ?? ''}`;
       if (this.identity !== identity) {
         this.identity = identity; this.revision++; this.stateMode.set(mock);
-        this.state.set(mock ? this.loadOrder() : this.emptyOrder()); this.liveHistory.set([]);
+        this.state.set(mock ? this.loadOrder() : this.emptyOrder()); this.liveHistory.set([]); this.travelBookings.set([]);
       }
       if (mock) return;
       if (!user) return;
@@ -221,7 +237,7 @@ export class OrderService {
     await this.community.catalog();
     const { booking } = await this.api.get<{ booking: BookingDto }>(`/bookings/${id}`);
     const order = await this.fromApi(booking);
-    if (revision === this.revision) this.state.set(order);
+    if (revision === this.revision) { this.rememberTravel(booking); this.state.set(order); }
   }
 
   async refresh(): Promise<void> {
@@ -232,6 +248,7 @@ export class OrderService {
       await this.community.catalog();
       const result = await this.api.get<{ bookings: BookingDto[] }>('/bookings', { role: this.auth.user()?.role === 'PRO' ? 'pro' : 'customer', limit: 100 });
       if (revision !== this.revision) return;
+      this.travelBookings.set(this.auth.user()?.role === 'PRO' ? result.bookings.filter((b) => b.status === 'EN_ROUTE' && b.proId === this.auth.user()?.id).map((b) => ({ id: b.id, status: b.status, coordinates: [b.lat,b.lng] as const, expectedArrivalAt: b.expectedArrivalAt })) : []);
       this.liveHistory.set(result.bookings.filter((b) => b.status === 'COMPLETED').map((b) => ({ id: b.code, title: b.skuName,
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
         amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
@@ -241,6 +258,14 @@ export class OrderService {
       if (revision === this.revision) { this.state.set(order); this.error.set(''); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
     finally { this.loading.set(false); }
+  }
+
+  private rememberTravel(booking: BookingDto): void {
+    if (this.auth.user()?.role !== 'PRO' || booking.proId !== this.auth.user()?.id) return;
+    this.travelBookings.update((current) => {
+      const rest = current.filter((b) => b.id !== booking.id);
+      return booking.status === 'EN_ROUTE' ? [...rest, { id: booking.id, status: booking.status, coordinates: [booking.lat,booking.lng] as const, expectedArrivalAt: booking.expectedArrivalAt }] : rest;
+    });
   }
 
   async advance(status: OrderStatus): Promise<void> {
@@ -277,11 +302,11 @@ export class OrderService {
     const resetIndex = b.events.reduce((last, e, i) => e.note?.startsWith('DEMO_RESET:') ? i : last, -1);
     const currentEvents = resetIndex >= 0 ? b.events.slice(resetIndex) : b.events;
     return {
-      id: b.id, code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
+      id: b.id, coordinates: [b.lat, b.lng], code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
       sku: { ...(sku ?? this.emptyOrder().sku), id: b.skuId, name: b.skuName, pricePhp: b.priceCentavos / 100 },
       helper: { ...(helper ?? this.emptyOrder().helper), id: b.proId ?? '', name: b.pro?.name ?? 'Finding a Pro',
-        avatarUrl: await this.community.image(b.pro?.avatarKey ?? null), rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
-      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: await this.community.image(b.customer?.avatarKey ?? null),
+        avatarUrl: await this.community.image(b.pro?.avatarKey ?? null).catch(() => ''), rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
+      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: await this.community.image(b.customer?.avatarKey ?? null).catch(() => ''),
       address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
       paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
       completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,

@@ -26,3 +26,14 @@ describe('RouteTrack', () => {
     expect(track.cornerFactor(10, 30)).toBe(1);
   });
 });
+
+describe('remaining street route snapping', () => {
+  it('projects noisy GPS to a street segment and excludes earlier legs at a crossing', () => {
+    const route = new RouteTrack([[0,0],[0,100],[100,100],[100,0],[0,0]], 'screen');
+    const first = route.project([3,40]);
+    expect(first.distance).toBeCloseTo(40); expect(first.error).toBeCloseTo(3);
+    const later = route.project([0,0],250);
+    expect(later.distance).toBeCloseTo(400); expect(later.error).toBeCloseTo(0);
+    expect(route.project([50,101]).distance).toBeCloseTo(150);
+  });
+});

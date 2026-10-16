@@ -50,6 +50,18 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     await client.close();
   });
 
+  it('refreshes only online approved Pro locations without ever toggling availability',async()=>{
+    const point={ lat:17.613,lng:121.727 };
+    expect((await api('/pro/location',json(point))).status).toBe(401);
+    expect((await api('/pro/location',json(point,headers[0]))).status).toBe(403);
+    expect((await api('/pro/location',json({ lat:91,lng:121 },headers[1]))).status).toBe(422);
+    expect((await api('/pro/location',json(point,headers[1]))).status).toBe(200);
+    await api('/pro/availability',json({ online:false },headers[1]));
+    expect((await api('/pro/location',json(point,headers[1]))).status).toBe(409);
+    const [profile]=await client.db.select().from(proProfiles).where(eq(proProfiles.userId,ids[1]!));
+    expect(profile!.isOnline).toBe(false); expect(await balance()).toBe('115000'); await balanced();
+  });
+
   it('requires approved Pro auth and validates paired coordinates without inventing a fresh fix', async () => {
     expect((await api('/pro/availability', json({ online: true }))).status).toBe(401);
     expect((await api('/pro/availability', json({ online: true }, headers[0]))).status).toBe(403);

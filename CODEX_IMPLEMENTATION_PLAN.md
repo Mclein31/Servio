@@ -251,6 +251,10 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 5. If LAN operation proves unreliable, propose Cloudflare + Neon deployment and **ask the owner first**. No Neon project or Cloudflare resources exist yet; never assume credentials/resources.
 6. After the demo: Launch-ready B1 remainder → B4 → C5 → E → F2 → F3 → F4. Skip admin console, push, CI and deploy until then. Phase G remains explicitly gated on owner instruction.
 
+### Real-user readiness update (owner request, 2026-10-16)
+
+Before the remaining device/checklist work, finish real customer account creation and delivered six-digit email sign-in, editable profile details/photo, and saved addresses with an explicit map pin used by checkout. Keep all payment holds, escrow releases, tips and cashouts **mock only**. Preserve the existing Ionic screens/design. Add owner-scoped API validation/tests and app build/lint/tests for these flows. Do not treat this as approval to create cloud resources, implement real payments, SMS/social sign-in or remove the placeholder legal details. Email delivery verification requires locally configured sender credentials; never request them in chat. B3 tracking fixes finish first, then these real-user flows, then F1/D4 and device rehearsal.
+
 ## 4. Owner answers and remaining questions (updated 2026-10-16)
 
 - **Cancellation/no-show:** answered; ADR-009. Tuguegarao constants supersede earlier traffic assumptions (ADR-008).
