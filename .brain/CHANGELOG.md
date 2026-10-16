@@ -4,6 +4,10 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.14] — 2026-10-16
+### Fixed
+- Demo dispatch permits an approved online Pro to queue another job while finishing a current booking, consistent with the owner's EN_ROUTE-based no-show policy. Removed the extra busy-Pro restriction; acceptance still changes no money and keeps all authorization/expiry locks. Regression test covers a second acceptance while another job is in progress.
+
 ## [0.5.13] — 2026-10-16
 ### Added
 - C4: API-backed Pro availability, offer radar/acceptance, job status/cancellation, owned photo evidence/add-on quotes, customer PIN completion, ledger wallet/pagination and mock GCash cashout. Pro routes require a Pro account; chat shows the correct peer and both parties' actual messages.

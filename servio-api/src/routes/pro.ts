@@ -59,8 +59,6 @@ pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.
     if (action === 'accept') {
       const [profile] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, proId));
       if (profile!.kycStatus !== 'APPROVED' || !profile!.isOnline) throw new ApiError(403, 'PRO_UNAVAILABLE', 'Go online as an approved Pro before accepting.');
-      const [busy] = await tx.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.proId, proId), sql`${bookings.status} NOT IN ('COMPLETED','CANCELLED')`)).limit(1);
-      if (busy) throw new ApiError(409, 'PRO_BUSY', 'Finish your active booking first.');
       await tx.update(dispatchOffers).set({ response: 'ACCEPTED', respondedAt: now }).where(eq(dispatchOffers.id, id));
       await tx.update(bookings).set({ proId, status: 'ACCEPTED' }).where(eq(bookings.id, booking!.id));
       await tx.insert(bookingEvents).values({ bookingId: booking!.id, status: 'ACCEPTED', actorId: proId, createdAt: now });
