@@ -29,7 +29,7 @@ When an agent is asked to implement or design a feature:
 
 ## 5. Running the App & Implementation Gotchas
 - Run: `cd servio-app && npm start` (http://localhost:4200). Test: `npx ng test --watch=false`. Lint: `npx ng lint`.
-- First run shows onboarding. Offline mode accepts `123456`; live email codes come from the API log when SMTP is absent. New live users complete name/optional PH mobile before landing. Demo connection on Login selects mock/API and a LAN URL. Mock customer completion PIN is `7492`; live PIN comes only from authenticated booking reads. Live demo accounts use the locally configured DEMO_LOGIN_CODE (D2), without email. Staff cannot use mobile sign-in. Reset is tracked in D3.
+- First run shows onboarding. Offline mode accepts `123456`; live email codes come from the API log when SMTP is absent. New live users complete name/optional PH mobile before landing. Demo connection on Login selects mock/API and a LAN URL. Mock customer completion PIN is `7492`; live PIN comes only from authenticated booking reads. Live demo accounts use the locally configured DEMO_LOGIN_CODE (D2), without email. Staff cannot use mobile sign-in. Reset/backup/restore instructions are in docs/DEMO_DATA.md; full reset uses dedicated local servio_demo, not mixed servio_dev.
 - Leaflet maps inside Ionic pages need explicit width/height and `invalidateSize()` on `ionViewDidEnter`; tab pages are attached late.
 - Do not put `maxlength="1"` on OTP cells: iOS one-time-code autofill inserts the whole code into the first cell (`app-code-input` distributes it).
 - `ion-title` is absolutely positioned in iOS mode; `.servio-detail-bar` insets it past the back button.

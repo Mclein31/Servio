@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertDemoDatabase, DEMO } from '../src/demo/guard';
+import { assertDemoDatabase, assertDisposableDemoDatabase, DEMO } from '../src/demo/guard';
 import { DEMO_BULLETIN, DEMO_IMAGES, DEMO_PROS } from '../src/demo/data';
 import { SKU_ROWS } from '../src/db/catalog-data';
 
@@ -9,6 +9,11 @@ describe('demo dataset and database boundary', () => {
     expect(assertDemoDatabase('postgres://user@dedicated.neon.tech/servio_demo', 'demo').pathname).toBe('/servio_demo');
     for (const url of ['postgres://user@localhost.evil.test/servio_dev', 'postgres://user@remote.test/servio_dev?branch=demo', 'postgres://user@localhost/other_project', 'https://localhost/servio_demo']) expect(() => assertDemoDatabase(url,'development')).toThrow();
     for (const environment of ['production','PRODUCTION',' prod ']) expect(() => assertDemoDatabase('postgres://user@localhost/servio_dev', environment)).toThrow('production');
+  });
+  it('never permits destructive reset/restore against dev/test or production', () => {
+    expect(assertDisposableDemoDatabase('postgres://user@localhost/servio_demo','development').pathname).toBe('/servio_demo');
+    for (const name of ['servio_dev','servio_test','other_project']) expect(() => assertDisposableDemoDatabase(`postgres://user@localhost/${name}`,'development')).toThrow();
+    expect(() => assertDisposableDemoDatabase('postgres://user@localhost/servio_demo','production')).toThrow();
   });
   it('keeps identities separate and every offered/bulletin service in the existing fixed catalog', () => {
     expect(DEMO.customer).not.toBe(DEMO.tutor);

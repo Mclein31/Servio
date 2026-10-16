@@ -37,7 +37,7 @@
 - [x] C4: Approved availability, foreground nearest-Pro offers/accept/decline/expiry, server job status/cancel, evidence quotes, PIN completion and ledger wallet/cashout. B2 adds socket events; B3 adds native GPS.
 - [x] D1: Guarded idempotent demo seed, separate accounts, Tuguegarao catalog history/feed, reconciled ledger balances and local R2 images.
 - [x] D2: Guarded fixed-code sign-in for existing active demo customers/Pros; production and staff blocked.
-- [ ] D3: Reset and backup.
+- [x] D3: Dedicated demo DB reset/backup/restore and authenticated compensating order reset; docs/DEMO_DATA.md.
 - [ ] B2: OrderRoom live sockets.
 - [ ] B3: Real GPS and simulator fallback.
 - [ ] F1 (demo-required): Android packaging, permissions, icons/splash and dev/demo LAN access; iPhone Personal Team install instructions.
@@ -54,10 +54,10 @@
 - [x] Every demo row marked as demo data (`is_demo` flag or a fixed demo id range) so cleanup can never touch real data.
 
 **Reset and backup**
-- [ ] `npm run db:demo-reset`: deletes only demo rows (respecting the append-only ledger, using a guarded cleanup path), then re-runs the catalog seed and the demo seed, leaving a clean known state in one command.
-- [ ] Hard guard: reset and demo seed refuse to run when `ENVIRONMENT=production` or against the production database.
-- [ ] Backup before the demo: `pg_dump` snapshot script (`npm run db:backup` → `backups/servio-<date>.sql`, git-ignored) plus a restore script; on Neon, also create a branch snapshot (`demo-baseline`) to restore from instantly.
-- [ ] App "Reset demo order" button (Tracking tab) calls the API reset endpoint (dev/demo only) instead of only clearing local storage.
+- [x] `npm run db:demo-reset`: dedicated servio_demo database only, refuses non-demo rows, guarded TRUNCATE then catalog/data/image seed. Normal servio_dev/test are preserved.
+- [x] Hard guard: reset and demo seed refuse to run when `ENVIRONMENT=production` or against the production database.
+- [x] Local custom-format pg_dump backup and guarded restore verified in servio_demo; ignored backups/. Future owner-approved Neon demo-baseline/Reset from parent documented, not performed.
+- [x] App "Reset demo order" button (Tracking tab) calls the API reset endpoint (dev/demo only) instead of only clearing local storage.
 - [ ] Demo-day checklist: run reset, verify both accounts sign in, walk the full flow (book → track → add-on → PIN → wallet → review), reset again before presenting.
 
 ---
