@@ -19,3 +19,30 @@ export function json(body: unknown, headers: Record<string, string> = {}): Reque
 
 /** Unique per run so suites never collide on the shared test database. */
 export const testEmail = (tag: string) => `${tag}.${crypto.randomUUID().slice(0, 8)}@servio.test`;
+
+/** Real DB/session/escrow fixture shared by booking feature suites. */
+export async function bookingFixture(status: 'ACCEPTED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' = 'ARRIVED') {
+  const { connectDb } = await import('../src/db/client');
+  const { bookings, proProfiles, proSkus, users } = await import('../src/db/schema');
+  const { issueSession } = await import('../src/middleware/auth');
+  const { eq } = await import('drizzle-orm');
+  const client = (await connectDb(env))!;
+  try {
+    const rows = await client.db.insert(users).values([
+      { email: testEmail('fixture-customer') }, { email: testEmail('fixture-pro'), role: 'PRO' }, { email: testEmail('fixture-other'), role: 'PRO' },
+    ]).returning();
+    const customer = rows[0]!; const pro = rows[1]!; const other = rows[2]!;
+    await client.db.insert(proProfiles).values({ userId: pro.id, kycStatus: 'APPROVED' });
+    await client.db.insert(proSkus).values({ proId: pro.id, skuId: 'sku-ac-leak' });
+    const auth = async (id: string) => ({ Authorization: `Bearer ${(await issueSession(client.db, id, undefined)).accessToken}` });
+    const headers = { customer: await auth(customer.id), pro: await auth(pro.id), other: await auth(other.id) };
+    const res = await api('/bookings', json({ skuId: 'sku-ac-leak', proId: pro.id,
+      address: { street: 'Ugac Norte', barangay: 'Ugac Norte', city: 'Tuguegarao City' }, lat: 17.618111, lng: 121.718927,
+      schedule: 'ASAP', paymentMethod: 'GCASH',
+    }, { ...headers.customer, 'Idempotency-Key': crypto.randomUUID() }));
+    if (res.status !== 201) throw new Error(`Fixture creation failed: ${res.status}`);
+    const { booking } = await res.json() as { booking: typeof bookings.$inferSelect };
+    await client.db.update(bookings).set({ status }).where(eq(bookings.id, booking.id));
+    return { ...client, customer, pro, other, headers, booking: { ...booking, status } };
+  } catch (error) { await client.close(); throw error; }
+}

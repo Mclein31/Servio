@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.5] — 2026-10-16
+### Added
+- A5: Catalog-only add-on quotes in ARRIVED/IN_PROGRESS, restricted to the assigned Pro, with validated evidence key/note and one pending quote at a time.
+- Customer approval atomically adds a balanced `ADDON_HOLD`; decline leaves escrow unchanged. Booking reads include snapshotted add-ons in their totals. Concurrent approvals hold once; failed authorization rolls back the decision and ledger writes.
+### Verified
+- API typecheck and add-on tests cover ₱350 → ₱1,500 escrow, later ₱297.50 Pro share, auth, strict input/SKU validation, lifecycle restrictions, decline, replay, concurrent quote/approval and rollback. Upload ownership/content is integrated by the next task, A6.
+
 ## [0.5.4] — 2026-10-16
 ### Added
 - A4: Participant-only booking detail and cursor-paginated customer/Pro lists, event/add-on totals, assigned-Pro status transitions and 409 invalid-transition guards. Completion still requires the upcoming PIN endpoint.
