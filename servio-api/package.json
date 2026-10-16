@@ -16,7 +16,8 @@
     "db:seed-demo": "tsx scripts/seed-demo.ts",
     "db:demo-reset": "tsx scripts/demo-tools.ts reset",
     "db:backup": "tsx scripts/demo-tools.ts backup",
-    "db:restore": "tsx scripts/demo-tools.ts restore"
+    "db:restore": "tsx scripts/demo-tools.ts restore",
+    "secrets:production": "tsx scripts/production-secrets.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",
