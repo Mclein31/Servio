@@ -22,7 +22,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
             <span class="wordmark">SERVIO</span><span class="pro">PRO</span>
           </div>
           <a routerLink="/tabs/profile" class="switch" aria-label="Account and sign out"><ion-icon name="swap-horizontal-outline" aria-hidden="true"></ion-icon></a>
-          <app-avatar [name]="pro.auth.user()?.fullName ?? 'Pro'" [size]="40"></app-avatar>
+          <app-avatar [src]="pro.auth.avatarUrl()" [name]="pro.auth.user()?.fullName ?? 'Pro'" [size]="40"></app-avatar>
         </div>
       </ion-toolbar>
     </ion-header>

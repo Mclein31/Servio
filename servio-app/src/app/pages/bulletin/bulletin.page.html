@@ -9,7 +9,7 @@
   <div class="servio-section intro">
     <p class="servio-subtitle">Live requests from your neighborhood.</p>
     <app-search-filter placeholder="Search requests, skills, or keywords…" [selectedFilterCount]="filter() === 'ALL' ? 0 : 1"
-      (searchChange)="query.set($event)"></app-search-filter>
+      (searchChange)="query.set($event)" (filterClick)="openFilterSheet()"></app-search-filter>
   </div>
 
   <div class="servio-section">

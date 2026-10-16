@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
+import { ActionSheetController, IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
 import { CATEGORIES } from '../../core/data/mock-data';
 import { CommunityService } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -25,12 +25,17 @@ const MINI_STEPS = ['Accepted', 'On the Way', 'Arrived', 'Done'];
 export class HomePage {
   private readonly router = inject(Router);
   private readonly sheets = inject(SheetsService);
+  private readonly toasts = inject(ToastController);
+  private readonly actionSheets = inject(ActionSheetController);
   readonly orders = inject(OrderService);
   readonly sim = inject(TrackingService);
 
   readonly community = inject(CommunityService);
   readonly auth = inject(AuthService);
-  ionViewWillEnter(): void { void this.community.refresh(); }
+  ionViewWillEnter(): void {
+    void this.community.refresh();
+    void this.auth.refreshProfile();
+  }
   readonly firstName = computed(() => this.auth.user()?.fullName?.split(' ')[0] ?? 'neighbor');
   readonly categories = CATEGORIES.slice(0, 4);
   readonly bulletin = computed(() => this.community.requests().slice(0, 3));
@@ -81,5 +86,42 @@ export class HomePage {
 
   openCategory(id: string): void {
     this.router.navigate(['/tabs/directory'], { queryParams: { category: id } });
+  }
+
+  async openNotifications(): Promise<void> {
+    const toast = await this.toasts.create({
+      message: 'You have no new notifications.',
+      duration: 2000,
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  async openFilters(): Promise<void> {
+    const buttons = CATEGORIES.map((c) => ({
+      text: c.label,
+      icon: c.icon,
+      handler: () => {
+        this.openCategory(c.id);
+      },
+    }));
+    const sheet = await this.actionSheets.create({
+      header: 'Browse by Category',
+      buttons: [
+        {
+          text: 'All Services',
+          icon: 'apps-outline',
+          handler: () => {
+            this.router.navigate(['/tabs/directory']);
+          },
+        },
+        ...buttons,
+        {
+          text: 'Cancel',
+          role: 'cancel',
+        },
+      ],
+    });
+    await sheet.present();
   }
 }
