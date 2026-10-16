@@ -75,3 +75,12 @@
 - **Status:** Accepted
 - **Decision:** Sign-in is a 6-digit email code via Gmail SMTP (AdvanCare ADR-014 pattern); the app's phone login becomes email. Payments use a mock `PaymentProvider` with the full escrow ledger (PayMongo after the demo). Tracking uses real Pro GPS over a Durable Object, with the existing route simulator kept as a demo fallback. Admin console, Android, push and Cloudflare/Neon deploy are required before launch. Completion PINs are derived with HMAC(PIN_SECRET, booking id) and never stored.
 - **Consequences:** SMS cost is avoided for the pilot (Semaphore later). Demo data lives in a dedicated demo database/Neon branch so reset can truncate safely.
+
+
+## ADR-007: Transactional Mock Booking Holds and Retry Safety
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context:** Checkout retries must never create multiple bookings or escrow holds. The demo uses mock money, while retaining production-style ledger invariants.
+- **Decision:** `POST /bookings` snapshots the active catalog price and `TRUST_FEE_CENTAVOS` (default 5000). The mock provider authorization, booking, event and balanced hold entries execute within one database transaction. Optional `Idempotency-Key` values are scoped to the authenticated customer, fingerprint the validated request, and serialize with a transaction advisory lock plus a unique index; changed requests with the same key fail with 409. Mobile checkout must supply a stable key per authorization attempt. Direct Pros must be active, approved and qualified for the SKU.
+- **Consequences:** Concurrent and sequential retries authorize once; failed authorization rolls back all booking writes. The stateless mock implements `authorizeHold/capture/refund`; a future real provider must provide its own external idempotency and reconciliation (Phase G, not implemented). SERVIO shares no code, packages, credentials, storage or database resources with any other project.
