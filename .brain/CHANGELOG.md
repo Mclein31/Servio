@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.10] — 2026-10-16
+### Added
+- C1: Angular Fetch HttpClient, API-relative Promise wrapper, scoped bearer/request-ID interceptor, safe error toasts and rejected-session clearing. Capacitor Preferences stores sessions separately from auth callers; mock tokens and API credentials are not forwarded to storage URLs.
+- App API/mock/demo environment flags and validated, persisted demo connection settings for LAN/emulator addresses. Production has no connection override or assumed deployed URL. Blob upload/download helpers support the new storage endpoints (ADR-015).
+### Verified
+- App build/lint and API-client tests pass without warnings: auth/request/idempotency headers, foreign-origin exclusion, persisted LAN/mock configuration, URL validation, error-envelope toasts and session rejection. Existing tracking/money/OTP/slide tests remain passing.
+
 ## [0.5.9] — 2026-10-16
 ### Added
 - A9: Once-only customer review after completion, 100% Pro tips with balanced entries, and integer rating_sum for exact aggregate averages (`0006_exact_review_averages`, migrated dev/test).
