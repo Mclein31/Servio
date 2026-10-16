@@ -107,16 +107,25 @@
   <!-- Active tracking mini-widget -->
   @if (orders.isActive()) {
     <a class="tracking-widget" routerLink="/tabs/tracking" aria-label="Open live tracking">
-      <div class="tw-top">
-        <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="44" [online]="true"></app-avatar>
-        <div class="tw-text">
-          <span class="tw-title">{{ orders.order().helper.name }} • {{ orders.order().sku.name }}</span>
-          <span class="tw-sub">Order #{{ orders.order().code ?? orders.order().id }}</span>
+      <div class="tw-header">
+        <div class="tw-helper-info">
+          <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="42" [online]="true"></app-avatar>
+          <div class="tw-id-block">
+            <div class="tw-name-row">
+              <span class="tw-helper-name">{{ orders.order().helper.name }}</span>
+              <span class="tw-order-num">#{{ orders.order().code ?? orders.order().id }}</span>
+            </div>
+            <span class="tw-service-tag">{{ orders.order().sku.name }}</span>
+          </div>
         </div>
-        <span class="tw-eta">
-          <span class="live-dot" aria-hidden="true"></span>{{ statusLine() }}
-        </span>
+        <ion-icon name="chevron-forward" class="tw-arrow" aria-hidden="true"></ion-icon>
       </div>
+
+      <div class="tw-status-banner">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="tw-status-text">{{ statusLine() }}</span>
+      </div>
+
       <div class="tw-progress" role="progressbar" [attr.aria-valuenow]="miniProgress().index + 1" aria-valuemin="1" aria-valuemax="4">
         <div class="tw-bar"><span class="tw-fill" [style.transform]="'scaleX(' + miniProgress().fill + ')'"></span></div>
         <div class="tw-steps">
