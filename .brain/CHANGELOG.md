@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.21] — 2026-10-16
+### Added
+- Functional profile Edit: persisted name, optional PH mobile, photo upload/removal and signed current-avatar display. Reuses the profile setup design, prefills the account, preserves failed edits and keeps the sign-in email read-only.
+- PATCH /me validates non-empty updates and completed owned avatar uploads, rejecting other owners/purposes and identity/role changes. Payments remain simulated.
+### Verified
+- API typecheck and 154 tests; app build/lint and 42 tests pass with zero warnings. Browser saved Sophia’s contact edit through the API and returned to Profile. Real email delivery still requires sender configuration; no email credentials or real-payment resource was added.
+
 ## [0.5.20] — 2026-10-16
 ### Added
 - B3 implementation: native foreground Geolocation, shared live socket lifecycle, immediate booking/chat/add-on/dispatch refresh, remaining-street snapping/interpolation, 20-second reconnect indicator and explicit Tuguegarao route fallback. Real booking pins survive arrival; queued-job selection preserves the current customer’s GPS stream.

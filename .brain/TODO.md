@@ -46,7 +46,7 @@
 
 **Owner-added real-user readiness (payments remain mock)**
 - [ ] Real email-code delivery configuration and verification; normal verified-email account creation stays separate from demo identities.
-- [ ] Editable profile name/mobile/photo with owned-upload validation and persisted results.
+- [x] Editable profile name/mobile/photo, authenticated persistence, current-avatar display and owned completed-upload validation.
 - [ ] Owner-scoped saved addresses, map pin picker and checkout using the confirmed location.
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
