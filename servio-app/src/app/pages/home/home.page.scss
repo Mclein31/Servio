@@ -404,3 +404,32 @@
     transform: translateY(16px);
   }
 }
+
+@media (max-width: 360px) {
+  .hero-copy {
+    width: 62%;
+    padding: 16px 0 16px 14px;
+
+    h2 {
+      font-size: 20px;
+      line-height: 25px;
+    }
+
+    p {
+      font-size: 11px;
+      line-height: 15px;
+    }
+  }
+
+  .hero-art {
+    width: 48%;
+    right: -10px;
+  }
+
+  .hero-cta {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+

@@ -245,3 +245,37 @@
     transform: translateY(-2px);
   }
 }
+
+@media (max-width: 360px) {
+  .order-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .status-chip {
+    align-self: flex-start;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .comm {
+    padding: 10px 12px;
+    gap: 8px;
+
+    p {
+      font-size: 12px;
+      line-height: 16px;
+    }
+  }
+
+  .comm-actions {
+    gap: 8px;
+  }
+
+  .call {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+}
+

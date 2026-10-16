@@ -1,10 +1,8 @@
-
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-
 
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
@@ -18,3 +16,17 @@
 
 .env
 .env*.local
+
+# Local configs
+servio-app/.npmrc
+
+# Android build outputs & local config
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/local.properties
+**/android/*.jks
+**/android/*.keystore
+**/android/keystore.properties
+**/android/captures/
+**/android/.cxx/
