@@ -113,3 +113,14 @@
 - **Network:** Mac hosts Postgres/API with `wrangler dev --ip 0.0.0.0`; app supports a configurable LAN API URL. Allow development LAN origins. Restrict iOS local-network ATS and Android cleartext exceptions to dev/demo builds. Document Wi-Fi, installs and fallbacks in the checklist. If LAN is unreliable, ask before deploying: owner has no SERVIO Neon/Cloudflare resources yet.
 - **Identity/email:** Sophia M. is customer (`demo.customer@servio.test`); Sofia R. is the distinct tutor (`demo.tutor@servio.test`); Daniel K. is the main Pro (`demo.pro@servio.test`). Sender name SERVIO. No SMTP App Password yet: log development codes, and allow guarded `DEMO_LOGIN_CODE`. Business/email footer address is `Business address to follow — prototype`; short legal pages are labelled `Prototype — not legal advice`. Never invent registration details.
 - **Consequences:** Physical signing/GPS/install verification depends on connected owner devices and their Apple ID. Phase G remains gated; no cloud resources, real payments or FCM are created for this demo without a later instruction.
+
+
+## ADR-011: Upload Ownership and Local R2 Demo Adapter
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context:** The owner has not created Cloudflare resources and requires the demo to run on local Wi-Fi. Evidence photos must still use the same ownership, type and size rules as cloud uploads.
+- **Decision:** Record upload intents/owners in `uploads` (`0005_upload_ownership`). R2 mode uses dedicated `servio-*` buckets and signed PUTs covering Content-Type and Content-Length for 15 minutes; authorized downloads issue 60-second GET URLs. Only JPEG/PNG ≤5 MB and KYC-only PDF ≤10 MB are accepted. Add-on references must be complete uploads owned by the assigned Pro for `addon_evidence`.
+- **Local demo:** `UPLOADS_MODE=local` signs key/method/type/length/expiry capabilities with domain-separated HMAC using PIN_SECRET and reads/writes the local Wrangler R2 binding. Production rejects local mode. The PUT stream is bounded to the declared length; URLs use the incoming API origin so LAN phones can reach them. `UPLOADS_MODE=r2` uses S3 presigning and the actual SERVIO bucket binding; no cloud resources are created by this task.
+- **Authorization:** Upload owners may read their files. Booking participants may read attached evidence/chat photos; bulletin photos are readable with the bulletin; approved Pro avatars are directory-visible. KYC files are owner-only until an audited admin path is implemented. No file purpose may be repurposed into chat/evidence to disclose KYC.
+- **Consequences:** Demo upload behavior is verifiable without cloud accounts; remote R2 operation remains a later integration check. The local bucket is persistent dev data, distinct from the Postgres ledger.

@@ -27,7 +27,7 @@
 - [x] A3: Booking creation, mock escrow hold, idempotency (including concurrent retries and rollback tests).
 - [x] A4: Authorized status machine, participant reads/pagination, compensating cancellation fees/refunds, Pro strikes and server no-show deadlines.
 - [x] A5: Assigned-Pro catalog add-on quotes, one pending quote, customer approval holds, decline and concurrency/rollback checks.
-- [ ] A6: Authorized R2 uploads.
+- [x] A6: Owned upload metadata, R2 signed PUT/GET, local Wrangler demo adapter, participant access and add-on evidence ownership checks.
 - [ ] A7: Completion PIN and escrow release.
 - [ ] A8: Wallet and cashout.
 - [ ] A9: Tips, reviews, bulletin, chat, directory.

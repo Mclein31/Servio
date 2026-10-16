@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.6] — 2026-10-16
+### Added
+- A6: Owned upload intents (`0005_upload_ownership`, migrated dev/test), strict purpose/type/size/key validation, 15-minute R2 PUT signatures covering type+length, and authorized 60-second downloads. Add-on evidence must be the Pro's own fully uploaded image.
+- `UPLOADS_MODE=local` uses signed, bounded HTTP PUT/GET capabilities against Wrangler's local R2 binding, making photos work on local Wi-Fi without cloud resources; production rejects this mode. R2 mode uses only dedicated `servio-*` bucket credentials. ADR-011 and `.env.example` document the modes.
+### Verified
+- API typecheck and 96 tests pass. New tests cover local round-trip bytes, cache/nosniff headers, dummy-credential R2 presigning without network, auth/participant restrictions, unowned/incomplete evidence, size/type/purpose limits, tamper/expiry and production guard. Live cloud R2 remains unverified because the owner has not created resources.
+
 ## [0.5.5] — 2026-10-16
 ### Added
 - A5: Catalog-only add-on quotes in ARRIVED/IN_PROGRESS, restricted to the assigned Pro, with validated evidence key/note and one pending quote at a time.
