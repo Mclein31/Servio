@@ -3,15 +3,18 @@
   --border: 0;
   --color: #9CA3AF;
   --color-selected: #FF5C00;
-  height: var(--servio-tab-bar-height);
-  padding: 0 8px;
+  height: calc(var(--servio-tab-bar-height) + 8px);
+  padding-bottom: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 4px;
   box-shadow: 0 -4px 16px rgba(17, 24, 39, 0.05);
   contain: none;
+}
 
-  &.is-ios {
-    height: calc(var(--servio-tab-bar-height) + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+:host-context(.plt-ios) .servio-tab-bar {
+  height: calc(var(--servio-tab-bar-height) + env(safe-area-inset-bottom, 0px) + 4px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
 }
 
 ion-tab-button {
@@ -19,7 +22,7 @@ ion-tab-button {
   --padding-end: 0;
   --ripple-color: transparent;
   max-width: none;
-  height: 100%;
+  height: var(--servio-tab-bar-height);
 }
 
 .tab-pill {
@@ -31,7 +34,7 @@ ion-tab-button {
   width: 100%;
   max-width: 66px;
   min-width: 48px;
-  height: 42px;
+  height: 40px;
   border-radius: 12px;
   transition: background-color 0.2s ease;
 
