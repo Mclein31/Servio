@@ -215,6 +215,8 @@ export const bookings = pgTable(
     /** Human-readable order code, e.g. SRV-8821. */
     code: text('code').notNull().default(sql`'SRV-' || nextval('booking_code_seq')::text`),
     isDemo: boolean('is_demo').notNull().default(false),
+    idempotencyKey: text('idempotency_key'),
+    requestHash: text('request_hash'),
     customerId: uuid('customer_id')
       .notNull()
       .references(() => users.id),
@@ -239,6 +241,7 @@ export const bookings = pgTable(
   },
   (t) => [
     uniqueIndex('bookings_code_uq').on(t.code),
+    uniqueIndex('bookings_customer_idempotency_uq').on(t.customerId, t.idempotencyKey),
     index('bookings_customer_idx').on(t.customerId, t.createdAt),
     index('bookings_pro_idx').on(t.proId, t.status),
     check('bookings_money_chk', sql`${t.priceCentavos} > 0 AND ${t.trustFeeCentavos} >= 0 AND ${t.tipCentavos} >= 0`),

@@ -22,8 +22,8 @@
 
 **Implementation plan — Demo milestone (in required order)**
 - [x] A1: Demo flags and database-generated booking codes (`0002_demo_and_pros`); migrated dev/test and schema assertions pass.
-- [ ] A3: Booking creation, mock escrow hold, idempotency.
-- [ ] A4: Status machine and participant reads (owner cancellation policy pending).
+- [x] A3: Booking creation, mock escrow hold, idempotency (including concurrent retries and rollback tests).
+- [ ] A4: Status machine and participant reads (owner fee and no-show policy received; implementation next).
 - [ ] A5: Catalog add-on quotes and approval holds.
 - [ ] A6: Authorized R2 uploads.
 - [ ] A7: Completion PIN and escrow release.

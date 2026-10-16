@@ -25,6 +25,8 @@ export interface Bindings {
   MAIL_FROM_NAME?: string;
   /** 32+ random bytes, base64. Derives completion PINs (escrow release). */
   PIN_SECRET?: string;
+  /** Fixed booking trust fee in integer centavos (default 5000). */
+  TRUST_FEE_CENTAVOS?: string;
 }
 
 export interface Variables {

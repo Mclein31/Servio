@@ -4,6 +4,7 @@ import { corsMiddleware } from './middleware/cors';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { requestId } from './middleware/request-id';
 import { auth } from './routes/auth';
+import { bookings } from './routes/bookings';
 import { catalog } from './routes/catalog';
 import { health } from './routes/health';
 import { me } from './routes/me';
@@ -20,6 +21,7 @@ v1.route('/', health);
 v1.route('/', catalog);
 v1.route('/', auth);
 v1.route('/', me);
+v1.route('/', bookings);
 app.route('/api/v1', v1);
 
 export default app;

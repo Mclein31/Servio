@@ -22,6 +22,13 @@
       "when": 1792112783038,
       "tag": "0002_demo_and_pros",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792112890491,
+      "tag": "0003_booking_idempotency",
+      "breakpoints": true
     }
   ]
 }
