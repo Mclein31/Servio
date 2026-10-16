@@ -12,7 +12,7 @@ LAUNCH_CITY = "tuguegarao"
 UPLOADS_MODE = "local"
 # Capacitor apps: iOS serves from capacitor://localhost, Android from http://localhost.
 # In development any http://localhost:<port> is also allowed (see src/middleware/cors.ts).
-ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,http://localhost:8100"
+ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost,http://localhost:8100"
 R2_BUCKET_NAME = "servio-uploads-dev"
 
 # Local development reaches Postgres/Neon directly through DATABASE_URL (servio-api/.env).
@@ -40,7 +40,7 @@ new_sqlite_classes = ["OrderRoom"]
 
 [env.production]
 name = "servio-api"
-vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "r2", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost", R2_BUCKET_NAME = "servio-uploads" }
+vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "r2", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost", R2_BUCKET_NAME = "servio-uploads" }
 
 # Create once you have the Neon URL, then paste the printed id here:
 #   npx wrangler hyperdrive create servio-neon --connection-string="<DATABASE_URL_UNPOOLED>"

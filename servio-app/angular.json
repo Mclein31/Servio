@@ -79,6 +79,11 @@
             },
             "ci": {
               "progress": false
+            },
+            "demo": {
+              "optimization": true,
+              "sourceMap": false,
+              "outputHashing": "all"
             }
           },
           "defaultConfiguration": "production"

@@ -4,6 +4,16 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.25] — 2026-10-16
+### Added
+- F1 native packages: SERVIO Android project, camera/location/notification declarations, existing-logo icons/splash, API-connected demo build/sync command and foreground location strings. Development defaults to API mode.
+- Android Debug-only cleartext configuration, iOS Debug-only local-network plist, strict Release configurations and guards against packaging the demo network settings as Release. Native HTTPS localhost CORS origin included.
+### Maintenance
+- Angular 22.2.3 / Vitest 4.1.12 security patches and a compatible xcode uuid override; app dependency audit reports zero vulnerabilities. API runtime dependency audit is clear; four moderate advisories remain in its development-only Drizzle/esbuild toolchain.
+### Verification
+- App build/lint and 50 tests pass with zero warnings. Android debug APK builds; Release rejects demo config and the production network manifest denies cleartext. iOS simulator build succeeds, API sign-in and Tuguegarao tracking load on iPhone 14 Plus.
+- Android emulator installation failed with a package-service broken pipe; a cold restart remained offline. Physical Personal Team signing, GPS/camera, actual Gmail delivery and cloud deployment remain unverified/deferred. Native Xcode emitted third-party Camera/AppIntents warnings; app build/lint/tests were warning-free.
+
 ## [0.5.24] — 2026-10-16
 ### Fixed
 - Native rehearsal exposed stale progress when a remote demo sender restarted its route. Receivers now restart interpolation from the new simulated position and keep its source label. Delayed live router responses cannot replace embedded demo geometry.

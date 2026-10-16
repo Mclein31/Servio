@@ -40,7 +40,7 @@
 ```
 SERVIO/
 ├─ servio-app/        Ionic 9 + Angular 22 + Capacitor 8 app (customer + Pro). iOS project in servio-app/ios.
-├─ servio-api/        Cloudflare Worker API (Hono). Steps 1–2 done.
+├─ servio-api/        Cloudflare Worker API (Hono). Demo lifecycle and real-user account/profile/address flows implemented.
 ├─ .brain/            Project knowledge (update TODO/CHANGELOG/DECISIONS as you go).
 ├─ vault/, Servio_Vault/  Obsidian product knowledge (read-only for you unless a task says otherwise).
 └─ SERVIO.fig, assets/    Design sources.
@@ -68,7 +68,8 @@ cd servio-app
 npm start              # ng serve on :4200
 npx ng test --watch=false
 npx ng lint
-npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
+npm run native:demo && npx cap open ios     # then Debug / Cmd+R in Xcode
+# Future HTTPS Release: npm run native:production before a Release build.
 ```
 > `npx cap run ios` fails at deploy on this Mac ("Simulator.app does not exist"); use Xcode or `xcrun simctl install/launch`.
 
@@ -253,13 +254,13 @@ npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode
 
 ### Real-user readiness update (owner request, 2026-10-16)
 
-Before the remaining device/checklist work, finish real customer account creation and delivered six-digit email sign-in, editable profile details/photo, and saved addresses with an explicit map pin used by checkout. Keep all payment holds, escrow releases, tips and cashouts **mock only**. Preserve the existing Ionic screens/design. Add owner-scoped API validation/tests and app build/lint/tests for these flows. Do not treat this as approval to create cloud resources, implement real payments, SMS/social sign-in or remove the placeholder legal details. Email delivery verification requires locally configured sender credentials; never request them in chat. B3 tracking fixes finish first, then these real-user flows, then F1/D4 and device rehearsal.
+Before the remaining device/checklist work, finish real customer account creation and delivered six-digit email sign-in, editable profile details/photo, and saved addresses with an explicit map pin used by checkout. Keep all payment holds, escrow releases, tips and cashouts **mock only**. Preserve the existing Ionic screens/design. Add owner-scoped API validation/tests and app build/lint/tests for these flows. Do not treat this as approval to create cloud resources, implement real payments, SMS/social sign-in or remove the placeholder legal details. Email delivery verification requires locally configured sender credentials; never request them in chat. B3 tracking fixes finish first, then these real-user flows, then F1/D4 and device rehearsal. Profiles and map-pinned saved addresses are implemented (ADRs 026/028); Gmail delivery is implemented and tested with fake SMTP (ADR-027), awaiting owner credentials/inbox verification. Native build/install/run instructions and the full flow are in `docs/DEMO_CHECKLIST.md`.
 
 ## 4. Owner answers and remaining questions (updated 2026-10-16)
 
 - **Cancellation/no-show:** answered; ADR-009. Tuguegarao constants supersede earlier traffic assumptions (ADR-008).
 - **Date/devices:** Monday, October 19, 2026; iPhone 14 Plus customer, Android Pro, backup Android and iPhone simulator; Mac + Windows laptop. See section 3 and ADR-010.
 - **Accounts:** Sophia M. (`demo.customer@servio.test`) is customer only. Tutor is a separate person/account **Sofia R.** (`demo.tutor@servio.test`). Daniel K. (`demo.pro@servio.test`) remains main Pro. No demo account is both customer and Pro.
-- **Sender:** `SERVIO`. Gmail App Password is not configured. Use development API-log codes plus `DEMO_LOGIN_CODE` for demo users so sign-in works without email.
+- **Sender:** `SERVIO`. Owner selected **Gmail SMTP** and will configure credentials locally (never in chat). See `docs/EMAIL_SETUP.md`. Actual inbox delivery is pending that configuration; development API-log codes plus `DEMO_LOGIN_CODE` keep demo sign-in available.
 - **Business/legal:** use exactly **Business address to follow — prototype** in the email footer and legal pages. Do not invent a registered name, address, TIN or DTI/SEC number. Keep Terms, Privacy and Escrow Protection Policy short and label them **Prototype — not legal advice**.
 - **Cloud:** no Neon/Cloudflare resources yet; deployment fallback requires owner approval. Actual personal-team signing and physical-device GPS/install verification require the owner's connected devices and Apple ID.
