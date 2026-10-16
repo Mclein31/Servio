@@ -13,7 +13,8 @@
 - [x] Initialize repository Git structure and base Ionic-Angular project layout (`servio-app/`).
 - [x] Create editable Figma customer/Pro flows, linked branding and onboarding graphics (`SERVIO.fig`).
 - [ ] Validate representative Philippine catalog pricing, the ₱50 trust fee and the 85/15 payout split before launch.
-- [ ] Record the backend stack decision as an ADR (Workers + Hono + Drizzle + Neon via Hyperdrive + R2, same as AdvanCare).
+- [x] Record the backend stack decision as an ADR (ADR-005/006).
+- [ ] **Remaining work is specified task-by-task in `CODEX_IMPLEMENTATION_PLAN.md` (repo root).**
 
 ---
 
@@ -47,13 +48,13 @@
 - [x] Drizzle schema + migrations (17 tables) with DB guards: append-only ledger/events, balanced double-entry.
 - [x] Local `servio_dev` / `servio_test` databases migrated; idempotent catalog seed (`npm run db:seed`).
 - [x] Shared helpers: env bindings, per-request DB client, errors, validation, crypto, money split.
-- [ ] Middleware: request ID, CORS (Capacitor origins), error envelope, `withDb`, `requireUser`.
-- [ ] Routes: `GET /health`, `GET /catalog` (categories, SKUs, add-ons).
-- [ ] Vitest setup (`@cloudflare/vitest-plugin`) + tests for health, catalog, money split, ledger guards.
+- [x] Middleware: request ID, CORS (Capacitor origins), error envelope, `withDb`, `requireUser`.
+- [x] Routes: `GET /health`, `GET /catalog` (categories, SKUs, add-ons).
+- [x] Vitest setup (`@cloudflare/vitest-plugin`) + tests for health, catalog, money split, ledger guards.
 
 **Step 2 — Sign-in (email codes, ADR-014 pattern from AdvanCare)**
-- [ ] Gmail SMTP mailer over `cloudflare:sockets` (dev: code printed to log).
-- [ ] `POST /auth/request-otp`, `POST /auth/verify-otp`, `GET /auth/me`, `POST /auth/sign-out` (hashed codes + sessions, rate limits, attempt lockout).
+- [x] Gmail SMTP mailer over `cloudflare:sockets` (dev: code printed to log).
+- [x] `POST /auth/request-code`, `POST /auth/verify-code`, `POST /auth/sign-out`, `GET/PATCH /me` (hashed codes + sessions, rate limits, attempt lockout).
 - [ ] Profile endpoints (name, phone, avatar), Pro profile + KYC submission.
 - [ ] App: switch login screen from phone to email code; `AuthService` calls the API and stores the session token.
 

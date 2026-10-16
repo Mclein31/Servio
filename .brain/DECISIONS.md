@@ -58,3 +58,20 @@
 - **Consequences:**
   - Positive: Prevents unauthorized surprise billing and keeps transaction volume on-platform.
   - Negative: Requires active internet connectivity on site for both customer and technician.
+
+---
+
+## ADR-005: Backend on Cloudflare Workers + Neon Postgres + R2 (AdvanCare Stack)
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Context:** SERVIO needed a backend; the owner already runs AdvanCare on Cloudflare Workers with Neon and R2 and wants one setup across projects.
+- **Decision:** `servio-api/` uses Cloudflare Workers + Hono + Valibot, Drizzle ORM over `pg` to Neon Postgres (Hyperdrive in production, direct URL locally), R2 for photos/KYC via presigned URLs, Durable Objects for live order rooms (GPS, status, chat), FCM for push. Money is integer centavos; the ledger is double-entry and append-only, enforced by database triggers.
+- **Consequences:** No Supabase-style RLS — every endpoint must authorize in code (participants only, 404 otherwise). PostGIS is used on Neon; local dev uses haversine because Homebrew Postgres lacks PostGIS.
+
+## ADR-006: Demo Scope — Email Codes, Mock Escrow, Real GPS With Simulator Fallback
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Sign-in is a 6-digit email code via Gmail SMTP (AdvanCare ADR-014 pattern); the app's phone login becomes email. Payments use a mock `PaymentProvider` with the full escrow ledger (PayMongo after the demo). Tracking uses real Pro GPS over a Durable Object, with the existing route simulator kept as a demo fallback. Admin console, Android, push and Cloudflare/Neon deploy are required before launch. Completion PINs are derived with HMAC(PIN_SECRET, booking id) and never stored.
+- **Consequences:** SMS cost is avoided for the pilot (Semaphore later). Demo data lives in a dedicated demo database/Neon branch so reset can truncate safely.
