@@ -55,9 +55,10 @@ describe('live customer data and escrow screens', () => {
     await TestBed.inject(CommunityService).catalog();
     api.post.mockResolvedValue({ booking });
     const sku = TestBed.inject(CommunityService).skus()[0];
-    await orders.book('GCASH', 'Immediate / ASAP', sku, undefined, 'stable-retry');
-    await orders.book('GCASH', 'Immediate / ASAP', sku, undefined, 'stable-retry');
-    expect(api.post).toHaveBeenLastCalledWith('/bookings', expect.objectContaining({ skuId: 'sku-ac-leak', schedule: 'ASAP', paymentMethod: 'GCASH' }), { 'Idempotency-Key': 'stable-retry' });
+    await orders.book('GCASH', 'Immediate / ASAP', sku, undefined, 'stable-retry', undefined, {id:'address',label:'Home',...booking.address,landmark:null,lat:17.61,lng:121.72,isDefault:true});
+    await orders.book('GCASH', 'Immediate / ASAP', sku, undefined, 'stable-retry', undefined, {id:'address',label:'Home',...booking.address,landmark:null,lat:17.61,lng:121.72,isDefault:true});
+    expect(api.post).toHaveBeenLastCalledWith('/bookings', expect.objectContaining({ skuId: 'sku-ac-leak', schedule: 'ASAP', paymentMethod: 'GCASH',lat:17.61,lng:121.72,address:expect.objectContaining({street:'Ugac Norte'}) }), { 'Idempotency-Key': 'stable-retry' });
+    expect(api.post.mock.calls[0][1].address).not.toHaveProperty('landmark');
     expect(api.post.mock.calls[0][1]).not.toHaveProperty('priceCentavos');
     expect(api.post.mock.calls[0][1]).not.toHaveProperty('status');
     expect(orders.order().status).toBe('IN_PROGRESS');

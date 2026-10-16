@@ -3,6 +3,7 @@ export const CANCELLATION_FEES = { enRouteCentavos: 10000, arrivedCentavos: 2000
 
 export interface CityProfile {
   name: string;
+  addressCity: string;
   center: { lat: number; lng: number };
   roadFactor: number;
   averageSpeedKmh: number;
@@ -18,7 +19,7 @@ export interface CityProfile {
 /** Add a city here and select it with LAUNCH_CITY; consumers use the same estimator/policy. */
 export const CITY_PROFILES: Record<string, CityProfile> = {
   tuguegarao: {
-    name: 'Tuguegarao City, Cagayan', center: { lat: 17.613, lng: 121.727 },
+    name: 'Tuguegarao City, Cagayan', addressCity: 'Tuguegarao City', center: { lat: 17.613, lng: 121.727 },
     roadFactor: 1.3, averageSpeedKmh: 20,
     minTravelMinutes: 15, maxTravelMinutes: 60, defaultTravelMinutes: 30,
     freshLocationSeconds: 120, noShowGraceMinutes: 30, acceptedTimeoutMinutes: 15,

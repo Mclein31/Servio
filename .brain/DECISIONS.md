@@ -270,3 +270,13 @@
 - **Decision:** Deliver six-digit sign-in codes over Gmail implicit TLS on port 465 using an owner-configured App Password in the ignored local environment. Use SERVIO as sender display name and retain the prototype address footer. Missing credentials only permit the explicit development log fallback; production fails closed. Demo codes remain restricted to seeded demo identities.
 - **Security:** Serialize verification attempts and one-time consumption on the code row, rechecking expiry and attempt limits at consumption. SMTP closes on timeout and clears its timer after completion. Normal verified-email sign-in creates a customer account; no real payment integration is enabled.
 - **Verification:** Fake SMTP and database tests pass. Actual Gmail inbox delivery requires the owner's local credentials and inbox check in docs/EMAIL_SETUP.md; no credentials were inspected or messages sent during implementation.
+
+
+## ADR-028: Owned Saved Places and Explicit Booking Pins
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Store saved addresses per authenticated account with one default, serialized through the owner row and protected by a partial unique index. Validate city and coordinates against the configured Tuguegarao 10 km service area both when saving and when booking, before creating any hold. The booking retains its own address/coordinate snapshot. Editing a saved place never moves an existing booking.
+- **UX:** Add an Ionic address book reachable from Profile and checkout. Require an explicit map tap, pin drag or successful current-location fix for each new place; start the map at the verified Tuguegarao center. Keep manual entrance/barangay/directions text and OSM attribution. No invented automatic address or geocoding service. First address becomes default; deleting it promotes the oldest remaining place. Live accounts start without a sample address.
+- **Concurrency:** Ignore refreshes older than an address mutation, account-crossing results and GPS results from a closed editor. Include the full selected address/pin in the checkout retry fingerprint; omit empty optional booking directions. Demo seed includes Sophia's saved home, reset includes the new table.
+- **Verification:** API typecheck and 165 tests; app build/lint and 48 tests pass. Browser saved and reopened a Centro 10 pin and displayed it at checkout. Native location permission/device verification remains separate. No new secret or environment variable.

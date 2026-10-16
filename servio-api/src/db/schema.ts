@@ -77,6 +77,26 @@ export const users = pgTable(
   ],
 );
 
+/** Owner-managed service destinations. Bookings retain their own address snapshot. */
+export const userAddresses = pgTable('user_addresses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  label: text('label').notNull(),
+  street: text('street').notNull(),
+  barangay: text('barangay').notNull(),
+  city: text('city').notNull(),
+  landmark: text('landmark'),
+  lat: doublePrecision('lat').notNull(),
+  lng: doublePrecision('lng').notNull(),
+  isDefault: boolean('is_default').notNull().default(false),
+  createdAt: created(),
+  updatedAt: updated(),
+}, (t) => [
+  index('user_addresses_owner_idx').on(t.userId),
+  uniqueIndex('user_addresses_default_uq').on(t.userId).where(sql`${t.isDefault}`),
+  check('user_addresses_coordinates_chk', sql`${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180`),
+]);
+
 /** One row per emailed sign-in code. Only the hash is stored. */
 export const loginCodes = pgTable(
   'login_codes',

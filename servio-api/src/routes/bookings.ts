@@ -12,6 +12,7 @@ import { ApiError } from '../lib/errors';
 import { splitPayout, TRUST_FEE_CENTAVOS } from '../lib/money';
 import { ownedUpload } from '../lib/uploads';
 import { validate } from '../lib/validation';
+import { validateServiceLocation } from '../lib/service-area';
 import { requireUser } from '../middleware/auth';
 import { withDb } from '../middleware/db';
 import { mockPayments } from '../payments/mock';
@@ -39,6 +40,7 @@ bookings.use('/bookings/*', withDb, requireUser);
 
 bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   const input = c.req.valid('json');
+  validateServiceLocation({ ...input.address, lat: input.lat, lng: input.lng }, c.env.LAUNCH_CITY);
   const customerId = c.get('userId');
   const key = c.req.header('Idempotency-Key');
   if (key !== undefined && !/^[A-Za-z0-9_-]{1,128}$/.test(key)) {

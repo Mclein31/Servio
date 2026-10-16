@@ -3,6 +3,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { AddonQuote, AddonSku, Order, OrderStatus, PaymentMethod, ServiceSku } from '../../shared/models/domain.models';
 import { buildMilestones, HelperSummary, StepMilestone } from '../../shared/models/ui.models';
 import { roundCentavos, splitPayout } from '../../shared/utils/money';
+import { SavedAddress } from './address.service';
 import { DEMO_ADDRESS } from '../data/launch-city';
 import { HELPERS, SKUS } from '../data/mock-data';
 import { clearDemoState, loadDemoState, saveDemoState } from './demo-store';
@@ -128,11 +129,12 @@ export class OrderService {
   }
 
   /** Checkout: authorize a fresh escrow hold and dispatch. */
-  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }): Promise<void> {
+  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress): Promise<void> {
     if (!this.api.settings.useMockApi()) {
       if (!sku) throw new Error('Choose a catalog service.');
+      if (!place) throw new Error('Choose and confirm your service address.');
       const { booking } = await this.api.post<{ booking: BookingDto }>('/bookings', {
-        skuId: sku.id, address: { ...DEMO_ADDRESS }, lat: 17.618111, lng: 121.718927,
+        skuId: sku.id, address: { street: place.street, barangay: place.barangay, city: place.city, ...(place.landmark?.trim() ? { landmark: place.landmark.trim() } : {}) }, lat: place.lat, lng: place.lng,
         schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}),
       }, { 'Idempotency-Key': key });
       await this.load(booking.id); return;
@@ -143,6 +145,7 @@ export class OrderService {
       sku: sku ?? o.sku,
       helper: helper ?? o.helper,
       paymentMethod,
+      ...(place ? { address: { street:place.street,barangay:place.barangay,city:place.city,landmark:place.landmark ?? '' },coordinates:[place.lat,place.lng] as const } : {}),
       schedule,
       addons: [],
       tipPhp: 0,

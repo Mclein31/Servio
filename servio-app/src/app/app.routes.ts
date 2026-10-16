@@ -26,6 +26,7 @@ export const routes: Routes = [
   { path: 'directory', redirectTo: 'tabs/directory' },
   { path: 'bulletin', redirectTo: 'tabs/bulletin' },
   { path: 'tracking', redirectTo: 'tabs/tracking' },
+  { path: 'addresses', canActivate: [authGuard], loadComponent: () => import('./pages/addresses/addresses.page').then((m) => m.AddressesPage) },
   { path: 'profile/edit', canActivate: [authGuard], data: { editing: true }, loadComponent: () => import('./pages/auth/profile-setup/profile-setup.page').then((m) => m.ProfileSetupPage) },
   { path: 'profile', redirectTo: 'tabs/profile' },
   // Screen-inventory aliases: these open as modals over their parent tab.

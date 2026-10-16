@@ -47,7 +47,7 @@
 **Owner-added real-user readiness (payments remain mock)**
 - [/] Gmail SMTP implementation, setup guide and code/concurrency tests pass; actual inbox delivery awaits owner-configured local credentials. Normal verified-email account creation stays separate from demo identities.
 - [x] Editable profile name/mobile/photo, authenticated persistence, current-avatar display and owned completed-upload validation.
-- [ ] Owner-scoped saved addresses, map pin picker and checkout using the confirmed location.
+- [x] Owner-scoped saved addresses, explicit map pin/current-location picker and checkout using confirmed coordinates; migration 0007 and coverage checks.
 
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
 - [x] Demo customer/Pro accounts with fixed sign-in codes only outside production: Sophia M., Daniel K., Chris L., Ava L., Kevin T., Sofia R. Staff account is seeded but cannot use mobile sign-in.

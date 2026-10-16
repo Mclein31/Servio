@@ -50,6 +50,13 @@
       "when": 1792114840916,
       "tag": "0006_exact_review_averages",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792144568622,
+      "tag": "0007_saved_addresses",
+      "breakpoints": true
     }
   ]
 }
