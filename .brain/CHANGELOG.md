@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.24] — 2026-10-16
+### Fixed
+- Native rehearsal exposed stale progress when a remote demo sender restarted its route. Receivers now restart interpolation from the new simulated position and keep its source label. Delayed live router responses cannot replace embedded demo geometry.
+- Added regression coverage for replay after a previously received endpoint and a delayed OSRM response after switching sources.
+
+### Verified
+- App build/lint and 50 tests pass with zero warnings, including both source-replay regressions.
+
 ## [0.5.23] — 2026-10-16
 ### Added
 - Account-owned saved addresses with serialized defaults, explicit Tuguegarao map pins, current-location action, Profile address book and checkout location selection. Bookings snapshot the selected coordinates and validate the 10 km city coverage before any mock hold.

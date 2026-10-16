@@ -40,7 +40,7 @@
 - [x] D2: Guarded fixed-code sign-in for existing active demo customers/Pros; production and staff blocked.
 - [x] D3: Dedicated demo DB reset/backup/restore and authenticated compensating order reset; docs/DEMO_DATA.md.
 - [x] B2: Hibernatable participant OrderRoom/Pro sockets, short-lived single-use session-bound tickets, validated/throttled Pro GPS and post-commit invalidations.
-- [/] B3: Native Geolocation, socket tracking/chat/dispatch, street snapping and explicit route fallback implemented; API/app checks and two-browser rehearsal pass. Native simulator/device rehearsal remains with F1/D4.
+- [/] B3: Native Geolocation, socket tracking/chat/dispatch, street snapping and explicit route fallback implemented; API/app checks and two-browser rehearsal pass. Native iPhone API sign-in/map loading verified; source replay regression fixed. Two-device GPS rehearsal remains with F1/D4.
 - [ ] F1 (demo-required): Android packaging, permissions, icons/splash and dev/demo LAN access; iPhone Personal Team install instructions.
 - [ ] D4: Demo checklist for Monday, October 19, 2026 (iPhone customer + Android Pro).
 
