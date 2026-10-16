@@ -23,7 +23,7 @@ import { AvatarComponent } from '../avatar/avatar.component';
         <span class="rating"><ion-icon name="star" aria-hidden="true"></ion-icon>{{ helper.rating | number: '1.1-1' }} <span class="count">({{ helper.reviewCount }})</span></span>
         <span class="distance"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ helper.distanceKm }} km away</span>
       </div>
-      <span class="price-tag">₱{{ helper.hourlyRatePhp | number: '1.0-0' }}/hr</span>
+      <span class="price-tag">₱{{ helper.hourlyRatePhp | number: '1.0-0' }}/{{ helper.rateUnit ?? 'hr' }}</span>
       @if (!compact) {
         @if (actionMode === 'book') {
           <button type="button" class="action book" (click)="onBook($event)">Book Now</button>

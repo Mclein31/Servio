@@ -35,7 +35,7 @@ function qrCells(seed: string): boolean[] {
     <ion-content>
       <div class="sheet-screen">
         <div class="sheet-context">
-          <div><strong>Active order #{{ o.id }}</strong><span>{{ o.helper.name }} · {{ o.sku.name }}</span></div>
+          <div><strong>Active order #{{ o.code ?? o.id }}</strong><span>{{ o.helper.name }} · {{ o.sku.name }}</span></div>
         </div>
         <div class="sheet-panel" role="dialog" aria-labelledby="pin-title">
           <span class="sheet-handle" aria-hidden="true"></span>
@@ -88,9 +88,9 @@ function qrCells(seed: string): boolean[] {
             </div>
 
             <div class="sheet-actions">
-              <a class="pill-btn-outline block brand" [routerLink]="['/pro/order', o.id, 'verify-otp']">
+              @if (orders.api.settings.useMockApi()) { <a class="pill-btn-outline block brand" [routerLink]="['/pro/order', o.id, 'verify-otp']">
                 <ion-icon name="swap-horizontal-outline" aria-hidden="true"></ion-icon> Demo: open Pro PIN entry
-              </a>
+              </a> }
               <a class="text-btn center" routerLink="/tabs/tracking">Back to tracking</a>
             </div>
           }

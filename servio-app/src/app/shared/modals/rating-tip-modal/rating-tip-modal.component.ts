@@ -27,10 +27,11 @@ const RATING_WORDS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
     <ion-content class="servio-page">
       <div class="wrap">
+        @if (error()) { <p role="alert">{{ error() }}</p> }
         <div class="who">
           <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="72"></app-avatar>
           <h1>How was your service with {{ o.helper.name }}?</h1>
-          <span class="servio-caption">{{ o.sku.name }} · #{{ o.id }}</span>
+          <span class="servio-caption">{{ o.sku.name }} · #{{ o.code ?? o.id }}</span>
         </div>
 
         <div class="stars" role="radiogroup" aria-label="Rating">
@@ -86,7 +87,7 @@ const RATING_WORDS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
     <ion-footer class="ion-no-border">
       <div class="servio-action-bar">
-        <button type="button" class="pill-btn block" [disabled]="rating() === 0" (click)="submit()">Submit Review & Close</button>
+        <button type="button" class="pill-btn block" [disabled]="rating() === 0 || saving() || orders.order().reviewed" (click)="submit()">Submit Review & Close</button>
       </div>
     </ion-footer>
   `,
@@ -100,6 +101,8 @@ export class RatingTipModalComponent {
   readonly compliments = ['Punctual', 'Clean Work', 'Polite', 'Expert Knowledge'];
   readonly tipChoices: TipChoice[] = [0, 50, 100, 200, 'custom'];
 
+  readonly saving = signal(false);
+  readonly error = signal('');
   readonly rating = signal(5);
   readonly bumped = signal(0);
   readonly picked = signal(new Set<string>(['Clean Work']));
@@ -131,7 +134,11 @@ export class RatingTipModalComponent {
   }
 
   async submit(): Promise<void> {
-    this.orders.setTip(this.tipPhp());
+    if (this.saving()) return;
+    this.saving.set(true); this.error.set('');
+    try { await this.orders.review(this.rating(), [...this.picked()], this.feedback(), this.tipPhp()); }
+    catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not submit review.'); return; }
+    finally { this.saving.set(false); }
     const toast = await this.toasts.create({
       message: this.tipPhp() > 0 ? `Thanks! ₱${this.tipPhp()} tip sent to ${this.orders.order().helper.name}.` : 'Thanks for your review!',
       duration: 2000,

@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, inject, signal } from '@angular/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { MessageDto } from '../../../core/api/customer.models';
+import { AuthService } from '../../../core/services/auth.service';
 import { Location } from '@angular/common';
 import { AlertController, IonContent, IonFooter, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
 import { SEED_CHAT } from '../../../core/data/mock-data';
@@ -29,7 +32,14 @@ export class OrderChatPage {
   private readonly location = inject(Location);
   private readonly alerts = inject(AlertController);
 
-  readonly messages = signal<ChatMessage[]>(SEED_CHAT);
+  readonly auth = inject(AuthService);
+  readonly messages = signal<ChatMessage[]>(this.orders.api.settings.useMockApi() ? SEED_CHAT : []);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  private timer?: ReturnType<typeof setInterval>;
+  private generation = 0;
+  private refreshing = false;
+  constructor() { inject(DestroyRef).onDestroy(() => this.stop()); }
   readonly draft = signal('');
   readonly typing = signal(false);
   private replyIndex = 0;
@@ -40,30 +50,64 @@ export class OrderChatPage {
 
   ionViewDidEnter(): void {
     this.content?.scrollToBottom(0);
+    if (!this.orders.api.settings.useMockApi()) { void this.refresh(); this.timer = setInterval(() => void this.refresh(), 3000); }
   }
 
-  send(): void {
+  ionViewDidLeave(): void { this.stop(); }
+  private stop(): void { if (this.timer) clearInterval(this.timer); this.timer = undefined; this.generation++; }
+  private async refresh(): Promise<void> {
+    if (this.refreshing) return;
+    this.refreshing = true;
+    const generation = this.generation;
+    try {
+      const all: MessageDto[] = [];
+      let after: string | null = null;
+      do {
+        const result: { messages: MessageDto[]; nextCursor: string | null } = await this.orders.api.get(`/bookings/${this.orders.order().id}/messages`, after ? { after } : undefined);
+        all.push(...result.messages); after = result.nextCursor;
+      } while (after);
+      const messages = await Promise.all(all.map(async (m): Promise<ChatMessage> => ({ id: m.id, from: !m.senderId ? 'system' : m.senderId === this.orders.order().customerId ? 'customer' : 'helper',
+        text: m.body, time: new Date(m.createdAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' }),
+        photoUrl: m.photoKey ? await this.orders.api.imageUrl(m.photoKey) : undefined })));
+      if (generation === this.generation) { this.messages.set(messages); this.error.set(''); }
+    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load messages.'); }
+    finally { this.refreshing = false; }
+  }
+  async send(): Promise<void> {
     const text = this.draft().trim();
-    if (!text) return;
-    this.push({ from: 'customer', text });
-    this.draft.set('');
-    this.typing.set(true);
-    setTimeout(() => {
-      this.typing.set(false);
-      this.push({ from: 'helper', text: AUTO_REPLIES[this.replyIndex++ % AUTO_REPLIES.length] });
-    }, 1400);
+    if (!text || text.length > 2000 || this.saving()) return;
+    if (!this.orders.api.settings.useMockApi()) {
+      this.saving.set(true);
+      try { await this.orders.api.post(`/bookings/${this.orders.order().id}/messages`, { body: text }); this.draft.set(''); await this.refresh(); }
+      catch (error) { this.error.set(error instanceof Error ? error.message : 'Message was not sent.'); }
+      finally { this.saving.set(false); } return;
+    }
+    this.push({ from: 'customer', text }); this.draft.set(''); this.typing.set(true);
+    setTimeout(() => { this.typing.set(false); this.push({ from: 'helper', text: AUTO_REPLIES[this.replyIndex++ % AUTO_REPLIES.length] }); }, 1400);
   }
 
   async attach(): Promise<void> {
-    const a = await this.alerts.create({ header: 'Share a photo', message: 'Photos you share stay inside this order’s chat.', buttons: ['OK'] });
-    await a.present();
+    if (this.saving() || !this.orders.isActive()) return;
+    this.saving.set(true);
+    try {
+      const shot = await Camera.getPhoto({ source: CameraSource.Photos, resultType: CameraResultType.DataUrl, quality: 70, width: 1280, webUseInput: true });
+      if (!shot.dataUrl) return;
+      if (this.orders.api.settings.useMockApi()) { this.push({ from: 'customer', text: '', photoUrl: shot.dataUrl }); return; }
+      const blob = await (await fetch(shot.dataUrl)).blob();
+      const photoKey = await this.orders.api.upload(blob, 'request_photo');
+      await this.orders.api.post(`/bookings/${this.orders.order().id}/messages`, { photoKey });
+      await this.refresh();
+    } catch (error) { if (!String(error).toLowerCase().includes('cancel')) this.error.set('Photo could not be sent. Please try again.'); }
+    finally { this.saving.set(false); }
   }
+
+  outgoing(m: ChatMessage): boolean { return m.from === (this.auth.user()?.role === 'PRO' ? 'helper' : 'customer'); }
 
   async call(): Promise<void> {
     const a = await this.alerts.create({
       header: 'Masked call',
       subHeader: `Connecting to ${this.orders.order().helper.name}…`,
-      message: 'Neither number is revealed. Calls work only while this order is active.',
+      message: 'Voice calls are not available in this demo. Use the booking chat.',
       buttons: [{ text: 'End call', role: 'cancel' }],
     });
     await a.present();

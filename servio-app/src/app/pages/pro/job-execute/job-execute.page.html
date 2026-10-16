@@ -4,7 +4,7 @@
     <button type="button" class="icon-btn" slot="start" routerLink="/pro" aria-label="Back to Pro dashboard">
       <ion-icon name="arrow-back" aria-hidden="true"></ion-icon>
     </button>
-    <ion-title>Active Order #{{ o.id }}</ion-title>
+    <ion-title>Active Order #{{ o.code ?? o.id }}</ion-title>
   </ion-toolbar>
 </ion-header>
 

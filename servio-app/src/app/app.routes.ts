@@ -1,5 +1,13 @@
+import { inject } from '@angular/core';
+import { OrderService } from './core/services/order.service';
 import { Routes } from '@angular/router';
 import { authGuard, entryGuard, guestGuard } from './core/guards/auth.guard';
+
+const loadOrder = async (route: { paramMap: { get(name: string): string | null } }) => {
+  const orders = inject(OrderService);
+  await orders.load(route.paramMap.get('id')!);
+  return true;
+};
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [entryGuard], children: [] },
@@ -25,11 +33,11 @@ export const routes: Routes = [
 
   // Customer — booking & order lifecycle
   { path: 'checkout', canActivate: [authGuard], loadComponent: () => import('./pages/checkout/checkout.page').then((m) => m.CheckoutPage) },
-  { path: 'order/:id/chat', canActivate: [authGuard], loadComponent: () => import('./pages/order/order-chat/order-chat.page').then((m) => m.OrderChatPage) },
-  { path: 'order/:id/addon-modal', canActivate: [authGuard], loadComponent: () => import('./shared/modals/addon-approval-modal/addon-approval-modal.component').then((m) => m.AddonApprovalModalComponent) },
+  { path: 'order/:id/chat', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/order/order-chat/order-chat.page').then((m) => m.OrderChatPage) },
+  { path: 'order/:id/addon-modal', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/addon-approval-modal/addon-approval-modal.component').then((m) => m.AddonApprovalModalComponent) },
   { path: 'order/:id/addon', redirectTo: 'order/:id/addon-modal' },
-  { path: 'order/:id/completion', canActivate: [authGuard], loadComponent: () => import('./shared/modals/completion-otp-modal/completion-otp-modal.component').then((m) => m.CompletionOtpModalComponent) },
-  { path: 'order/:id/review', canActivate: [authGuard], loadComponent: () => import('./shared/modals/rating-tip-modal/rating-tip-modal.component').then((m) => m.RatingTipModalComponent) },
+  { path: 'order/:id/completion', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/completion-otp-modal/completion-otp-modal.component').then((m) => m.CompletionOtpModalComponent) },
+  { path: 'order/:id/review', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/rating-tip-modal/rating-tip-modal.component').then((m) => m.RatingTipModalComponent) },
 
   // Servio Pro
   { path: 'pro', canActivate: [authGuard], loadComponent: () => import('./pages/pro/dashboard/dashboard.page').then((m) => m.ProDashboardPage) },

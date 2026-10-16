@@ -6,14 +6,14 @@
           <img src="assets/logo/servio_app_icon_orange.png" alt="" width="32" height="32" />
           <span class="wordmark">SERVIO</span>
         </div>
-        <span class="servio-caption">{{ greeting }}, Sophia</span>
+        <span class="servio-caption">{{ greeting }}, {{ firstName() }}</span>
       </div>
-      <button type="button" class="bell" aria-label="Notifications, 2 unread">
+      <button type="button" class="bell" aria-label="Notifications">
         <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
-        <span class="badge-dot" aria-hidden="true"></span>
+
       </button>
       <a routerLink="/tabs/profile" class="me" aria-label="Your profile">
-        <app-avatar src="assets/avatars/sophia.png" name="Sophia M." [size]="40"></app-avatar>
+        <app-avatar [name]="auth.user()?.fullName ?? 'Customer'" [size]="40"></app-avatar>
       </a>
     </div>
   </ion-toolbar>
@@ -21,6 +21,7 @@
 
 <ion-content class="servio-page" [fullscreen]="false">
   <div class="servio-section first">
+    @if (community.error()) { <p role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
     <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)"></app-search-filter>
   </div>
 
@@ -70,7 +71,7 @@
         <a class="see-all" routerLink="/tabs/bulletin">See all <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></a>
       </div>
       <ul class="bulletin-list">
-        @for (r of bulletin; track r.id) {
+        @for (r of bulletin(); track r.id) {
           <li>
             <a class="bulletin-row" routerLink="/tabs/bulletin">
               <span class="req-icon" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
@@ -95,8 +96,8 @@
       <a class="see-all" routerLink="/tabs/directory">See all <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></a>
     </div>
     <div class="helper-carousel">
-      @for (h of helpers; track h.id) {
-        <app-helper-card [helper]="h" actionMode="book" (selected)="openHelper($event)" (book)="book()"></app-helper-card>
+      @for (h of helpers(); track h.id) {
+        <app-helper-card [helper]="h" actionMode="book" (selected)="openHelper($event)" (book)="book($event)"></app-helper-card>
       }
     </div>
   </div>
@@ -110,7 +111,7 @@
         <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="44" [online]="true"></app-avatar>
         <div class="tw-text">
           <span class="tw-title">{{ orders.order().helper.name }} • {{ orders.order().sku.name }}</span>
-          <span class="tw-sub">Order #{{ orders.order().id }}</span>
+          <span class="tw-sub">Order #{{ orders.order().code ?? orders.order().id }}</span>
         </div>
         <span class="tw-eta">
           <span class="live-dot" aria-hidden="true"></span>{{ statusLine() }}

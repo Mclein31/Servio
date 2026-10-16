@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonIcon, ToastController } from '@ionic/angular';
 import { ADDON_CATALOG } from '../../../core/data/mock-data';
@@ -17,7 +17,7 @@ import { formatPhp, roundCentavos } from '../../utils/money';
     <ion-content>
       <div class="sheet-screen">
         <div class="sheet-context">
-          <div><strong>Active order #{{ o.id }}</strong><span>{{ o.helper.name }} · {{ o.sku.name }}</span></div>
+          <div><strong>Active order #{{ o.code ?? o.id }}</strong><span>{{ o.helper.name }} · {{ o.sku.name }}</span></div>
         </div>
         @if (quote(); as q) {
           <div class="sheet-panel" role="dialog" aria-labelledby="addon-title">
@@ -44,10 +44,11 @@ import { formatPhp, roundCentavos } from '../../utils/money';
             </div>
             <p class="fine">Standard catalog part price. Work on this add-on starts only after you approve.</p>
 
+            @if (error()) { <p role="alert">{{ error() }}</p> }
             <div class="sheet-actions">
               @if (q.decision === 'PENDING') {
-                <button type="button" class="pill-btn block" (click)="decide(true)">Approve & Authorize <span class="price">{{ q.sku.pricePhp | php: 'signed' }}</span></button>
-                <button type="button" class="pill-btn-outline block" (click)="decide(false)">Decline Add-on</button>
+                <button type="button" class="pill-btn block" [disabled]="saving()" (click)="decide(true)">Approve & Authorize <span class="price">{{ q.sku.pricePhp | php: 'signed' }}</span></button>
+                <button type="button" class="pill-btn-outline block" [disabled]="saving()" (click)="decide(false)">Decline Add-on</button>
               } @else {
                 <div class="decided" [class.ok]="q.decision === 'APPROVED'">
                   <ion-icon [name]="q.decision === 'APPROVED' ? 'checkmark-circle' : 'close-circle'" aria-hidden="true"></ion-icon>
@@ -68,6 +69,8 @@ export class AddonApprovalModalComponent {
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastController);
 
+  readonly saving = signal(false);
+  readonly error = signal('');
   readonly quote = computed(() => {
     const addons = this.orders.order().addons;
     return addons.find((a) => a.decision === 'PENDING') ?? addons[addons.length - 1] ?? null;
@@ -82,7 +85,7 @@ export class AddonApprovalModalComponent {
 
   constructor() {
     // Opening the screen directly (deep link / demo) shows the brief's sample quote.
-    if (!this.orders.order().addons.length) {
+    if (this.orders.api.settings.useMockApi() && !this.orders.order().addons.length) {
       this.orders.pushAddonQuote(ADDON_CATALOG[0], 'assets/design/sample-drain-hose-evidence.png', 'Exposed drain hose is cracked and causing wall moisture.');
     }
   }
@@ -93,8 +96,11 @@ export class AddonApprovalModalComponent {
 
   async decide(approve: boolean): Promise<void> {
     const q = this.quote();
-    if (!q) return;
-    this.orders.decideAddon(q.id, approve);
+    if (!q || this.saving()) return;
+    this.saving.set(true); this.error.set('');
+    try { await this.orders.decideAddon(q.id, approve); }
+    catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not decide add-on.'); return; }
+    finally { this.saving.set(false); }
     const toast = await this.toasts.create({
       message: approve ? `Approved. Escrow is now ${formatPhp(this.orders.escrowTotalPhp())}.` : 'Add-on declined. Your helper continues the original job.',
       duration: 2000,

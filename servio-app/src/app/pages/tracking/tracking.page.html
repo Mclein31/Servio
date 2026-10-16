@@ -11,15 +11,17 @@
 
   @let o = orders.order();
 
+  @if (orders.error()) { <p class="servio-section" role="alert">{{ orders.error() }} <button class="text-btn" (click)="orders.refresh()">Retry</button></p> }
+  @if (orders.hasOrder()) {
   <div class="servio-section">
     <section class="active servio-card" aria-labelledby="order-title">
       <!-- Header card -->
       <div class="order-head">
         <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="56"></app-avatar>
         <div class="order-text">
-          <span class="servio-caption">Active Order #{{ o.id }}</span>
+          <span class="servio-caption">Active Order #{{ o.code ?? o.id }}</span>
           <h2 id="order-title">{{ o.sku.name }}</h2>
-          <span class="helper-line">{{ o.helper.name }} · <ion-icon name="star" aria-hidden="true"></ion-icon> {{ o.helper.rating | number: '1.1-1' }} ({{ o.helper.reviewCount }})</span>
+          <span class="helper-line">{{ o.helper.name }} @if (o.helper.id) { · <ion-icon name="star" aria-hidden="true"></ion-icon> {{ o.helper.rating | number: '1.1-1' }} ({{ o.helper.reviewCount }}) }</span>
         </div>
         <span class="status-chip" [class]="'status-chip ' + statusChip().tone">
           <ion-icon [name]="statusChip().icon" aria-hidden="true"></ion-icon>{{ statusChip().label }}
@@ -27,7 +29,7 @@
       </div>
 
       <!-- Live map -->
-      <app-tracking-map [height]="280"></app-tracking-map>
+      @if (o.status === 'EN_ROUTE' || o.status === 'ARRIVED' || o.status === 'IN_PROGRESS') { <app-tracking-map [height]="280"></app-tracking-map> }
 
       <!-- Milestones -->
       <app-stepper class="stepper" [steps]="orders.milestones()" [showTimes]="true"></app-stepper>
@@ -57,7 +59,7 @@
         <a class="pill-btn block" [routerLink]="['/order', o.id, 'completion']">
           <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Show Completion PIN
         </a>
-      } @else if (o.status === 'COMPLETED') {
+      } @else if (o.status === 'COMPLETED' && !o.reviewed) {
         <a class="pill-btn block success" [routerLink]="['/order', o.id, 'review']">
           <ion-icon name="star-outline" aria-hidden="true"></ion-icon> Rate & Tip {{ o.helper.name }}
         </a>
@@ -65,25 +67,29 @@
 
       <div class="escrow-line">
         <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
-        @if (o.escrow === 'HOLD_AUTHORIZED') {
+        @if (o.escrow === 'REFUNDED') { <span>Booking cancelled · refund recorded</span> } @else if (o.escrow === 'HOLD_AUTHORIZED') {
           <span><span class="price">{{ orders.escrowTotalPhp() | php }}</span> held in escrow until you share your PIN</span>
         } @else {
           <span>Escrow released · <span class="price">{{ orders.escrowTotalPhp() | php }}</span></span>
         }
       </div>
 
-      <div class="demo">
+      @if (orders.isActive() && o.status !== 'IN_PROGRESS' && community.cancellationFees()) {
+        <button type="button" class="text-btn" [disabled]="cancelling()" (click)="cancel()">Cancel booking</button>
+      }
+      @if (orders.api.settings.useMockApi()) { <div class="demo">
         <button type="button" class="text-btn" (click)="replay()">Replay route</button>
         <button type="button" class="text-btn muted" (click)="resetDemo()">Reset demo order</button>
-      </div>
+      </div> }
     </section>
   </div>
 
+  } @else { <p class="servio-section">{{ orders.loading() ? 'Loading bookings…' : 'No bookings yet. Find a helper to get started.' }}</p> }
   <!-- Order history -->
   <div class="servio-section">
     <div class="servio-section-head"><h2>Order History</h2></div>
     <ion-accordion-group class="history servio-card" [multiple]="true">
-      @for (h of history; track h.id) {
+      @for (h of history(); track h.id) {
         <ion-accordion [value]="h.id">
           <ion-item slot="header" lines="none">
             <ion-label>

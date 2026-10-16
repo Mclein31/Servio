@@ -5,10 +5,10 @@
       <button type="button" class="icon-btn" (click)="back()" aria-label="Back">
         <ion-icon name="arrow-back" aria-hidden="true"></ion-icon>
       </button>
-      <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="42" [online]="true"></app-avatar>
+      <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="42" [online]="o.helper.isAvailable"></app-avatar>
       <div class="who">
         <strong>{{ o.helper.name }}</strong>
-        <span>{{ o.sku.name }} · #{{ o.id }}</span>
+        <span>{{ o.sku.name }} · #{{ o.code ?? o.id }}</span>
       </div>
       <button type="button" class="icon-btn tinted" (click)="call()" aria-label="Masked call">
         <ion-icon name="call" aria-hidden="true"></ion-icon>
@@ -21,16 +21,18 @@
 </ion-header>
 
 <ion-content class="servio-page">
+  @if (error()) { <p role="alert">{{ error() }}</p> }
   <div class="thread" role="log" aria-live="polite">
     <span class="day">Today</span>
     @for (m of messages(); track m.id) {
       @if (m.from === 'system') {
         <div class="system"><ion-icon name="lock-closed" aria-hidden="true"></ion-icon>{{ m.text }}</div>
       } @else {
-        <div class="msg" [class.out]="m.from === 'customer'">
+        <div class="msg" [class.out]="outgoing(m)">
           <div class="bubble">
+            @if (m.photoUrl) { <img [src]="m.photoUrl" alt="Photo shared in this booking" style="max-width: 100%; border-radius: 12px" /> }
             <p>{{ m.text }}</p>
-            <span class="time">{{ m.time }}{{ m.from === 'customer' ? ' · Read' : '' }}</span>
+            <span class="time">{{ m.time }}</span>
           </div>
         </div>
       }
@@ -46,8 +48,8 @@
     <button type="button" class="icon-btn" (click)="attach()" aria-label="Attach photo">
       <ion-icon name="camera-outline" aria-hidden="true"></ion-icon>
     </button>
-    <input type="text" placeholder="Type a message…" [value]="draft()" (input)="draft.set($any($event.target).value)" aria-label="Message" enterkeyhint="send" />
-    <button type="submit" class="send" [disabled]="!draft().trim()" aria-label="Send">
+    <input type="text" maxlength="2000" [disabled]="!orders.isActive()" placeholder="Type a message…" [value]="draft()" (input)="draft.set($any($event.target).value)" aria-label="Message" enterkeyhint="send" />
+    <button type="submit" class="send" [disabled]="!draft().trim() || saving() || !orders.isActive()" aria-label="Send">
       <ion-icon name="send" aria-hidden="true"></ion-icon>
     </button>
   </form>

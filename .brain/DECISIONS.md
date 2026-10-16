@@ -170,3 +170,12 @@
 - **Status:** Accepted
 - **Decision:** Retain the existing login/code-input layouts while switching identity to normalized email and the API's single-use six-digit code. Persist the API session, load `/me`, collect a name and optional `+639…` mobile on first sign-in, and land Pros in their workspace. Offline mode alone accepts `123456`; live mode displays the API development note rather than a test-code hint. Ignore profile responses belonging to a cleared/replaced session.
 - **Demo/legal:** Login exposes demo-only API/LAN/offline connection settings. Short Terms, Privacy and Escrow pages use the owner's prototype label and placeholder business address; sign-in email footers use the same address. These pages are prototype copy pending legal review. No email provider credentials or fixed live demo code are introduced by C2.
+
+
+## ADR-017: Server-Owned Customer Flows and Offline Isolation
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Keep the customer screens and peso-formatting pipes; map API integer centavos into presentation models at the service boundary. Live mode starts with no fabricated booking, history, helper or completion PIN and never persists booking/PIN state to the mock local store. Booking IDs remain UUIDs for API/routes; generated codes are display labels. Participant reads expose names/avatar keys/rating summaries without contact details or auth metadata. Catalog responses include trust/cancellation fees from the server configuration.
+- **Writes:** Checkout reuses a request key for an unchanged retry payload, with Philippine scheduled windows stored as timestamps. Add-on/review/cancellation/chat state changes only after API success; the local simulator cannot change live statuses. Live photo chat uses owned upload intents. Demo customer identity remains separate from the Pro; offline-only cross-role shortcuts stay hidden in API mode.
+- **Refresh:** Participant booking reads refresh every four seconds and open chat every three seconds until B2 adds room events; API fetches bypass browser disk/cache to avoid stale policy or private booking data. B3 supplies GPS. No live rider simulation or arrival is inferred by C3. Error/retry and empty states retain the existing layout.

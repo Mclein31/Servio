@@ -47,6 +47,10 @@ export interface AddonQuote {
 
 export interface Order {
   id: string;
+  code?: string;
+  customerId?: string;
+  expectedArrivalAt?: string | null;
+  reviewed?: boolean;
   sku: ServiceSku;
   helper: HelperSummary;
   customerName: string;
@@ -65,6 +69,8 @@ export interface Order {
 
 export interface BulletinRequest {
   id: string;
+  lat?: number;
+  lng?: number;
   title: string;
   description: string;
   category: CategoryId;
@@ -96,6 +102,7 @@ export interface HelperProfile extends HelperSummary {
 export interface ChatMessage {
   id: string;
   from: 'system' | 'helper' | 'customer';
+  photoUrl?: string;
   text: string;
   time: string;
 }

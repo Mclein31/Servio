@@ -17,10 +17,10 @@
   <div class="servio-section">
     <section class="hero servio-card-hero">
       <div class="identity">
-        <app-avatar src="assets/avatars/sophia.png" name="Sophia M." [size]="76" [online]="true"></app-avatar>
+        <app-avatar [name]="auth.user()?.fullName ?? 'Customer'" [size]="76" [online]="true"></app-avatar>
         <div class="who">
-          <h2>Sophia M.</h2>
-          <span class="role">Community Helper & Customer</span>
+          <h2>{{ auth.user()?.fullName }}</h2>
+          <span class="role">{{ mock() ? 'Community Helper & Customer' : auth.user()?.role === 'PRO' ? 'Servio Pro' : 'Customer' }}</span>
           <span class="loc"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>Ugac Norte, Tuguegarao City</span>
         </div>
         <button type="button" class="edit">
@@ -28,7 +28,7 @@
         </button>
       </div>
       <div class="metrics">
-        @for (m of metrics; track m.label) {
+        @for (m of (mock() ? metrics : liveMetrics()); track m.label) {
           <div class="metric" [style.background]="m.tint">
             <ion-icon [name]="m.icon" [style.color]="m.ink" aria-hidden="true"></ion-icon>
             <strong>{{ m.value }}</strong>
@@ -39,6 +39,7 @@
     </section>
   </div>
 
+  @if (mock()) {
   <div class="servio-section">
     <div class="servio-section-head">
       <h2>My Services</h2>
@@ -58,6 +59,7 @@
     </div>
   </div>
 
+  }
   <div class="servio-section">
     <nav class="settings servio-card" aria-label="Account settings">
       @for (item of settings; track item.label) {

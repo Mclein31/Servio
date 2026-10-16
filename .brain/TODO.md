@@ -33,7 +33,7 @@
 - [x] A9: Completed-customer reviews and 100% tips, strict SKU bulletin, participant chat with system messages/photos, approved directory and filtered/ranked queries.
 - [x] C1: Fetch HttpClient, scoped auth/request IDs/error toasts, Preferences sessions, app API/mock flags and persisted demo LAN configuration.
 - [x] C2: Live email-code sign-in, profile setup, role landing, demo connection sheet and prototype legal links.
-- [ ] C3: Customer API flows.
+- [x] C3: Live catalog/directory/bulletin, checkout with stable retry keys, participant tracking/history/chat/photos, add-on decisions, customer PIN, cancellation and review/tip.
 - [ ] C4: Pro API flows.
 - [ ] D1: Guarded demo seed.
 - [ ] D2: Demo sign-in.

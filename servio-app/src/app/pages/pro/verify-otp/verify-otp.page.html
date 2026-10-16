@@ -40,7 +40,7 @@
         <path d="M28 50 L42 63 L69 34" />
       </svg>
       <h1><span class="price">{{ credited()! | php }}</span> Credited to Wallet!</h1>
-      <p>Escrow for order #{{ o.id }} moved from HOLD_AUTHORIZED to COMPLETED.</p>
+      <p>Escrow for order #{{ o.code ?? o.id }} moved from HOLD_AUTHORIZED to COMPLETED.</p>
       <button type="button" class="pill-btn block success-btn" (click)="viewWallet()">View Wallet</button>
     </div>
   }
