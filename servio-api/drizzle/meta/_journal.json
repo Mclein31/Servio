@@ -15,6 +15,13 @@
       "when": 1792080085817,
       "tag": "0001_ledger_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792112783038,
+      "tag": "0002_demo_and_pros",
+      "breakpoints": true
     }
   ]
 }
