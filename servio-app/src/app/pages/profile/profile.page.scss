@@ -64,7 +64,29 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  flex-shrink: 0;
 }
+
+@media (max-width: 360px) {
+  .hero {
+    padding: 14px;
+  }
+
+  .identity {
+    gap: 10px;
+  }
+
+  .who h2 {
+    font-size: 18px;
+    line-height: 23px;
+  }
+
+  .edit {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+}
+
 
 .metrics {
   display: grid;
