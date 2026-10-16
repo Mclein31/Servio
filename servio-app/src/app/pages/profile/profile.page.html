@@ -17,13 +17,13 @@
   <div class="servio-section">
     <section class="hero servio-card-hero">
       <div class="identity">
-        <app-avatar [name]="auth.user()?.fullName ?? 'Customer'" [size]="76" [online]="true"></app-avatar>
+        <app-avatar [src]="auth.avatarUrl()" [name]="auth.user()?.fullName ?? 'Customer'" [size]="76" [online]="true"></app-avatar>
         <div class="who">
           <h2>{{ auth.user()?.fullName }}</h2>
           <span class="role">{{ mock() ? 'Community Helper & Customer' : auth.user()?.role === 'PRO' ? 'Servio Pro' : 'Customer' }}</span>
           <span class="loc"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>Ugac Norte, Tuguegarao City</span>
         </div>
-        <button type="button" class="edit">
+        <button type="button" class="edit" (click)="edit()">
           <ion-icon name="create-outline" aria-hidden="true"></ion-icon>Edit
         </button>
       </div>

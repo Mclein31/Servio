@@ -252,3 +252,12 @@
 - **Status:** Accepted (explicit owner request)
 - **Decision:** Extend the current work to real verified-email customer accounts, editable profile information/photo and saved map-pinned service addresses. Keep escrow, tips and payouts simulated. Complete these flows before the remaining Android/demo checklist work. This does not authorize PayMongo, SMS/social sign-in, cloud resource creation, invented legal details or unverified Pro dispatch.
 - **Dependency:** Real email delivery requires sender credentials configured in the ignored local environment. Ask for provider choice, not credentials in chat; independently finish the account/profile/address implementation. Production deployment, physical signing/GPS and actual email delivery must be reported separately from local/unit verification.
+
+
+## ADR-026: Editable Account Profiles and Owned Photos
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (owner-requested real-user readiness)
+- **Decision:** Reuse the profile setup layout for profile editing. Save trimmed names, optional E.164 Philippine mobile numbers and a current avatar via authenticated PATCH /me. A photo must be a completed avatar-purpose upload owned by the same account; no KYC/evidence/other-owner key can be attached. Null removes the current avatar. Reject empty patches and unknown identity/role/demo fields. Keep the sign-in email read-only until a separate verified email-change flow is specified.
+- **UX:** Preserve edits on failure, disable save while uploading/saving, prefill the signed-in account and refresh signed avatar URLs on profile entry. The existing Edit button now opens this flow. First-time users still complete their profile after email verification. Phone numbers are contact details, not SMS-verified identity; all payment operations remain mock.
+- **Consequences:** No new secret/environment variable or schema migration. API tests cover persistence, owner/session/purpose validation, invalid identity changes and unchanged ledger rows; app tests cover prefill, validation, photo removal and failed-save recovery.

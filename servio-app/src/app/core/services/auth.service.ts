@@ -29,6 +29,7 @@ export class AuthService {
   readonly pendingEmail = signal<string | null>(null);
   readonly devNote = signal<string | null>(null);
   readonly user = signal<AppUser | null>(null);
+  readonly avatarUrl = signal('');
   readonly pro = signal<AppPro | null>(null);
   readonly needsProfile = computed(() => !this.user()?.fullName);
   private loadedToken?: string;
@@ -36,7 +37,7 @@ export class AuthService {
 
   constructor() {
     effect(() => {
-      if (!this.sessions.token()) { this.user.set(null); this.pro.set(null); this.loadedToken = undefined; }
+      if (!this.sessions.token()) { this.user.set(null); this.avatarUrl.set(''); this.pro.set(null); this.loadedToken = undefined; }
     });
   }
 
@@ -51,7 +52,7 @@ export class AuthService {
   }
   async refreshProfile(force = false): Promise<void> {
     const token = await this.sessions.get();
-    if (!token) { this.user.set(null); this.pro.set(null); return; }
+    if (!token) { this.user.set(null); this.avatarUrl.set(''); this.pro.set(null); return; }
     if (!force && this.loadedToken === token && this.user()) return;
     if (this.profileLoading?.token !== token) {
       const promise = (async () => {
@@ -62,6 +63,7 @@ export class AuthService {
           const result = await this.api.get<{ me: AppUser; pro: AppPro | null }>('/me');
           if (this.sessions.token() !== token) return;
           this.user.set(result.me); this.pro.set(result.pro);
+          await this.loadAvatar(result.me,token);
         }
         this.loadedToken = token;
       })().finally(() => { if (this.profileLoading?.token === token) this.profileLoading = undefined; });
@@ -96,18 +98,23 @@ export class AuthService {
     await this.refreshProfile(true);
     return true;
   }
-  async updateProfile(fullName: string, phoneNumber: string | null): Promise<void> {
-    if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber } : u);
+  async updateProfile(fullName: string, phoneNumber: string | null, avatarKey?: string | null): Promise<void> {
+    if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber, ...(avatarKey!==undefined?{ avatarKey }: {}) } : u);
     else {
       const token = this.sessions.token();
-      const result = await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber });
-      if (this.sessions.token() === token) this.user.set(result.me);
+      const result = await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber, ...(avatarKey!==undefined?{ avatarKey }: {}) });
+      if (this.sessions.token() === token) { this.user.set(result.me); if(token) await this.loadAvatar(result.me,token); }
     }
   }
+  private async loadAvatar(user: AppUser, token: string): Promise<void> {
+    const url=user.avatarKey ? await this.api.imageUrl(user.avatarKey).catch(()=>'') : '';
+    if(this.sessions.token()===token && this.user()?.avatarKey===user.avatarKey) this.avatarUrl.set(url);
+  }
+
   landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
 
   async clearLocal(): Promise<void> {
-    this.loadedToken = undefined; this.user.set(null); this.pro.set(null);
+    this.loadedToken = undefined; this.user.set(null); this.avatarUrl.set(''); this.pro.set(null);
     await this.sessions.clear(); clearDemoState();
   }
   async logout(): Promise<void> {

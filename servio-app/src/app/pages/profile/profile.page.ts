@@ -54,6 +54,9 @@ export class ProfilePage {
     { label: 'Switch to Servio Pro', caption: 'Accept jobs and track earnings', icon: 'swap-horizontal-outline', tint: 'var(--servio-cat-tech)', ink: '#7C3AED', route: '/pro' },
   ];
 
+  edit(): void { void this.router.navigateByUrl('/profile/edit'); }
+  ionViewWillEnter(): void { void this.auth.refreshProfile(true); }
+
   async open(item: SettingItem): Promise<void> {
     if (item.route === '/pro' && !this.mock() && this.auth.user()?.role !== 'PRO') {
       const toast = await this.toasts.create({ message: 'Pro applications will open after the demo. Sign in with the separate demo Pro account to demonstrate jobs.', duration: 2800, position: 'top' });

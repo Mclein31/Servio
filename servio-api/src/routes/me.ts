@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import * as v from 'valibot';
 import { proProfiles, users } from '../db/schema';
 import type { AppEnv } from '../env';
+import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
 import { withDb } from '../middleware/db';
@@ -20,14 +21,16 @@ me.get('/me', async (c) => {
   return c.json({ me: user, pro: pro ?? null });
 });
 
-const PatchProfile = v.strictObject({
+const PatchProfile = v.pipe(v.strictObject({
   fullName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2, 'Enter your name.'), v.maxLength(80))),
+  avatarKey: v.optional(v.nullable(v.pipe(v.string(),v.regex(UPLOAD_KEY)))),
   /** Philippine mobile in E.164 (+639XXXXXXXXX). */
   phoneNumber: v.optional(v.nullable(v.pipe(v.string(), v.trim(), v.regex(/^\+639\d{9}$/, 'Use a Philippine mobile number, e.g. +639171234567.')))),
-});
+}), v.check((value)=>Object.keys(value).length>0,'Provide a profile field.'));
 
 me.patch('/me', validate('json', PatchProfile), async (c) => {
   const patch = c.req.valid('json');
+  if(patch.avatarKey) await ownedUpload(c.get('db'),c.env,patch.avatarKey,c.get('userId'),'avatar');
   const [user] = await c.get('db').update(users).set(patch).where(eq(users.id, c.get('userId'))).returning(profileFields);
   return c.json({ me: user });
 });
