@@ -64,8 +64,8 @@ auth.post('/auth/request-code', validate('json', v.strictObject({ email: EmailSc
       {
         to: email,
         subject: `${code} is your SERVIO code`,
-        text: `Your SERVIO sign-in code is ${code}\n\nIt works once and expires in 10 minutes.\nIf you didn’t ask for this code, you can ignore this email. Never share it with anyone — including SERVIO staff or your helper.`,
-        html: `<div style="font-family:Arial,sans-serif;color:#111827;max-width:420px"><p>Your SERVIO sign-in code is</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0;color:#D04A00">${code}</p><p>It works once and expires in 10 minutes.</p><p style="color:#6B7280;font-size:13px">If you didn’t ask for this code, you can ignore this email. Never share it with anyone — including SERVIO staff or your helper.</p></div>`,
+        text: `Your SERVIO sign-in code is ${code}\n\nIt works once and expires in 10 minutes.\nIf you didn’t ask for this code, you can ignore this email. Never share it with anyone — including SERVIO staff or your helper.\n\nSERVIO\nBusiness address to follow — prototype`,
+        html: `<div style="font-family:Arial,sans-serif;color:#111827;max-width:420px"><p>Your SERVIO sign-in code is</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0;color:#D04A00">${code}</p><p>It works once and expires in 10 minutes.</p><p style="color:#6B7280;font-size:13px">If you didn’t ask for this code, you can ignore this email. Never share it with anyone — including SERVIO staff or your helper.</p><p style="color:#6B7280;font-size:12px">SERVIO<br>Business address to follow — prototype</p></div>`,
       },
       c.get('requestId'),
     );

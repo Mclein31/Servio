@@ -24,7 +24,8 @@
 
 .phone {
   color: var(--servio-text-primary);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .edit {

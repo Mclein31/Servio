@@ -33,7 +33,7 @@
 | Payments for the demo | **Mock escrow** — full escrow/ledger in the DB, no real money. PayMongo after the demo. |
 | Sign-in | **Email 6-digit code only** (Gmail SMTP, AdvanCare ADR-014 pattern). No Google/Apple/SMS yet. |
 | Live tracking | **Real GPS from the Pro phone + simulator fallback** (for indoor demos). |
-| Must also deliver | **Admin web console, Android build, push notifications (FCM), deploy to Cloudflare + Neon.** |
+| Demo delivery scope | **Android build + dev/demo LAN access required. Admin console, FCM, CI and cloud deploy deferred until after October 19 (section 3).** |
 | Backend stack | Same as `../AdvanCare/backend`: Cloudflare Workers + Hono + Valibot + Drizzle (`pg`) + Neon via Hyperdrive + R2. |
 
 ### Repo map
@@ -65,7 +65,7 @@ DATABASE_URL_UNPOOLED=postgresql://$USER@localhost:5432/servio_test npm run db:m
 
 # App
 cd servio-app
-npm start              # ng serve on :8100
+npm start              # ng serve on :4200
 npx ng test --watch=false
 npx ng lint
 npm run build && npx cap sync ios && npx cap open ios     # then Cmd+R in Xcode

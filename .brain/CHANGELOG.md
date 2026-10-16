@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.11] — 2026-10-16
+### Added
+- C2: Email-code login/resend/verification, first sign-in name/optional PH mobile setup, session-aware role landing and demo-only API/LAN connection sheet, retaining the existing screen layouts and code-input behavior.
+- Short prototype Terms, Privacy and Escrow pages and SERVIO email footer with the owner's placeholder address (ADR-016). Live sign-in shows the API development note; only offline mode accepts the test code.
+### Verified
+- Live browser: request logged code → verify → first profile save → customer home. Automated app checks cover normalization, session storage, profile setup, Pro routing, mock isolation, invalid codes and stale responses after sign-out. API typecheck/tests remain passing; no SMTP or physical-device email delivery was required.
+
 ## [0.5.10] — 2026-10-16
 ### Added
 - C1: Angular Fetch HttpClient, API-relative Promise wrapper, scoped bearer/request-ID interceptor, safe error toasts and rejected-session clearing. Capacitor Preferences stores sessions separately from auth callers; mock tokens and API credentials are not forwarded to storage URLs.

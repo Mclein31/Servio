@@ -9,6 +9,9 @@ export const routes: Routes = [
   { path: 'auth/login', canActivate: [guestGuard], loadComponent: () => import('./pages/auth/login/login.page').then((m) => m.LoginPage) },
   { path: 'auth/verify-otp', canActivate: [guestGuard], loadComponent: () => import('./pages/auth/verify-otp/verify-otp.page').then((m) => m.VerifyOtpPage) },
 
+  { path: 'auth/profile', canActivate: [authGuard], loadComponent: () => import('./pages/auth/profile-setup/profile-setup.page').then((m) => m.ProfileSetupPage) },
+  { path: 'legal/:type', loadComponent: () => import('./pages/legal/legal.page').then((m) => m.LegalPage) },
+
   // Customer — 5-tab shell
   { path: 'tabs', canActivate: [authGuard], loadChildren: () => import('./tabs/tabs.routes').then((m) => m.TABS_ROUTES) },
   { path: 'home', redirectTo: 'tabs/home' },

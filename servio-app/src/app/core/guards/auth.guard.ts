@@ -7,17 +7,19 @@ export const entryGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (!(await auth.hasSeenOnboarding())) return router.parseUrl('/onboarding');
-  return router.parseUrl((await auth.isAuthenticated()) ? '/tabs/home' : '/auth/login');
+  return router.parseUrl((await auth.isAuthenticated()) ? auth.landingPath() : '/auth/login');
 };
 
 /** Protects signed-in areas. */
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
-  return (await auth.isAuthenticated()) || inject(Router).parseUrl('/auth/login');
+  const router = inject(Router);
+  return (await auth.isAuthenticated()) || router.parseUrl('/auth/login');
 };
 
 /** Keeps signed-in users out of the login flow. */
 export const guestGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
-  return !(await auth.isAuthenticated()) || inject(Router).parseUrl('/tabs/home');
+  const router = inject(Router);
+  return !(await auth.isAuthenticated()) || router.parseUrl(auth.landingPath());
 };

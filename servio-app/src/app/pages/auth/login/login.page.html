@@ -1,37 +1,33 @@
 <ion-content class="servio-page">
   <div class="wrap">
     <img class="brand" src="assets/logo/servio_app_icon_orange.png" alt="SERVIO" width="88" height="88" />
-    <h1 class="servio-display">Enter your mobile number</h1>
+    <h1 class="servio-display">Enter your email address</h1>
     <p class="servio-subtitle">We'll send a 6-digit verification code.</p>
-
     <form (submit)="$event.preventDefault(); submit()">
-      <label class="field-label" for="phone">Mobile number</label>
+      <label class="field-label" for="email">Email address</label>
       <div class="phone-field" [class.invalid]="showHint()">
-        <span class="prefix" aria-label="Philippines, plus 63">
-          <span class="flag" aria-hidden="true">🇵🇭</span>+63
-          <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
-        </span>
-        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="917 123 4567"
-          maxlength="12" [value]="display()" (input)="onInput($event)" aria-describedby="phone-help" />
+        <span class="prefix" aria-hidden="true">&#64; <ion-icon name="lock-closed"></ion-icon></span>
+        <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com"
+          maxlength="255" [value]="email()" (input)="onInput($event)" aria-describedby="email-help" />
       </div>
-      <p id="phone-help" class="help" [class.error]="showHint()">
-        @if (showHint()) { Philippine mobile numbers start with 9 (e.g. 917 123 4567). }
-        @else { Philippines · 10-digit mobile number }
+      <p id="email-help" class="help" [class.error]="showHint() || error()" aria-live="polite">
+        @if (error()) { {{ error() }} } @else if (showHint()) { Enter a valid email address. } @else { Passwordless · one-time email code }
       </p>
     </form>
-
     <div class="trust servio-card">
       <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
-      <p>Passwordless sign-in. Your number is never shown to helpers — calls and chats stay masked in the app.</p>
+      <p>Passwordless sign-in. Your email and mobile number stay private from helpers.</p>
     </div>
+    @if (connection.available) {
+      <button type="button" class="text-btn demo-connection" (click)="connection.open()">Demo connection · {{ auth.settings.useMockApi() ? 'Offline' : 'API' }}</button>
+    }
   </div>
 </ion-content>
-
 <ion-footer class="ion-no-border">
   <div class="servio-action-bar">
     <button type="button" class="pill-btn block" [disabled]="!valid() || sending()" (click)="submit()">
       @if (sending()) { <ion-spinner name="crescent"></ion-spinner> } @else { Continue }
     </button>
-    <p class="terms">By continuing, you agree to SERVIO's Terms of Service and Escrow Protection Policy.</p>
+    <p class="terms">Prototype use. Read <a routerLink="/legal/terms">Terms</a>, <a routerLink="/legal/privacy">Privacy</a> and <a routerLink="/legal/escrow">Escrow Protection Policy</a>.</p>
   </div>
 </ion-footer>
