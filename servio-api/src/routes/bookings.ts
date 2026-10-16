@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import * as v from 'valibot';
 import type { Executor } from '../db/client';
 import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
-import { addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
+import { addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
 import { sha256Hex } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
@@ -220,3 +220,54 @@ bookings.post('/bookings/:id/status', validate('param', idSchema), validate('jso
   });
   return c.json({ booking: await bookingDetails(c.get('db'), row) });
 });
+
+const QuoteAddon = v.strictObject({
+  addonSkuId: shortText(100),
+  photoKey: v.pipe(v.string(), v.regex(/^uploads\/addon_evidence\/\d{4}\/(0[1-9]|1[0-2])\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png)$/)),
+  note: shortText(1000),
+});
+const addonStage = (status: string) => status === 'ARRIVED' || status === 'IN_PROGRESS';
+
+bookings.post('/bookings/:id/addons', validate('param', idSchema), validate('json', QuoteAddon), async (c) => {
+  const quote = await c.get('db').transaction(async (tx) => {
+    const row = await participantBooking(tx, c.req.valid('param').id, c.get('userId'), true);
+    const [actor] = await tx.select({ role: users.role }).from(users).where(eq(users.id, c.get('userId')));
+    if (row.proId !== c.get('userId') || actor!.role !== 'PRO') throw new ApiError(403, 'ASSIGNED_PRO_REQUIRED', 'Only the assigned Pro may request an add-on.');
+    if (!addonStage(row.status)) throw invalidTransition();
+    const [pending] = await tx.select({ id: addonQuotes.id }).from(addonQuotes).where(and(eq(addonQuotes.bookingId, row.id), eq(addonQuotes.decision, 'PENDING')));
+    if (pending) throw new ApiError(409, 'ADDON_PENDING', 'Wait for the customer to decide the current add-on.');
+    const input = c.req.valid('json');
+    const [sku] = await tx.select().from(addonSkus).where(and(eq(addonSkus.id, input.addonSkuId), eq(addonSkus.isActive, true))).for('share');
+    if (!sku) throw new ApiError(422, 'SKU_UNAVAILABLE', 'Choose an available add-on from the catalog.');
+    const [created] = await tx.insert(addonQuotes).values({ ...input, bookingId: row.id, addonName: sku.name, priceCentavos: sku.priceCentavos, createdBy: c.get('userId') }).returning();
+    return created!;
+  });
+  return c.json({ quote }, 201);
+});
+
+bookings.post('/bookings/:id/addons/:quoteId/decision',
+  validate('param', v.strictObject({ id: v.pipe(v.string(), v.uuid()), quoteId: v.pipe(v.string(), v.uuid()) })),
+  validate('json', v.strictObject({ approve: v.boolean() })), async (c) => {
+    const quote = await c.get('db').transaction(async (tx) => {
+      const row = await participantBooking(tx, c.req.valid('param').id, c.get('userId'), true);
+      if (row.customerId !== c.get('userId')) throw new ApiError(403, 'CUSTOMER_REQUIRED', 'Only the customer may decide an add-on.');
+      if (!addonStage(row.status)) throw invalidTransition();
+      const [pending] = await tx.select().from(addonQuotes).where(and(eq(addonQuotes.id, c.req.valid('param').quoteId), eq(addonQuotes.bookingId, row.id)));
+      if (!pending) throw new ApiError(404, 'NOT_FOUND', 'Add-on not found.');
+      if (pending.decision !== 'PENDING') throw new ApiError(409, 'ADDON_ALREADY_DECIDED', 'This add-on has already been decided.');
+      const { approve } = c.req.valid('json');
+      if (approve) {
+        const totals = await bookingDetails(tx, row);
+        if (totals.totalCentavos + pending.priceCentavos > 2_147_483_647) throw new ApiError(422, 'AMOUNT_TOO_LARGE', 'This booking exceeds the supported amount.');
+        await mockPayments.authorizeHold({ bookingId: row.id, customerId: row.customerId, amountCentavos: pending.priceCentavos, paymentMethod: row.paymentMethod });
+        const txnId = crypto.randomUUID();
+        await tx.insert(ledgerEntries).values([
+          { txnId, bookingId: row.id, account: `customer:${row.customerId}`, amountCentavos: -pending.priceCentavos, kind: 'ADDON_HOLD', memo: pending.addonName },
+          { txnId, bookingId: row.id, account: `escrow:${row.id}`, amountCentavos: pending.priceCentavos, kind: 'ADDON_HOLD', memo: pending.addonName },
+        ]);
+      }
+      const [changed] = await tx.update(addonQuotes).set({ decision: approve ? 'APPROVED' : 'DECLINED', decidedAt: await serverNow(tx) }).where(eq(addonQuotes.id, pending.id)).returning();
+      return changed!;
+    });
+    return c.json({ quote });
+  });
