@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } fro
 import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { IonContent, IonFooter, IonIcon, ModalController } from '@ionic/angular';
-import { HELPERS } from '../../../core/data/mock-data';
+import { CommunityService } from '../../../core/services/community.service';
 import { HelperProfile, ServiceSku } from '../../models/domain.models';
 import { AvatarComponent } from '../../components/avatar/avatar.component';
 import { PhpPipe } from '../../pipes/php.pipe';
@@ -104,13 +104,17 @@ export class HelperProfileModalComponent implements OnInit {
   private readonly modals = inject(ModalController);
   private readonly router = inject(Router);
 
+  private readonly community = inject(CommunityService);
   readonly helper = signal<HelperProfile | null>(null);
   readonly chosen = signal<ServiceSku | null>(null);
 
-  ngOnInit(): void {
-    const h = HELPERS.find((x) => x.id === this.helperId) ?? HELPERS[1];
-    this.helper.set(h);
-    this.chosen.set(h.skus[0]);
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.community.directory();
+      const h = this.community.helpers().find((x) => x.id === this.helperId);
+      if (!h) { await this.modals.dismiss(); return; }
+      this.helper.set(h); this.chosen.set(h.skus[0]);
+    } catch { await this.modals.dismiss(); }
   }
 
   async bookService(): Promise<void> {

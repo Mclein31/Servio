@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.12] — 2026-10-16
+### Added
+- C3: API catalog/directory/bulletin and posting, stable-key checkout with scheduled timestamps, participant booking/history, customer-only PIN, add-on approval, cancellation, review/100% tip submission and persisted photo/text chat. Live screens use API snapshots and identity; offline content remains separately usable.
+- Public participant display summaries and catalog fee configuration, without contact/session metadata. Live booking/PIN state stays in memory and API fetches bypass browser cache. The simulator cannot alter live booking status (ADR-017).
+### Verified
+- App build/lint and 28 tests pass with zero warnings; API typecheck and 122 tests pass. Coverage includes centavo mapping, failed hold preserving escrow, ₱1,500 total / ₱1,232.50 Pro display, retry keys/no client prices, Philippine windows and participant privacy.
+- Browser: live sign-in identity, empty customer state, catalog checkout → persisted ₱1,150 pending hold, bulletin create/read booking chat send/read, and cancellation → balanced compensating REFUND (both hold/refund sum to zero). Pro acceptance/settlement and cross-device realtime follow in C4/B2/B3.
+
 ## [0.5.11] — 2026-10-16
 ### Added
 - C2: Email-code login/resend/verification, first sign-in name/optional PH mobile setup, session-aware role landing and demo-only API/LAN connection sheet, retaining the existing screen layouts and code-input behavior.

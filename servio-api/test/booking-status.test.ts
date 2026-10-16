@@ -46,6 +46,19 @@ describe.runIf(hasDb)('booking status, reads and cancellation (A4)', () => {
   });
   afterEach(async () => { await client.close(); });
 
+  it('returns participant display identities without contact details, credentials or attempts', async () => {
+    const result = await api(`/bookings/${booking.id}`, { headers: customer });
+    const body = await result.json() as { booking: Record<string, unknown> };
+    expect(body.booking.customer).toEqual({ id: customerId, name: null, avatarKey: null });
+    expect(body.booking.pro).toMatchObject({ id: proId, rating: 0, ratingCount: 0 });
+    expect(body.booking.reviewed).toBe(false);
+    for (const key of ['email', 'phoneNumber', 'pinAttempts', 'requestHash', 'idempotencyKey']) {
+      expect(body.booking).not.toHaveProperty(key);
+      expect(body.booking.customer).not.toHaveProperty(key);
+      expect(body.booking.pro).not.toHaveProperty(key);
+    }
+  });
+
   it.each([['ACCEPTED', 'EN_ROUTE'], ['EN_ROUTE', 'ARRIVED'], ['ARRIVED', 'IN_PROGRESS']] as const)('allows assigned Pro %s → %s and appends an event without moving money', async (from, to) => {
     await state(from);
     const res = await change(to);

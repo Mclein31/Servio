@@ -160,6 +160,7 @@ export class SlideToConfirmComponent {
   }
 
   reset(): void {
+    this.done.set(false);
     this.dragging.set(false);
     this.setOffset(0);
   }

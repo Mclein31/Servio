@@ -18,6 +18,7 @@ export interface HelperSummary {
   reviewCount: number;
   distanceKm: number;
   hourlyRatePhp: number;
+  rateUnit?: string;
   isAvailable: boolean;
   badgeLabel?: string;
 }

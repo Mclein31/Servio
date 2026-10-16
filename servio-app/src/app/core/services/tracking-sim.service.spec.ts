@@ -4,6 +4,8 @@ import { vi } from 'vitest';
 import { TUGUEGARAO_ROUTE } from '../data/tuguegarao-route';
 import { DEMO_ADDRESS } from '../data/launch-city';
 import { RouteTrack } from '../../shared/utils/route-track';
+import { ApiService } from '../api/api.service';
+import { AuthService } from './auth.service';
 import { OrderService } from './order.service';
 import { TrackingSimService } from './tracking-sim.service';
 
@@ -11,6 +13,10 @@ const route = new RouteTrack(TUGUEGARAO_ROUTE, 'geo');
 
 describe('Tuguegarao demo tracking', () => {
   beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [
+      { provide: ApiService, useValue: { settings: { ready: Promise.resolve(), useMockApi: signal(true) } } },
+      { provide: AuthService, useValue: { user: signal(null) } },
+    ] });
     const storage = new Map<string, string>();
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => storage.get(key) ?? null,
@@ -40,7 +46,7 @@ describe('Tuguegarao demo tracking', () => {
   it('advances the rider along the new geometry while en route', () => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const orders = { order: signal({ status: 'EN_ROUTE' }), setStatus: vi.fn() };
+    const orders = { api: { settings: { useMockApi: signal(true) } }, order: signal({ status: 'EN_ROUTE' }), setStatus: vi.fn() };
     TestBed.configureTestingModule({ providers: [{ provide: OrderService, useValue: orders }] });
     const sim = TestBed.inject(TrackingSimService);
     TestBed.tick();
@@ -58,6 +64,10 @@ describe('Tuguegarao demo tracking', () => {
     localStorage.removeItem('servio.demo.order');
     const seeded = TestBed.inject(OrderService).order();
     TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [
+      { provide: ApiService, useValue: { settings: { ready: Promise.resolve(), useMockApi: signal(true) } } },
+      { provide: AuthService, useValue: { user: signal(null) } },
+    ] });
     localStorage.setItem('servio.demo.order', JSON.stringify({ ...seeded, status: 'IN_PROGRESS', address: { ...seeded.address, city: 'Previous demo city' } }));
     const migrated = TestBed.inject(OrderService).order();
     expect(migrated.address).toEqual(DEMO_ADDRESS);

@@ -16,7 +16,7 @@ export class ApiService {
     if (!this.settings.apiUrl()) throw new Error('The SERVIO API address is not configured.');
     let params = new HttpParams();
     for (const [key,value] of Object.entries(options.query ?? {})) params = params.set(key, String(value));
-    return firstValueFrom(this.http.request<T>(method, this.settings.apiUrl() + path, { body, params, headers: new HttpHeaders(options.headers) }));
+    return firstValueFrom(this.http.request<T>(method, this.settings.apiUrl() + path, { body, params, cache: 'no-store', headers: new HttpHeaders(options.headers) }));
   }
   get<T>(path: string, query?: Record<string,string | number>) { return this.request<T>('GET', path, undefined, { query }); }
   post<T>(path: string, body: unknown, headers?: Record<string,string>) { return this.request<T>('POST', path, body, { headers }); }

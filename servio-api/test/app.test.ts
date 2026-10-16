@@ -26,7 +26,8 @@ describe('app shell', () => {
   it.runIf(hasDb)('catalog lists categories, SKUs and add-ons in centavos', async () => {
     const res = await api('/catalog');
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { categories: unknown[]; skus: { id: string; priceCentavos: number }[]; addons: { id: string; priceCentavos: number }[] };
+    const body = (await res.json()) as { trustFeeCentavos: number; categories: unknown[]; skus: { id: string; priceCentavos: number }[]; addons: { id: string; priceCentavos: number }[] };
+    expect(body.trustFeeCentavos).toBe(5000);
     expect(body.categories.length).toBe(5);
     expect(body.skus.find((s) => s.id === 'sku-ac-leak')?.priceCentavos).toBe(110000);
     expect(body.addons.find((a) => a.id === 'addon-drain-hose')?.priceCentavos).toBe(35000);

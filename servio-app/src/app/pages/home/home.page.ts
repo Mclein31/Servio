@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
-import { BULLETIN_REQUESTS, CATEGORIES, HELPERS } from '../../core/data/mock-data';
+import { CATEGORIES } from '../../core/data/mock-data';
+import { CommunityService } from '../../core/services/community.service';
+import { AuthService } from '../../core/services/auth.service';
 import { OrderService } from '../../core/services/order.service';
 import { SheetsService } from '../../core/services/sheets.service';
 import { TrackingSimService } from '../../core/services/tracking-sim.service';
@@ -26,9 +28,13 @@ export class HomePage {
   readonly orders = inject(OrderService);
   readonly sim = inject(TrackingSimService);
 
+  readonly community = inject(CommunityService);
+  readonly auth = inject(AuthService);
+  ionViewWillEnter(): void { void this.community.refresh(); }
+  readonly firstName = computed(() => this.auth.user()?.fullName?.split(' ')[0] ?? 'neighbor');
   readonly categories = CATEGORIES.slice(0, 4);
-  readonly bulletin = BULLETIN_REQUESTS.slice(0, 3);
-  readonly helpers = HELPERS.filter((h) => h.id !== 'sophia');
+  readonly bulletin = computed(() => this.community.requests().slice(0, 3));
+  readonly helpers = this.community.helpers;
   readonly categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
   readonly miniSteps = MINI_STEPS;
 
@@ -54,7 +60,7 @@ export class HomePage {
   readonly statusLine = computed(() => {
     switch (this.orders.order().status) {
       case 'ACCEPTED': return 'Helper assigned · preparing to leave';
-      case 'EN_ROUTE': return `ETA ${this.sim.etaMinutes()} mins`;
+      case 'EN_ROUTE': return this.sim.etaLabel();
       case 'ARRIVED': return 'Arrived at your door';
       case 'IN_PROGRESS': return 'Work in progress';
       default: return '';
@@ -65,8 +71,8 @@ export class HomePage {
     this.sheets.openHelperProfile(id);
   }
 
-  book(): void {
-    this.router.navigateByUrl('/checkout');
+  book(id: string): void {
+    this.router.navigate(['/checkout'], { queryParams: { helper: id } });
   }
 
   search(term: string): void {

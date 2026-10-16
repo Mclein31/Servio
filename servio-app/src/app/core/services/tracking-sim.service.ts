@@ -52,6 +52,15 @@ export class TrackingSimService implements OnDestroy {
   readonly running = signal(false);
 
   readonly etaLabel = computed(() => {
+    if (!this.orders.api.settings.useMockApi()) {
+      const o = this.orders.order();
+      if (o.status === 'PENDING_ACCEPTANCE') return 'Waiting for Pro acceptance';
+      if (o.status === 'ACCEPTED') return 'Your helper is getting ready';
+      if (o.status === 'ARRIVED' || o.status === 'IN_PROGRESS') return 'Your helper has arrived';
+      if (o.status === 'COMPLETED') return 'Job complete';
+      if (o.status === 'CANCELLED') return 'Booking cancelled';
+      return o.expectedArrivalAt ? `Expected at ${new Date(o.expectedArrivalAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}` : 'Waiting for location';
+    }
     if (this.arrived()) return 'Your helper has arrived';
     return `Arriving in ${this.etaMinutes()} min${this.etaMinutes() === 1 ? '' : 's'} (${formatDistance(this.remainingM())})`;
   });
@@ -61,7 +70,8 @@ export class TrackingSimService implements OnDestroy {
     effect(() => {
       const status = this.orders.order().status;
       untracked(() => {
-        if (status === 'EN_ROUTE') this.start();
+        if (!this.orders.api.settings.useMockApi()) this.park(status === 'ARRIVED' || status === 'IN_PROGRESS' || status === 'COMPLETED' ? this.route.total : this.startDistance);
+        else if (status === 'EN_ROUTE') this.start();
         else if (status === 'ACCEPTED' || status === 'PENDING_ACCEPTANCE') this.park(this.startDistance);
         else this.park(this.route.total);
       });
@@ -87,6 +97,7 @@ export class TrackingSimService implements OnDestroy {
 
   /** Demo control: send the rider back to the start of the leg. */
   replay(): void {
+    if (!this.orders.api.settings.useMockApi()) return;
     this.orders.setStatus('EN_ROUTE');
     this.park(this.startDistance);
     this.start();
@@ -134,7 +145,7 @@ export class TrackingSimService implements OnDestroy {
     if (this.route.total - next <= ARRIVAL_THRESHOLD_M) {
       this.stopTimer();
       // Let the final glide finish before the order flips to ARRIVED.
-      setTimeout(() => this.zone.run(() => this.orders.setStatus('ARRIVED')), FIX_INTERVAL_MS);
+      setTimeout(() => { if (this.orders.api.settings.useMockApi()) this.zone.run(() => this.orders.setStatus('ARRIVED')); }, FIX_INTERVAL_MS);
     }
   }
 

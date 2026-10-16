@@ -1,6 +1,6 @@
 import { and, asc, eq, or, sql } from 'drizzle-orm';
 import type { Executor } from '../db/client';
-import { addonQuotes, bookingEvents, bookings as bookingTable } from '../db/schema';
+import { addonQuotes, bookingEvents, bookings as bookingTable, users, proProfiles, reviews } from '../db/schema';
 import { ApiError } from './errors';
 import { completionPin } from './completion-pin';
 
@@ -25,6 +25,10 @@ export async function participantBooking(db: Executor, id: string, userId: strin
 export async function bookingDetails(db: Executor, row: typeof bookingTable.$inferSelect, userId?: string, secret?: string) {
   const events = await db.select().from(bookingEvents).where(eq(bookingEvents.bookingId, row.id)).orderBy(asc(bookingEvents.createdAt), asc(bookingEvents.id));
   const addons = await db.select().from(addonQuotes).where(eq(addonQuotes.bookingId, row.id)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id));
-  return { ...publicBooking(row, addons), events, addons, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
+  const [customer] = await db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey }).from(users).where(eq(users.id, row.customerId));
+  const [pro] = row.proId ? await db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey, rating: proProfiles.ratingAvg, ratingCount: proProfiles.ratingCount })
+    .from(users).innerJoin(proProfiles, eq(proProfiles.userId, users.id)).where(eq(users.id, row.proId)) : [];
+  const [review] = await db.select({ id: reviews.id }).from(reviews).where(and(eq(reviews.bookingId, row.id), eq(reviews.authorId, row.customerId)));
+  return { ...publicBooking(row, addons), events, addons, customer, pro: pro ? { ...pro, rating: Number(pro.rating) } : null, reviewed: !!review, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
 }
 

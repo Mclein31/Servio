@@ -6,6 +6,11 @@ import { DEMO_ADDRESS } from '../data/launch-city';
 import { HELPERS, SKUS } from '../data/mock-data';
 import { clearDemoState, loadDemoState, saveDemoState } from './demo-store';
 import { WalletService } from './wallet.service';
+import { ApiService } from '../api/api.service';
+import { BookingDto } from '../api/customer.models';
+import { AuthService } from './auth.service';
+import { CommunityService } from './community.service';
+import { PAST_ORDERS } from '../data/mock-data';
 
 const ORDER_STEP_INDEX: Record<OrderStatus, number> = {
   PENDING_ACCEPTANCE: 0,
@@ -35,6 +40,15 @@ function minutesAgo(min: number): Date {
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private readonly wallet = inject(WalletService);
+  readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
+  private readonly community = inject(CommunityService);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  private readonly liveHistory = signal<{ id: string; title: string; helper: string; when: string; amountPhp: number }[]>([]);
+  readonly history = computed(() => this.api.settings.useMockApi() ? PAST_ORDERS : this.liveHistory());
+  private revision = 0;
+  private polling = false;
 
   private readonly state = signal<Order>(this.loadOrder());
   readonly order = this.state.asReadonly();
@@ -53,7 +67,7 @@ export class OrderService {
         .reduce((sum, a) => sum + splitPayout(a.sku.pricePhp).proPhp, 0),
     ),
   );
-  readonly proPayoutPhp = computed(() => roundCentavos(this.basePayout().proPhp + this.addonPayoutPhp()));
+  readonly proPayoutPhp = computed(() => splitPayout(this.serviceGrossPhp()).proPhp);
   readonly pendingAddon = computed(() => this.state().addons.find((a) => a.decision === 'PENDING') ?? null);
 
   readonly milestones = computed<StepMilestone[]>(() => {
@@ -68,14 +82,39 @@ export class OrderService {
     ]);
   });
 
-  readonly isActive = computed(() => !['COMPLETED', 'CANCELLED'].includes(this.state().status));
+  readonly hasOrder = computed(() => !!this.state().id);
+  readonly isActive = computed(() => this.hasOrder() && !['COMPLETED', 'CANCELLED'].includes(this.state().status));
 
   constructor() {
-    effect(() => saveDemoState('order', this.state()));
+    effect(() => { if (this.api.settings.useMockApi()) saveDemoState('order', this.state()); });
+    effect((cleanup) => {
+      const user = this.auth.user();
+      const mock = this.api.settings.useMockApi();
+      this.revision++;
+      if (mock) { this.state.set(this.loadOrder()); return; }
+      this.state.set(this.emptyOrder()); this.liveHistory.set([]);
+      if (!user) return;
+      const refresh = async () => {
+        if (this.polling) return;
+        this.polling = true;
+        try { await this.refresh(); } finally { this.polling = false; }
+      };
+      void refresh();
+      const timer = setInterval(() => void refresh(), 4000);
+      cleanup(() => clearInterval(timer));
+    });
   }
 
   /** Checkout: authorize a fresh escrow hold and dispatch. */
-  book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary): void {
+  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }): Promise<void> {
+    if (!this.api.settings.useMockApi()) {
+      if (!sku) throw new Error('Choose a catalog service.');
+      const { booking } = await this.api.post<{ booking: BookingDto }>('/bookings', {
+        skuId: sku.id, address: { ...DEMO_ADDRESS }, lat: 17.618111, lng: 121.718927,
+        schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}),
+      }, { 'Idempotency-Key': key });
+      await this.load(booking.id); return;
+    }
     const now = new Date();
     this.state.update((o) => ({
       ...o,
@@ -92,6 +131,7 @@ export class OrderService {
   }
 
   setStatus(status: OrderStatus): void {
+    if (!this.api.settings.useMockApi()) throw new Error('Use the API to change a live booking status.');
     this.state.update((o) => {
       if (o.status === status) return o;
       return { ...o, status, statusTimes: { ...o.statusTimes, [status]: new Date() } };
@@ -100,12 +140,17 @@ export class OrderService {
 
   /** Pro side — ADR-004: photo evidence + standardized part, awaiting customer approval. */
   pushAddonQuote(sku: AddonSku, photoUrl: string, note: string): AddonQuote {
+    if (!this.api.settings.useMockApi()) throw new Error('Upload evidence and request the add-on through the API.');
     const quote: AddonQuote = { id: `addon-${Date.now()}`, sku, photoUrl, note, createdAt: new Date(), decision: 'PENDING' };
     this.state.update((o) => ({ ...o, addons: [...o.addons.filter((a) => a.decision !== 'PENDING'), quote] }));
     return quote;
   }
 
-  decideAddon(id: string, approve: boolean): void {
+  async decideAddon(id: string, approve: boolean): Promise<void> {
+    if (!this.api.settings.useMockApi()) {
+      await this.api.post(`/bookings/${this.state().id}/addons/${id}/decision`, { approve });
+      await this.load(this.state().id); return;
+    }
     this.state.update((o) => ({
       ...o,
       addons: o.addons.map((a) => (a.id === id ? { ...a, decision: approve ? 'APPROVED' : 'DECLINED' } : a)),
@@ -121,6 +166,7 @@ export class OrderService {
    * HOLD_AUTHORIZED → COMPLETED and credits the Pro wallet (ADR-002).
    */
   verifyCompletionPin(pin: string): boolean {
+    if (!this.api.settings.useMockApi()) return false;
     const o = this.state();
     if (o.escrow !== 'HOLD_AUTHORIZED' || pin !== o.completionPin) return false;
 
@@ -141,16 +187,83 @@ export class OrderService {
 
   /** Demo helper: restore the mid-route state shown in the approved mockups. */
   resetDemo(): void {
+    if (!this.api.settings.useMockApi()) return; // D3 supplies the guarded server reset.
     clearDemoState();
     this.wallet.reset();
     this.state.set(this.seedOrder());
   }
 
   private loadOrder(): Order {
+    if (!this.api.settings.useMockApi()) return this.emptyOrder();
     const saved = loadDemoState<Order>('order');
     if (!saved) return this.seedOrder();
     // Migrate cached prototype addresses without losing escrow or lifecycle progress.
     return saved.address.city === DEMO_ADDRESS.city ? saved : { ...saved, address: { ...DEMO_ADDRESS } };
+  }
+
+  async load(id: string): Promise<void> {
+    if (this.api.settings.useMockApi()) return;
+    const revision = ++this.revision;
+    await this.community.catalog();
+    const { booking } = await this.api.get<{ booking: BookingDto }>(`/bookings/${id}`);
+    const order = await this.fromApi(booking);
+    if (revision === this.revision) this.state.set(order);
+  }
+
+  async refresh(): Promise<void> {
+    if (this.api.settings.useMockApi() || !this.auth.user()) return;
+    const revision = ++this.revision;
+    this.loading.set(true);
+    try {
+      await this.community.catalog();
+      const result = await this.api.get<{ bookings: BookingDto[] }>('/bookings', { role: this.auth.user()?.role === 'PRO' ? 'pro' : 'customer', limit: 100 });
+      if (revision !== this.revision) return;
+      this.liveHistory.set(result.bookings.filter((b) => b.status === 'COMPLETED').map((b) => ({ id: b.code, title: b.skuName,
+        helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
+        amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
+      const current = result.bookings.find((b) => b.id === this.state().id);
+      const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status)) ?? result.bookings[0];
+      const order = selected ? await this.fromApi(selected) : this.emptyOrder();
+      if (revision === this.revision) { this.state.set(order); this.error.set(''); }
+    } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
+    finally { this.loading.set(false); }
+  }
+
+  async cancel(reason: string): Promise<void> {
+    if (this.api.settings.useMockApi()) { this.setStatus('CANCELLED'); return; }
+    await this.api.post(`/bookings/${this.state().id}/status`, { to: 'CANCELLED', reason });
+    await this.load(this.state().id);
+  }
+
+  async review(rating: number, compliments: string[], body: string, tipPhp: number): Promise<void> {
+    if (this.api.settings.useMockApi()) { this.setTip(tipPhp); return; }
+    await this.api.post(`/bookings/${this.state().id}/review`, { rating, compliments, ...(body.trim() ? { body: body.trim() } : {}), tipCentavos: Math.round(tipPhp * 100) });
+    await this.load(this.state().id);
+  }
+
+  private async fromApi(b: BookingDto): Promise<Order> {
+    const sku = this.community.skus().find((s) => s.id === b.skuId);
+    const helper = this.community.helpers().find((p) => p.id === b.proId);
+    return {
+      id: b.id, code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
+      sku: { ...(sku ?? this.emptyOrder().sku), id: b.skuId, name: b.skuName, pricePhp: b.priceCentavos / 100 },
+      helper: { ...(helper ?? this.emptyOrder().helper), id: b.proId ?? '', name: b.pro?.name ?? 'Finding a Pro',
+        avatarUrl: await this.community.image(b.pro?.avatarKey ?? null), rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
+      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: await this.community.image(b.customer?.avatarKey ?? null),
+      address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
+      paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
+      completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,
+      statusTimes: Object.fromEntries(b.events.map((e) => [e.status, new Date(e.createdAt)])),
+      addons: await Promise.all(b.addons.map(async (a) => ({ id: a.id, sku: { id: a.addonSkuId, name: a.addonName, pricePhp: a.priceCentavos / 100, detail: '' },
+        photoUrl: await this.community.image(a.photoKey), note: a.note, createdAt: new Date(a.createdAt), decision: a.decision }))),
+    };
+  }
+
+  private emptyOrder(): Order {
+    return { id: '', sku: { id: '', name: '', category: 'repairs', pricePhp: 0, unit: 'job', durationLabel: '', inclusions: [] },
+      helper: { id: '', name: 'Finding a Pro', avatarUrl: '', category: '', rating: 0, reviewCount: 0, distanceKm: 0, hourlyRatePhp: 0, isAvailable: false },
+      customerName: '', customerAvatarUrl: '', address: { ...DEMO_ADDRESS }, schedule: 'Immediate / ASAP', paymentMethod: 'GCASH',
+      trustFeePhp: 0, addons: [], status: 'PENDING_ACCEPTANCE', escrow: 'NONE', completionPin: '', tipPhp: 0, statusTimes: {} };
   }
 
   private seedOrder(): Order {

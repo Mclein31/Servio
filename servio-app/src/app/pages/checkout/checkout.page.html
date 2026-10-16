@@ -9,16 +9,19 @@
 
 <ion-content class="servio-page">
   <div class="wrap">
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (sku(); as sku) {
+    @let helper = this.helper();
     <!-- Booking summary -->
     <section class="servio-card panel">
       <h2 class="sku">{{ sku.name }}</h2>
-      <div class="provider">
+      @if (helper) { <div class="provider">
         <app-avatar [src]="helper.avatarUrl" [name]="helper.name" [size]="40"></app-avatar>
         <div>
           <strong>{{ helper.name }}</strong>
           <span>Verified Pro · {{ helper.rating | number: '1.1-1' }} ({{ helper.reviewCount }} reviews)</span>
         </div>
-      </div>
+      </div> } @else { <p>Match with a nearby verified Pro</p> }
       <ul class="incl">
         @for (i of sku.inclusions; track i) {
           <li><ion-icon name="checkmark" aria-hidden="true"></ion-icon>{{ i }}</li>
@@ -54,7 +57,7 @@
     <section class="servio-card panel">
       <h3 class="flush">Escrow breakdown</h3>
       <div class="line"><span>Base Labor · {{ sku.name }}</span><span class="price">{{ sku.pricePhp | php }}</span></div>
-      <div class="line"><span>Platform Trust & Safety Fee</span><span class="price">{{ feePhp | php }}</span></div>
+      <div class="line"><span>Platform Trust & Safety Fee</span><span class="price">{{ feePhp() | php }}</span></div>
       <div class="divider"></div>
       <div class="line total"><span>Total Escrow Hold</span><span class="price">{{ totalPhp() | php }}</span></div>
     </section>
@@ -71,22 +74,23 @@
       <div class="servio-card methods" role="radiogroup" aria-label="Payment method">
         <button type="button" class="method" role="radio" [attr.aria-checked]="payment() === 'GCASH'" (click)="payment.set('GCASH')">
           <span class="logo gcash">G</span>
-          <span class="grow"><strong>GCash</strong><span>Instant debit · 0917 ••• 4567</span></span>
+          <span class="grow"><strong>GCash</strong><span>Demo mock hold</span></span>
           <span class="radio" [class.on]="payment() === 'GCASH'"></span>
         </button>
         <button type="button" class="method" role="radio" [attr.aria-checked]="payment() === 'CARD'" (click)="payment.set('CARD')">
           <span class="logo card"><ion-icon name="card" aria-hidden="true"></ion-icon></span>
-          <span class="grow"><strong>Credit / Debit Card</strong><span>Visa ending 4582 · pre-authorized hold</span></span>
+          <span class="grow"><strong>Credit / Debit Card</strong><span>Demo mock hold</span></span>
           <span class="radio" [class.on]="payment() === 'CARD'"></span>
         </button>
       </div>
     </section>
+    }
   </div>
 </ion-content>
 
 <ion-footer class="ion-no-border">
   <div class="servio-action-bar">
-    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="'Escrow authorized'" (confirmed)="authorize()"></app-slide-to-confirm>
+    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="saving() ? 'Authorizing…' : 'Slide to authorize'" [disabled]="!sku() || saving()" (confirmed)="authorize()"></app-slide-to-confirm>
     <p class="fine">You won't be charged until you share your completion PIN.</p>
   </div>
 </ion-footer>

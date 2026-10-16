@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
+import { OrderService } from '../../core/services/order.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
@@ -23,9 +24,15 @@ interface SettingItem {
 })
 export class ProfilePage {
   private readonly router = inject(Router);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly toasts = inject(ToastController);
 
+  readonly orders = inject(OrderService);
+  readonly mock = this.auth.settings.useMockApi;
+  readonly liveMetrics = computed(() => [
+    { value: String(this.orders.history().length + (this.orders.isActive() ? 1 : 0)), label: 'Bookings', icon: 'document-text-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
+    { value: String(this.orders.history().length), label: 'Completed', icon: 'checkmark-circle-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
+  ]);
   readonly metrics = [
     { value: '12', label: 'Requests', icon: 'document-text-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
     { value: '28', label: 'Jobs Done', icon: 'checkmark-circle-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
@@ -48,6 +55,10 @@ export class ProfilePage {
   ];
 
   async open(item: SettingItem): Promise<void> {
+    if (item.route === '/pro' && !this.mock() && this.auth.user()?.role !== 'PRO') {
+      const toast = await this.toasts.create({ message: 'Pro applications will open after the demo. Sign in with the separate demo Pro account to demonstrate jobs.', duration: 2800, position: 'top' });
+      await toast.present(); return;
+    }
     if (item.route) {
       this.router.navigateByUrl(item.route);
       return;

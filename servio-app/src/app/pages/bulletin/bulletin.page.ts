@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -5,7 +6,8 @@ import { IonContent, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/ang
 import * as L from 'leaflet';
 import { servioTileLayer } from '../../shared/utils/map-tiles';
 import { TUGUEGARAO_CENTER } from '../../core/data/launch-city';
-import { BULLETIN_REQUESTS, CATEGORIES } from '../../core/data/mock-data';
+import { CATEGORIES } from '../../core/data/mock-data';
+import { CommunityService } from '../../core/services/community.service';
 import { SheetsService } from '../../core/services/sheets.service';
 import { SearchFilterComponent } from '../../shared/components/search-filter/search-filter.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
@@ -22,7 +24,7 @@ const PIN_COORDS: [number, number][] = [
   selector: 'app-bulletin',
   templateUrl: 'bulletin.page.html',
   styleUrl: 'bulletin.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
+  imports: [DecimalPipe, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BulletinPage {
@@ -31,6 +33,9 @@ export class BulletinPage {
   @ViewChild('pinMap') pinMapEl?: ElementRef<HTMLDivElement>;
   private pinMap?: L.Map;
 
+  readonly isFinite = Number.isFinite;
+  readonly community = inject(CommunityService);
+  ionViewWillEnter(): void { void this.community.refresh(); }
   readonly filters: { id: Filter; label: string }[] = [
     { id: 'ALL', label: 'All' },
     { id: 'OPEN', label: 'Open' },
@@ -44,7 +49,7 @@ export class BulletinPage {
   readonly requests = computed(() => {
     const f = this.filter();
     const q = this.query().toLowerCase();
-    return BULLETIN_REQUESTS.filter((r) => {
+    return this.community.requests().filter((r) => {
       if (f === 'OPEN' && r.status !== 'OPEN') return false;
       if (f === 'URGENT' && r.status !== 'URGENT') return false;
       if (f === 'NEARBY' && r.distanceKm >= 3) return false;
@@ -52,7 +57,7 @@ export class BulletinPage {
     });
   });
 
-  readonly openCount = BULLETIN_REQUESTS.filter((r) => r.status === 'OPEN' || r.status === 'URGENT').length;
+  readonly openCount = computed(() => this.community.requests().filter((r) => (r.status === 'OPEN' || r.status === 'URGENT') && r.distanceKm <= 5).length);
 
   constructor() {
     inject(ActivatedRoute)
@@ -74,9 +79,10 @@ export class BulletinPage {
     this.pinMap?.remove();
     const map = L.map(this.pinMapEl.nativeElement, { zoomControl: false }).setView([...TUGUEGARAO_CENTER], 14);
     servioTileLayer().addTo(map);
-    BULLETIN_REQUESTS.forEach((r, i) => {
+    this.requests().forEach((r, i) => {
+      if (!this.community.api.settings.useMockApi() && (r.lat == null || r.lng == null)) return;
       const urgent = r.status === 'URGENT';
-      L.marker(PIN_COORDS[i % PIN_COORDS.length], {
+      L.marker(r.lat != null && r.lng != null ? [r.lat, r.lng] : PIN_COORDS[i % PIN_COORDS.length], {
         icon: L.divIcon({
           className: 'bulletin-pin',
           iconSize: [30, 38],

@@ -12,7 +12,8 @@ import {
   ModalController,
   ToastController,
 } from '@ionic/angular';
-import { BULLETIN_SKUS, CATEGORIES } from '../../../core/data/mock-data';
+import { CATEGORIES } from '../../../core/data/mock-data';
+import { CommunityService } from '../../../core/services/community.service';
 import { CategoryId } from '../../models/ui.models';
 import { PhpPipe } from '../../pipes/php.pipe';
 import { formatPhp } from '../../utils/money';
@@ -39,6 +40,7 @@ const MAX_DESC = 200;
           <div class="urgent-banner" role="status"><span class="bang">!</span> Marked urgent · shown first to nearby helpers</div>
         }
 
+        @if (error()) { <p role="alert">{{ error() }}</p> }
         <fieldset>
           <legend>Category</legend>
           <div class="cats">
@@ -98,17 +100,21 @@ export class PostBulletinModalComponent {
   private readonly modals = inject(ModalController);
   private readonly toasts = inject(ToastController);
 
+  readonly community = inject(CommunityService);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  constructor() { void this.community.catalog().then(() => this.pickCategory(this.category())).catch(() => this.error.set('Could not load catalog.')); }
   readonly maxDesc = MAX_DESC;
   readonly categories = CATEGORIES.filter((c) => c.id !== 'tech');
   readonly category = signal<CategoryId>('repairs');
-  readonly skuId = signal(BULLETIN_SKUS.find((s) => s.category === 'repairs')!.id);
+  readonly skuId = signal('');
   readonly desc = signal('');
   readonly urgent = signal(false);
   readonly area = signal('Barangay Ugac Norte, Tuguegarao City');
 
-  readonly skus = computed(() => BULLETIN_SKUS.filter((s) => s.category === this.category()));
-  readonly sku = computed(() => BULLETIN_SKUS.find((s) => s.id === this.skuId()) ?? null);
-  readonly canPost = computed(() => !!this.sku() && this.area().trim().length > 2);
+  readonly skus = computed(() => this.community.skus().filter((s) => s.category === this.category()));
+  readonly sku = computed(() => this.community.skus().find((s) => s.id === this.skuId()) ?? null);
+  readonly canPost = computed(() => !!this.sku() && this.area().trim().length > 2 && this.desc().trim().length > 0 && !this.saving());
 
   pickCategory(id: CategoryId): void {
     this.category.set(id);
@@ -121,6 +127,10 @@ export class PostBulletinModalComponent {
 
   async post(): Promise<void> {
     if (!this.canPost()) return;
+    this.saving.set(true); this.error.set('');
+    try { await this.community.postRequest({ skuId: this.sku()!.id, categoryId: this.category(), description: this.desc().trim(), neighborhood: this.area().trim(), urgent: this.urgent() }); }
+    catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not post request.'); return; }
+    finally { this.saving.set(false); }
     await this.modals.dismiss({ posted: true });
     const toast = await this.toasts.create({
       message: `Posted “${this.sku()!.name}” to your neighborhood${this.urgent() ? ' as urgent' : ''}.`,
