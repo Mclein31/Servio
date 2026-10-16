@@ -111,7 +111,7 @@ export class AuthService {
     if(this.sessions.token()===token && this.user()?.avatarKey===user.avatarKey) this.avatarUrl.set(url);
   }
 
-  async upgradeToPro(): Promise<void> {
+  async upgradeToPro(categoryId?: string, headline?: string): Promise<void> {
     if (this.settings.useMockApi()) {
       this.user.update((u) => u ? { ...u, role: 'PRO' } : u);
       this.pro.set({
@@ -125,7 +125,19 @@ export class AuthService {
       return;
     }
     const token = this.sessions.token();
-    const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/upgrade-pro', {});
+    const body = categoryId ? { categoryId, ...(headline ? { headline } : {}) } : {};
+    const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/upgrade-pro', body);
+    if (this.sessions.token() === token) {
+      this.user.set(result.me);
+      this.pro.set(result.pro);
+    }
+  }
+
+  async updateTrade(categoryId: string, headline?: string): Promise<void> {
+    if (this.settings.useMockApi()) return;
+    const token = this.sessions.token();
+    const body = { categoryId, ...(headline ? { headline } : {}) };
+    const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/pro-trade', body);
     if (this.sessions.token() === token) {
       this.user.set(result.me);
       this.pro.set(result.pro);

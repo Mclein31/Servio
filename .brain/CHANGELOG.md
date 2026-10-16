@@ -2,6 +2,13 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.31] — 2026-10-17
+### Fixed
+- Directory category navigation filter leak: resolved issue where newly onboarded Pros appeared under all categories regardless of active filter chip due to `POST /me/upgrade-pro` linking every catalog SKU and setting placeholder headline `'Community Service Professional'`.
+- `servio-api`: Updated `POST /me/upgrade-pro` to accept optional `categoryId` and `headline`, scoping linked `pro_skus` strictly to the chosen category. Added `POST /me/pro-trade` endpoint enabling Pros to change their trade category and re-scope assigned SKUs.
+- `servio-app`: Updated Pro onboarding in `ProfilePage` to prompt the user to select their primary trade category (Repairs, Tutoring, Errands, Beauty & Care, Tech Help). Added a "Change Service Category" item under Pro settings to switch service categories on the fly with immediate Directory refresh.
+- Synchronized active Pro records in Neon PostgreSQL to reflect specific trade category SKUs.
+
 ## [0.5.30] — 2026-10-16
 ### Added
 - Servio Pro onboarding and dual-persona mode switching across `servio-api` and `servio-app` (ADR-030).

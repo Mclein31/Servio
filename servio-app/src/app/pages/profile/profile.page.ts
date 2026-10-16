@@ -4,6 +4,7 @@ import { AlertController, IonContent, IonHeader, IonIcon, IonToolbar, ToastContr
 import { AddressService } from '../../core/services/address.service';
 import { OrderService } from '../../core/services/order.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CommunityService } from '../../core/services/community.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
 
@@ -14,7 +15,7 @@ interface SettingItem {
   tint: string;
   ink: string;
   route?: string;
-  action?: 'customer' | 'pro' | 'upgrade';
+  action?: 'customer' | 'pro' | 'upgrade' | 'trade';
 }
 
 @Component({
@@ -30,6 +31,7 @@ export class ProfilePage {
   readonly addresses = inject(AddressService);
   private readonly toasts = inject(ToastController);
   private readonly alerts = inject(AlertController);
+  readonly community = inject(CommunityService);
 
   readonly orders = inject(OrderService);
   readonly mock = this.auth.settings.useMockApi;
@@ -70,6 +72,14 @@ export class ProfilePage {
           tint: 'var(--servio-cat-tech)',
           ink: '#7C3AED',
           route: '/pro',
+        },
+        {
+          label: 'Change Service Category',
+          caption: 'Update the trade and services you provide',
+          icon: 'construct-outline',
+          tint: 'var(--servio-cat-repairs)',
+          ink: '#D04A00',
+          action: 'trade',
         },
         {
           label: 'Switch to Customer Mode',
@@ -140,21 +150,63 @@ export class ProfilePage {
     }
     if (item.action === 'upgrade') {
       const alert = await this.alerts.create({
-        header: 'Switch to Servio Pro',
-        subHeader: 'Become a Service Provider',
-        message: 'Activate your Pro account to accept local jobs, manage your availability, and track your earnings on SERVIO.',
+        header: 'Become a Servio Pro',
+        subHeader: 'Select your trade category',
+        message: 'Choose the primary service category you offer to neighbors:',
+        inputs: [
+          { name: 'category', type: 'radio', label: 'Repairs & Maintenance', value: 'repairs', checked: true },
+          { name: 'category', type: 'radio', label: 'Academic Tutoring', value: 'tutoring' },
+          { name: 'category', type: 'radio', label: 'Errands & Delivery', value: 'errands' },
+          { name: 'category', type: 'radio', label: 'Beauty & Care', value: 'beauty' },
+          { name: 'category', type: 'radio', label: 'Tech Help & Diagnostics', value: 'tech' },
+        ],
         buttons: [
           { text: 'Cancel', role: 'cancel' },
           {
             text: 'Activate & Switch',
-            handler: async () => {
+            handler: async (selectedCategory) => {
               try {
-                await this.auth.upgradeToPro();
+                await this.auth.upgradeToPro(selectedCategory || 'repairs');
+                void this.community.refresh();
                 const toast = await this.toasts.create({ message: 'Welcome to Servio Pro! You are now in Pro mode.', duration: 2200, position: 'top' });
                 await toast.present();
                 void this.router.navigateByUrl('/pro');
               } catch (err) {
                 const toast = await this.toasts.create({ message: err instanceof Error ? err.message : 'Could not activate Servio Pro.', duration: 3000, position: 'top' });
+                await toast.present();
+              }
+            },
+          },
+        ],
+      });
+      await alert.present();
+      return;
+    }
+    if (item.action === 'trade') {
+      const alert = await this.alerts.create({
+        header: 'Change Service Category',
+        subHeader: 'Select your primary trade',
+        message: 'Update which services you provide in the neighborhood directory:',
+        inputs: [
+          { name: 'category', type: 'radio', label: 'Repairs & Maintenance', value: 'repairs', checked: true },
+          { name: 'category', type: 'radio', label: 'Academic Tutoring', value: 'tutoring' },
+          { name: 'category', type: 'radio', label: 'Errands & Delivery', value: 'errands' },
+          { name: 'category', type: 'radio', label: 'Beauty & Care', value: 'beauty' },
+          { name: 'category', type: 'radio', label: 'Tech Help & Diagnostics', value: 'tech' },
+        ],
+        buttons: [
+          { text: 'Cancel', role: 'cancel' },
+          {
+            text: 'Update Category',
+            handler: async (selectedCategory) => {
+              if (!selectedCategory) return;
+              try {
+                await this.auth.updateTrade(selectedCategory);
+                void this.community.refresh();
+                const toast = await this.toasts.create({ message: 'Service category updated successfully.', duration: 2000, position: 'top' });
+                await toast.present();
+              } catch (err) {
+                const toast = await this.toasts.create({ message: err instanceof Error ? err.message : 'Could not update category.', duration: 2500, position: 'top' });
                 await toast.present();
               }
             },
