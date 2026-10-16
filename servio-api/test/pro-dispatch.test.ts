@@ -78,6 +78,15 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     expect(await balance()).toBe('115000'); await balanced();
   });
 
+  it('allows an approved Pro to queue a second accepted job while finishing another', async () => {
+    await client.db.insert(bookings).values({ customerId: ids[0]!, proId: ids[1]!, skuId: 'sku-ac-leak', skuName: 'AC repair', priceCentavos: 110000,
+      trustFeeCentavos: 5000, address: { street: 'Ugac Norte', barangay: 'Ugac Norte', city: 'Tuguegarao City' }, lat: 17.618111, lng: 121.718927,
+      schedule: 'ASAP', paymentMethod: 'GCASH', status: 'IN_PROGRESS', isDemo: true });
+    const offer = (await poll()).offer!;
+    expect((await api(`/offers/${offer.id}/accept`, json({}, headers[1]))).status).toBe(200);
+    expect(await balance()).toBe('115000'); await balanced();
+  });
+
   it('declines to the next Pro, expires on server time, and refunds exactly once when exhausted', async () => {
     const first = (await poll()).offer!;
     expect((await api(`/offers/${first.id}/decline`, json({}, headers[1]))).status).toBe(200);

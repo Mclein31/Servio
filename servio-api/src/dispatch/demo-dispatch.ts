@@ -27,7 +27,6 @@ export async function advanceDispatch(tx: Transaction, booking: typeof bookings.
         AND u.id <> ${booking.customerId} AND p.last_lat IS NOT NULL AND p.last_lng IS NOT NULL
         AND p.last_located_at <= ${now} AND p.last_located_at > ${new Date(now.getTime() - profile.freshLocationSeconds * 1000)}
         AND NOT EXISTS (SELECT 1 FROM dispatch_offers d WHERE d.booking_id=${booking.id} AND d.pro_id=u.id)
-        AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.pro_id=u.id AND b.status NOT IN ('COMPLETED','CANCELLED'))
         AND NOT EXISTS (SELECT 1 FROM dispatch_offers d WHERE d.pro_id=u.id AND d.response='PENDING' AND d.expires_at > ${now})
     ) eligible WHERE distance_km <= ${profile.dispatchRadiusKm}
     ORDER BY distance_km, rating_avg DESC, id LIMIT 1
