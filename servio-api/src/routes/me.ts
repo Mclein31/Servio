@@ -11,7 +11,7 @@ export const me = new Hono<AppEnv>();
 me.use('/me', withDb, requireUser);
 me.use('/me/*', withDb, requireUser);
 
-const profileFields = { id: users.id, email: users.email, fullName: users.fullName, phoneNumber: users.phoneNumber, role: users.role, avatarKey: users.avatarKey };
+const profileFields = { id: users.id, isDemo: users.isDemo, email: users.email, fullName: users.fullName, phoneNumber: users.phoneNumber, role: users.role, avatarKey: users.avatarKey };
 
 me.get('/me', async (c) => {
   const db = c.get('db');

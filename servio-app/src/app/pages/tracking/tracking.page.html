@@ -77,8 +77,8 @@
       @if (orders.isActive() && o.status !== 'IN_PROGRESS' && community.cancellationFees()) {
         <button type="button" class="text-btn" [disabled]="cancelling()" (click)="cancel()">Cancel booking</button>
       }
-      @if (orders.api.settings.useMockApi()) { <div class="demo">
-        <button type="button" class="text-btn" (click)="replay()">Replay route</button>
+      @if (orders.canResetDemo()) { <div class="demo">
+        @if (orders.api.settings.useMockApi()) { <button type="button" class="text-btn" (click)="replay()">Replay route</button> }
         <button type="button" class="text-btn muted" (click)="resetDemo()">Reset demo order</button>
       </div> }
     </section>

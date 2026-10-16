@@ -207,3 +207,13 @@
 - **Status:** Accepted (D2, owner-authorized no-email demo)
 - **Decision:** An optional six-digit DEMO_LOGIN_CODE enables reusable sign-in only for an existing active is_demo customer or Pro outside production. Never create an identity through this path, bypass disabled accounts, or admit ADMIN mobile sign-in. Request-code avoids SMTP and the hourly email-code quota for eligible demo accounts while retaining IP/email rate limits. Responses mention the configured code without returning its value. Normal single-use email codes remain valid for other accounts.
 - **Consequences:** Configure the code in ignored local environment, never committed source. Production ignores it even if configured accidentally. This capability does not affect completion PINs or money permissions.
+
+
+## ADR-021: Disposable Demo Database and Compensating Order Replay
+
+- **Date:** 2026-10-16
+- **Status:** Accepted (D3 safety boundary)
+- **Context:** servio_dev contains normal development accounts and bookings alongside the seeded presentation data. A full TRUNCATE there would destroy non-demo history.
+- **Decision:** Create a separate local servio_demo database for full presentation reset. Reset/restore require a dedicated servio_demo/demo name and non-production environment; reset locks and refuses non-demo users/bookings/bulletins before TRUNCATE, including uploads metadata. The normal dev/test databases remain untouched. Full reset reruns migrations, catalog, baseline and local R2 images. Backups are ignored custom pg_dump files, restored with pg_restore only into a dedicated demo database; reset currently requires local R2. No cloud resources are created.
+- **Order replay:** Only the reserved Sophia/Daniel participants can reset SRV-8821 through the API outside production. Lock the booking and Pro wallet, reverse its cumulative net ledger positions and re-hold the original base+fee. Keep every ledger/event/chat row; append a reset marker and lifecycle events, remove mutable quote/review state and reverse corresponding job/rating increments. The app shows the current timeline after that marker. Refuse if previously cashed-out earnings would make the wallet negative; use full disposable DB reset then. Other bookings/cashouts are preserved.
+- **Consequences:** Full reset invalidates demo sessions; order replay does not. Database backups exclude R2 bytes; preserve local Wrangler state or reseed baseline images. Future Neon demo-baseline branching is documented but unverified until owner-approved cloud setup.

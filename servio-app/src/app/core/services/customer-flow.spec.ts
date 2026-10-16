@@ -28,7 +28,7 @@ describe('live customer data and escrow screens', () => {
     api.get.mockReset(); api.post.mockReset(); api.imageUrl.mockResolvedValue('https://storage.example/evidence');
     api.get.mockImplementation(async (path: string) => path === '/catalog' ? catalog : { booking: structuredClone(booking) });
     TestBed.configureTestingModule({ providers: [
-      { provide: ApiService, useValue: api }, { provide: AuthService, useValue: { user: signal(null) } }, { provide: WalletService, useValue: {} },
+      { provide: ApiService, useValue: api }, { provide: AuthService, useValue: { user: signal(null) } }, { provide: WalletService, useValue: { refresh: vi.fn().mockResolvedValue(undefined) } },
     ] });
   });
   afterEach(() => { TestBed.resetTestingModule(); vi.restoreAllMocks(); });
@@ -63,6 +63,24 @@ describe('live customer data and escrow screens', () => {
     expect(orders.order().status).toBe('IN_PROGRESS');
     await orders.review(5, ['Polite'], 'Good work', 100);
     expect(api.post).toHaveBeenLastCalledWith(`/bookings/${booking.id}/review`, { rating: 5, compliments: ['Polite'], body: 'Good work', tipCentavos: 10000 });
+  });
+
+  it('resets through the server and discards stale completion timestamps only after a reset marker', async () => {
+    const orders=TestBed.inject(OrderService); TestBed.tick();
+    expect(orders.canResetDemo()).toBe(false);
+    await orders.resetDemo(); expect(api.post).not.toHaveBeenCalled();
+    TestBed.inject(AuthService).user.set({ id:'customer',email:'demo.customer@servio.test',role:'CUSTOMER',fullName:'Sophia M.',phoneNumber:null,avatarKey:null,isDemo:true });
+    api.post.mockResolvedValue({ booking });
+    api.get.mockImplementation(async (path: string) => path === '/catalog' ? catalog : { booking:{ ...booking,status:'EN_ROUTE',addons:[],events:[
+      { status:'COMPLETED',createdAt:'2026-10-15T23:00:00Z',note:null },
+      { status:'PENDING_ACCEPTANCE',createdAt:'2026-10-16T00:00:00Z',note:'DEMO_RESET: presentation restarted.' },
+      { status:'EN_ROUTE',createdAt:'2026-10-16T00:00:01Z',note:null },
+    ] } });
+    await orders.resetDemo();
+    expect(api.post).toHaveBeenCalledWith('/demo/reset-order',{});
+    expect(orders.order().status).toBe('EN_ROUTE');
+    expect(orders.order().statusTimes.COMPLETED).toBeUndefined();
+    expect(orders.order().statusTimes.EN_ROUTE).toBeInstanceOf(Date);
   });
 
   it('uses Philippine schedule windows even on a laptop in another timezone', () => {

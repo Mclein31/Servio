@@ -15,7 +15,7 @@ export function formatPhLocal(digits: string): string {
   return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 10)].filter(Boolean).join(' ');
 }
 export interface AppUser {
-  id: string; email: string; role: 'CUSTOMER' | 'PRO' | 'ADMIN'; fullName: string | null; phoneNumber: string | null; avatarKey: string | null;
+  isDemo?: boolean; id: string; email: string; role: 'CUSTOMER' | 'PRO' | 'ADMIN'; fullName: string | null; phoneNumber: string | null; avatarKey: string | null;
 }
 export interface AppPro {
   userId: string; isOnline: boolean; kycStatus: string; jobsDone: number; ratingAvg: string; ratingCount: number;

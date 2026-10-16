@@ -11,6 +11,7 @@ import { health } from './routes/health';
 import { uploads } from './routes/uploads';
 import { wallet } from './routes/wallet';
 import { pro } from './routes/pro';
+import { demo } from './routes/demo';
 import { me } from './routes/me';
 
 const app = new Hono<AppEnv>();
@@ -30,6 +31,7 @@ v1.route('/', uploads);
 v1.route('/', wallet);
 v1.route('/', community);
 v1.route('/', pro);
+v1.route('/', demo);
 app.route('/api/v1', v1);
 
 export default app;

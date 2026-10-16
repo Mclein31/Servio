@@ -90,6 +90,6 @@ export class TrackingPage {
   }
 
   resetDemo(): void {
-    this.orders.resetDemo();
+    void this.orders.resetDemo().catch(() => undefined);
   }
 }

@@ -1,3 +1,4 @@
+import { environment } from '../../../environments/environment';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { AddonQuote, AddonSku, Order, OrderStatus, PaymentMethod, ServiceSku } from '../../shared/models/domain.models';
 import { buildMilestones, HelperSummary, StepMilestone } from '../../shared/models/ui.models';
@@ -191,8 +192,16 @@ export class OrderService {
   }
 
   /** Demo helper: restore the mid-route state shown in the approved mockups. */
-  resetDemo(): void {
-    if (!this.api.settings.useMockApi()) return; // D3 supplies the guarded server reset.
+  readonly canResetDemo = computed(() => environment.demo && (this.api.settings.useMockApi() || this.auth.user()?.isDemo === true));
+
+  async resetDemo(): Promise<void> {
+    if (!this.canResetDemo()) return;
+    if (!this.api.settings.useMockApi()) {
+      const result = await this.api.post<{ booking: BookingDto }>('/demo/reset-order', {});
+      await this.load(result.booking.id);
+      await this.wallet.refresh();
+      return;
+    }
     clearDemoState();
     this.wallet.reset();
     this.state.set(this.seedOrder());
@@ -265,6 +274,8 @@ export class OrderService {
   private async fromApi(b: BookingDto): Promise<Order> {
     const sku = this.community.skus().find((s) => s.id === b.skuId);
     const helper = this.community.helpers().find((p) => p.id === b.proId);
+    const resetIndex = b.events.reduce((last, e, i) => e.note?.startsWith('DEMO_RESET:') ? i : last, -1);
+    const currentEvents = resetIndex >= 0 ? b.events.slice(resetIndex) : b.events;
     return {
       id: b.id, code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
       sku: { ...(sku ?? this.emptyOrder().sku), id: b.skuId, name: b.skuName, pricePhp: b.priceCentavos / 100 },
@@ -274,7 +285,7 @@ export class OrderService {
       address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
       paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
       completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,
-      statusTimes: Object.fromEntries(b.events.map((e) => [e.status, new Date(e.createdAt)])),
+      statusTimes: Object.fromEntries(currentEvents.map((e) => [e.status, new Date(e.createdAt)])),
       addons: await Promise.all(b.addons.map(async (a) => ({ id: a.id, sku: { id: a.addonSkuId, name: a.addonName, pricePhp: a.priceCentavos / 100, detail: '' },
         photoUrl: await this.community.image(a.photoKey), note: a.note, createdAt: new Date(a.createdAt), decision: a.decision }))),
     };

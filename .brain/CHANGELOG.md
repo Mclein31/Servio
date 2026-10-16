@@ -4,6 +4,14 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.17] — 2026-10-16
+### Added
+- D3: Dedicated servio_demo full reset/backup/restore scripts with production/database/non-demo-row guards. Migrates an empty demo DB and reseeds catalog, baseline and local images; preserves normal dev/test databases (ADR-021).
+- Participant-only prototype order reset appends compensating money/audit rows and a new base hold, clears mutable quotes/review, adjusts earned job/rating increments and restores fixed no-show timing. Current stepper starts after the reset marker. Existing money/events/chat stay intact.
+- docs/DEMO_DATA.md covers setup, database selection, ignored custom backups, restore, R2 separation, guarded no-email sign-in and future owner-approved Neon branching.
+### Verified
+- Local dedicated demo DB migrated/reset/seeded, custom backup created and restored successfully. API typecheck and 144 tests, including reset auth/production/concurrency/ledger preservation and add-on/PIN/tip reversal; app build/lint and 32 tests pass with zero warnings.
+
 ## [0.5.16] — 2026-10-16
 ### Added
 - D2: Optional six-digit DEMO_LOGIN_CODE skips email delivery for existing active demo customer/Pro accounts. Fixed-code login never creates accounts, never signs in staff, and is disabled in production; normal single-use codes and rate limits remain available.
