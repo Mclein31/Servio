@@ -271,7 +271,7 @@
 .helper-carousel {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 172px;
+  grid-auto-columns: 184px;
   gap: 12px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -310,13 +310,22 @@
 }
 
 .tw-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "avatar text"
+    "avatar eta";
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
+  row-gap: 6px;
+}
+
+app-avatar {
+  grid-area: avatar;
 }
 
 .tw-text {
-  flex: 1 1 auto;
+  grid-area: text;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -333,22 +342,31 @@
 
 .tw-sub {
   font-size: 12px;
-  line-height: 17px;
+  line-height: 16px;
   color: var(--servio-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tw-eta {
+  grid-area: eta;
+  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   border-radius: 30px;
   background: var(--servio-orange-tint);
   color: var(--servio-orange-text);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 
 .live-dot {
   width: 7px;
