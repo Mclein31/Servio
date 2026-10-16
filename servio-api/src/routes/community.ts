@@ -1,0 +1,84 @@
+import { and, asc, desc, eq, sql, type SQLWrapper } from 'drizzle-orm';
+import { Hono } from 'hono';
+import * as v from 'valibot';
+import { cityProfile, haversineKm } from '../config/cities';
+import { bulletinRequests, proProfiles, proSkus, reviews, serviceSkus, users } from '../db/schema';
+import type { AppEnv } from '../env';
+import { ApiError } from '../lib/errors';
+import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
+import { validate } from '../lib/validation';
+import { requireUser } from '../middleware/auth';
+import { withDb } from '../middleware/db';
+
+export const community = new Hono<AppEnv>();
+community.use('/bulletin/*', withDb, requireUser);
+community.use('/pros', withDb, requireUser);
+const text = (max: number) => v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
+const lat = v.pipe(v.number(), v.minValue(-90), v.maxValue(90));
+const lng = v.pipe(v.number(), v.minValue(-180), v.maxValue(180));
+const locationQuery = {
+  lat: v.optional(v.pipe(v.string(), v.regex(/^-?\d+(?:\.\d+)?$/), v.transform(Number), v.minValue(-90), v.maxValue(90))),
+  lng: v.optional(v.pipe(v.string(), v.regex(/^-?\d+(?:\.\d+)?$/), v.transform(Number), v.minValue(-180), v.maxValue(180))),
+};
+const paired = (i: { lat?: number; lng?: number }) => (i.lat === undefined) === (i.lng === undefined);
+const distanceSql = (latitude: SQLWrapper, longitude: SQLWrapper, from: { lat: number; lng: number }) => sql`
+  CASE WHEN ${latitude} IS NULL OR ${longitude} IS NULL THEN NULL ELSE
+  6371 * acos(LEAST(1.0,GREATEST(-1.0,
+    sin(radians(${latitude})) * sin(radians(${from.lat})) + cos(radians(${latitude})) * cos(radians(${from.lat})) * cos(radians(${longitude} - ${from.lng}))
+  ))) END
+`;
+
+
+community.post('/bulletin', validate('json', v.pipe(v.strictObject({
+  skuId: text(100), categoryId: text(100), description: text(200), neighborhood: text(150), urgent: v.optional(v.boolean(), false),
+  lat: v.optional(lat), lng: v.optional(lng), photoKey: v.optional(v.pipe(v.string(), v.regex(UPLOAD_KEY))),
+}), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
+  const input = c.req.valid('json');
+  const [sku] = await c.get('db').select().from(serviceSkus).where(and(eq(serviceSkus.id, input.skuId), eq(serviceSkus.categoryId, input.categoryId), eq(serviceSkus.isActive, true)));
+  if (!sku) throw new ApiError(422, 'SKU_UNAVAILABLE', 'Choose an available SKU in this category.');
+  if (input.photoKey) await ownedUpload(c.get('db'), c.env, input.photoKey, c.get('userId'), 'request_photo');
+  const [owner] = await c.get('db').select({ isDemo: users.isDemo }).from(users).where(eq(users.id, c.get('userId')));
+  const [request] = await c.get('db').insert(bulletinRequests).values({ ...input, authorId: c.get('userId'), isDemo: owner!.isDemo, status: input.urgent ? 'URGENT' : 'OPEN' }).returning();
+  return c.json({ request: { ...request, title: sku.name, priceCentavos: sku.priceCentavos, unit: sku.unit } }, 201);
+});
+
+community.get('/bulletin', validate('query', v.pipe(v.strictObject({ ...locationQuery,
+  filter: v.optional(v.picklist(['all', 'open', 'urgent', 'nearby']), 'all'),
+}), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
+  const input = c.req.valid('query');
+  const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
+  const rows = await c.get('db').select({ request: bulletinRequests, title: serviceSkus.name, priceCentavos: serviceSkus.priceCentavos, unit: serviceSkus.unit, author: users.fullName })
+    .from(bulletinRequests).innerJoin(serviceSkus, eq(serviceSkus.id, bulletinRequests.skuId)).innerJoin(users, eq(users.id, bulletinRequests.authorId))
+    .where(and(input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
+      input.filter === 'nearby' ? sql`${distanceSql(bulletinRequests.lat, bulletinRequests.lng, origin)} < 3` : undefined))
+    .orderBy(desc(bulletinRequests.createdAt), desc(bulletinRequests.id)).limit(100);
+  const requests = rows.map((r) => ({ ...r.request, title: r.title, priceCentavos: r.priceCentavos, unit: r.unit, author: r.author ?? 'Neighbor',
+    distanceKm: r.request.lat != null && r.request.lng != null ? haversineKm(origin, { lat: r.request.lat, lng: r.request.lng }) : null,
+  })).filter((r) => input.filter !== 'nearby' || (r.distanceKm !== null && r.distanceKm < 3));
+  return c.json({ requests });
+});
+
+community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuery, category: v.optional(text(100)) }), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
+  const input = c.req.valid('query');
+  const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
+  const rows = await c.get('db').select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey, profile: proProfiles })
+    .from(users).innerJoin(proProfiles, eq(proProfiles.userId, users.id))
+    .where(and(eq(users.role, 'PRO'), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'),
+      sql`EXISTS (SELECT 1 FROM pro_skus p JOIN service_skus s ON s.id=p.sku_id WHERE p.pro_id=${users.id} AND s.is_active=true ${input.category ? sql`AND s.category_id=${input.category}` : sql``})`))
+    .orderBy(sql`${distanceSql(proProfiles.lastLat, proProfiles.lastLng, origin)} ASC NULLS LAST`, desc(proProfiles.ratingAvg), asc(users.id)).limit(100);
+  const pros = [];
+  for (const row of rows) {
+    const skus = await c.get('db').select({ sku: serviceSkus }).from(proSkus).innerJoin(serviceSkus, eq(serviceSkus.id, proSkus.skuId))
+      .where(and(eq(proSkus.proId, row.id), eq(serviceSkus.isActive, true), input.category ? eq(serviceSkus.categoryId, input.category) : undefined));
+    if (!skus.length) continue;
+    const feedback = await c.get('db').select({ id: reviews.id, author: users.fullName, rating: reviews.rating, body: reviews.body, createdAt: reviews.createdAt })
+      .from(reviews).innerJoin(users, eq(users.id, reviews.authorId)).where(eq(reviews.subjectId, row.id)).orderBy(desc(reviews.createdAt)).limit(10);
+    const p = row.profile;
+    pros.push({ id: row.id, name: row.name ?? 'SERVIO Pro', avatarKey: row.avatarKey, headline: p.headline, bio: p.bio, credentials: p.credentials,
+      yearsExperience: p.yearsExperience, jobsDone: p.jobsDone, rating: Number(p.ratingAvg), ratingCount: p.ratingCount,
+      isOnline: p.isOnline, distanceKm: p.lastLat != null && p.lastLng != null ? haversineKm(origin, { lat: p.lastLat, lng: p.lastLng }) : null,
+      fromPriceCentavos: Math.min(...skus.map((s) => s.sku.priceCentavos)), skus: skus.map((s) => s.sku), reviews: feedback });
+  }
+  pros.sort((a,b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || b.rating - a.rating);
+  return c.json({ pros });
+});

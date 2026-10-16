@@ -30,7 +30,7 @@
 - [x] A6: Owned upload metadata, R2 signed PUT/GET, local Wrangler demo adapter, participant access and add-on evidence ownership checks.
 - [x] A7: Customer-only HMAC PIN, committed five-attempt lockout, atomic completion/release and replay/concurrency guards.
 - [x] A8: Ledger-derived Pro wallet, pending earnings, Philippine daily income, mixed ledger pagination and locked mock GCash cashouts.
-- [ ] A9: Tips, reviews, bulletin, chat, directory.
+- [x] A9: Completed-customer reviews and 100% tips, strict SKU bulletin, participant chat with system messages/photos, approved directory and filtered/ranked queries.
 - [ ] C1: App API client.
 - [ ] C2: Email code auth screens.
 - [ ] C3: Customer API flows.

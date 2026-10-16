@@ -131,6 +131,7 @@ export const proProfiles = pgTable(
     lastLocatedAt: timestamp('last_located_at', { withTimezone: true }),
     ratingAvg: numeric('rating_avg', { precision: 3, scale: 2 }).notNull().default('0'),
     ratingCount: integer('rating_count').notNull().default(0),
+    ratingSum: integer('rating_sum').notNull().default(0),
     jobsDone: integer('jobs_done').notNull().default(0),
     cancellationStrikes: integer('cancellation_strikes').notNull().default(0),
     createdAt: created(),

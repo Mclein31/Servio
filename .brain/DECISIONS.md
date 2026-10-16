@@ -139,7 +139,17 @@
 
 - **Date:** 2026-10-16
 - **Status:** Accepted
-- **Decision:** Available balance is the sum of the Pro wallet account. Pending earnings are the rounded 85% share of base + approved add-ons for assigned open held bookings, excluding the trust fee; they appear as derived pending rows, never spendable wallet credits. Today's net earnings sum wallet credits since Philippine midnight (`Asia/Manila`), so withdrawing earnings does not change today's earnings metric.
+- **Decision:** Available balance is the sum of the Pro wallet account. Pending earnings are the rounded 85% share of base + approved add-ons for assigned open held bookings, excluding the trust fee; they appear as derived pending rows, never spendable wallet credits. Today's net earnings sum wallet credits since Philippine midnight (fixed Philippine UTC+08:00), so withdrawing earnings does not change today's earnings metric.
 - **Cashout:** Require integer centavos, minimum 50000, fee 1500, and a valid PH GCash number. Acquire a transaction advisory lock per Pro before reading the balance and debiting amount + fee. Append a balanced PAYOUT (wallet → clearing + fee) and create REQUESTED then mock PAID payout in the same transaction. Store only the masked destination.
 - **Read consistency:** Return wallet totals, pending items and entries from one repeatable-read, read-only transaction, so a concurrent release cannot disappear between separate response queries.
 - **Consequences:** Concurrent requests cannot overdraw; escrow cannot be cashed out before PIN completion (or an owner-authorized cancellation fee). No real payout provider or real transfer is implemented.
+
+
+## ADR-014: Catalog Community APIs, Private Booking Chat and Exact Review Totals
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Reviews are customer-only after completion and once per booking. Tips use a balanced customer→Pro transaction with 100% to the Pro, never escrow/platform. Store an integer rating_sum with rating_count to compute the two-decimal display average without accumulating rounding drift (`0006_exact_review_averages`). Demo seed must initialize both from its baseline ratings.
+- **Community:** Bulletin creation requires an active SKU matching its category and rejects price fields. Nearby eligibility and Pro SKU/category eligibility plus distance/rating order are applied before limiting results. The directory returns approved active Pros and public profile fields, never contact details.
+- **Chat:** Only booking participants read messages; only active bookings accept new messages. Upload attachments must be complete and owned, with request_photo/addon_evidence purposes; KYC and avatar uploads cannot be repurposed into chat. Status transitions append system messages inside the same booking transaction.
+- **Consequences:** Reviews/tips serialize on the booking and update aggregates atomically. Shared booking-read helpers are extracted for REST/realtime reuse. No bidding, arbitrary prices, social messaging or unapproved directory entries are introduced.
