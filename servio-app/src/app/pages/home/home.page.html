@@ -8,12 +8,12 @@
         </div>
         <span class="servio-caption">{{ greeting }}, {{ firstName() }}</span>
       </div>
-      <button type="button" class="bell" aria-label="Notifications">
+      <button type="button" class="bell" (click)="openNotifications()" aria-label="Notifications">
         <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
 
       </button>
       <a routerLink="/tabs/profile" class="me" aria-label="Your profile">
-        <app-avatar [name]="auth.user()?.fullName ?? 'Customer'" [size]="40"></app-avatar>
+        <app-avatar [src]="auth.avatarUrl()" [name]="auth.user()?.fullName ?? 'Customer'" [size]="40"></app-avatar>
       </a>
     </div>
   </ion-toolbar>
@@ -22,7 +22,7 @@
 <ion-content class="servio-page" [fullscreen]="false">
   <div class="servio-section first">
     @if (community.error()) { <p role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
-    <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)"></app-search-filter>
+    <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)" (filterClick)="openFilters()"></app-search-filter>
   </div>
 
   <!-- Hero -->
