@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.18] — 2026-10-16
+### Added
+- B2: Hibernatable booking and Pro dispatch rooms with short-lived signed session-bound single-use tickets, active-participant authorization, bounded connection lifetime and GPS validation/throttling. Profile location writes are conditional at 15-second intervals; status/money/no-show deadlines remain server-owned.
+- Post-commit status/chat/add-on/reset events and deduplicated dispatch invalidations. REST polling remains a recovery path. Reset clears cached room GPS.
+### Verified
+- API typecheck and 149 tests pass. Miniflare connects two sockets: assigned Pro fixes reach customer, customer/invalid/throttled GPS is rejected, reconnect replays latest fix, profile write cadence holds, committed chat/add-on/status events arrive, session revocation/replay/cross-booking tickets fail, and money remains balanced/unchanged by GPS.
+
 ## [0.5.17] — 2026-10-16
 ### Added
 - D3: Dedicated servio_demo full reset/backup/restore scripts with production/database/non-demo-row guards. Migrates an empty demo DB and reseeds catalog, baseline and local images; preserves normal dev/test databases (ADR-021).

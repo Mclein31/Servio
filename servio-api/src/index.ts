@@ -1,3 +1,6 @@
+export { OrderRoom } from './live/order-room';
+import { live } from './routes/live';
+import { notifyLive } from './live/notify';
 import { Hono } from 'hono';
 import type { AppEnv } from './env';
 import { corsMiddleware } from './middleware/cors';
@@ -22,6 +25,8 @@ app.onError(errorHandler);
 app.notFound(notFoundHandler);
 
 const v1 = new Hono<AppEnv>();
+v1.use('*', notifyLive);
+v1.route('/', live);
 v1.route('/', health);
 v1.route('/', catalog);
 v1.route('/', auth);

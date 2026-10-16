@@ -3,6 +3,7 @@ import type { Database } from './db/client';
 /** Worker bindings. Secrets come from servio-api/.env locally and `wrangler secret put` when deployed. */
 export interface Bindings {
   ENVIRONMENT: string;
+  ORDER_ROOMS: DurableObjectNamespace;
   /** Key in config/cities.ts; defaults to tuguegarao. */
   LAUNCH_CITY?: string;
   /** Comma-separated origins allowed by CORS (includes the Capacitor app origins). */
