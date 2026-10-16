@@ -4,6 +4,13 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 
 ---
 
+## [0.5.26] — 2026-10-16
+### Documented
+- D4 runbook: Monday October 19 device/account setup, dedicated reset/backup, LAN reachability and CORS, Android JDK21/APK and free Apple Personal Team install, complete booking/add-on/PIN/wallet/review/reset flow, indoor route fallback and Gmail real-account steps.
+- Verification table explicitly separates passing tests/builds from remaining Android installer, physical signing/GPS/camera and inbox checks. Full Demo milestone remains in progress.
+### Verified
+- Final API typecheck and 165 tests pass; Worker dry-run packaging succeeds without deploying. App build/lint and 50 tests pass with zero warnings; refreshed Android/iOS simulator builds succeed. Native iPhone session receives the Pro's simulated source with the correct label after the replay correction.
+
 ## [0.5.25] — 2026-10-16
 ### Added
 - F1 native packages: SERVIO Android project, camera/location/notification declarations, existing-logo icons/splash, API-connected demo build/sync command and foreground location strings. Development defaults to API mode.
