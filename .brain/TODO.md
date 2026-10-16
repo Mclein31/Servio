@@ -31,7 +31,7 @@
 - [x] A7: Customer-only HMAC PIN, committed five-attempt lockout, atomic completion/release and replay/concurrency guards.
 - [x] A8: Ledger-derived Pro wallet, pending earnings, Philippine daily income, mixed ledger pagination and locked mock GCash cashouts.
 - [x] A9: Completed-customer reviews and 100% tips, strict SKU bulletin, participant chat with system messages/photos, approved directory and filtered/ranked queries.
-- [ ] C1: App API client.
+- [x] C1: Fetch HttpClient, scoped auth/request IDs/error toasts, Preferences sessions, app API/mock flags and persisted demo LAN configuration.
 - [ ] C2: Email code auth screens.
 - [ ] C3: Customer API flows.
 - [ ] C4: Pro API flows.

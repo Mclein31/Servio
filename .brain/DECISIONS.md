@@ -153,3 +153,12 @@
 - **Community:** Bulletin creation requires an active SKU matching its category and rejects price fields. Nearby eligibility and Pro SKU/category eligibility plus distance/rating order are applied before limiting results. The directory returns approved active Pros and public profile fields, never contact details.
 - **Chat:** Only booking participants read messages; only active bookings accept new messages. Upload attachments must be complete and owned, with request_photo/addon_evidence purposes; KYC and avatar uploads cannot be repurposed into chat. Status transitions append system messages inside the same booking transaction.
 - **Consequences:** Reviews/tips serialize on the booking and update aggregates atomically. Shared booking-read helpers are extracted for REST/realtime reuse. No bidding, arbitrary prices, social messaging or unapproved directory entries are introduced.
+
+
+## ADR-015: App API Client, Session Boundary and Demo Connection Settings
+
+- **Date:** 2026-10-16
+- **Status:** Accepted
+- **Decision:** Use Angular HttpClient with Fetch and an interceptor scoped to the configured SERVIO API base. Store opaque bearer sessions in Capacitor Preferences via a separate SessionService to avoid an AuthService/interceptor dependency cycle. Add a request UUID and auth header only for the API; never transmit offline mock tokens or API bearer credentials to signed upload URLs. Map safe API error envelopes to Ionic toasts and clear rejected sessions.
+- **Configuration:** App environment declares apiUrl/useMockApi/demo. Development defaults to localhost:8787/api/v1; Android emulator may select 10.0.2.2 and physical devices the Mac's LAN IP. Demo builds can persist a validated base URL and offline mock selection in Preferences; production does not load overrides. The subsequent auth task exposes this in a small demo-only connection sheet. Production API URL remains unset until an owner-approved deployment exists.
+- **Consequences:** Existing mock mode remains usable offline. Live app callers use one typed Promise API wrapper; Blob uploads obtain a presign then PUT without API authentication headers. Tokens/connection settings never enter committed source.
