@@ -5,9 +5,10 @@ import type { Executor } from '../db/client';
 import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
 import { addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
-import { sha256Hex } from '../lib/crypto';
+import { completionPin } from '../lib/completion-pin';
+import { sha256Hex, timingSafeEqualString } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
-import { TRUST_FEE_CENTAVOS } from '../lib/money';
+import { splitPayout, TRUST_FEE_CENTAVOS } from '../lib/money';
 import { ownedUpload } from '../lib/uploads';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
@@ -119,15 +120,15 @@ export async function participantBooking(db: Executor, id: string, userId: strin
   return row;
 }
 
-export async function bookingDetails(db: Executor, row: typeof bookingTable.$inferSelect) {
+export async function bookingDetails(db: Executor, row: typeof bookingTable.$inferSelect, userId?: string, secret?: string) {
   const events = await db.select().from(bookingEvents).where(eq(bookingEvents.bookingId, row.id)).orderBy(asc(bookingEvents.createdAt), asc(bookingEvents.id));
   const addons = await db.select().from(addonQuotes).where(eq(addonQuotes.bookingId, row.id)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id));
-  return { ...publicBooking(row, addons), events, addons };
+  return { ...publicBooking(row, addons), events, addons, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
 }
 
 bookings.get('/bookings/:id', validate('param', idSchema), async (c) => {
   const row = await participantBooking(c.get('db'), c.req.valid('param').id, c.get('userId'));
-  return c.json({ booking: await bookingDetails(c.get('db'), row) });
+  return c.json({ booking: await bookingDetails(c.get('db'), row, c.get('userId'), c.env.PIN_SECRET) });
 });
 
 const ListBookings = v.strictObject({
@@ -153,7 +154,7 @@ bookings.get('/bookings', validate('query', ListBookings), async (c) => {
   )).orderBy(desc(bookingTable.createdAt), desc(bookingTable.id)).limit(limit + 1);
   const page = rows.slice(0, limit);
   const last = page[page.length - 1];
-  return c.json({ bookings: await Promise.all(page.map((row) => bookingDetails(c.get('db'), row))),
+  return c.json({ bookings: await Promise.all(page.map((row) => bookingDetails(c.get('db'), row, c.get('userId'), c.env.PIN_SECRET))),
     nextCursor: rows.length > limit && last ? btoa(JSON.stringify({ id: last.id })) : null });
 });
 
@@ -272,4 +273,43 @@ bookings.post('/bookings/:id/addons/:quoteId/decision',
       return changed!;
     });
     return c.json({ quote });
+  });
+
+
+bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
+  validate('json', v.strictObject({ pin: v.pipe(v.string(), v.regex(/^\d{4}$/)) })), async (c) => {
+    const result = await c.get('db').transaction(async (tx) => {
+      const row = await participantBooking(tx, c.req.valid('param').id, c.get('userId'), true);
+      const [actor] = await tx.select({ role: users.role }).from(users).where(eq(users.id, c.get('userId')));
+      if (row.proId !== c.get('userId') || actor!.role !== 'PRO') throw new ApiError(403, 'ASSIGNED_PRO_REQUIRED', 'Only the assigned Pro may verify completion.');
+      if (!addonStage(row.status)) throw invalidTransition();
+      if (row.pinAttempts >= 5) throw new ApiError(423, 'PIN_LOCKED', 'Too many wrong PINs. Contact support to unlock completion.');
+      const expected = await completionPin(c.env.PIN_SECRET, row.id);
+      if (!timingSafeEqualString(expected, c.req.valid('json').pin)) {
+        const attempts = row.pinAttempts + 1;
+        await tx.update(bookingTable).set({ pinAttempts: attempts }).where(eq(bookingTable.id, row.id));
+        // Return the error so the attempt increment commits before Hono sends it.
+        return { error: new ApiError(attempts >= 5 ? 423 : 422, attempts >= 5 ? 'PIN_LOCKED' : 'PIN_INVALID', attempts >= 5 ? 'Too many wrong PINs. Contact support.' : 'That completion PIN does not match.') };
+      }
+      const detail = await bookingDetails(tx, row);
+      const gross = detail.totalCentavos - row.trustFeeCentavos;
+      const balance = await tx.execute<{ held: string }>(sql`SELECT COALESCE(SUM(amount_centavos),0)::text AS held FROM ledger_entries WHERE account = ${`escrow:${row.id}`}`);
+      if (Number(balance.rows[0]!.held) !== detail.totalCentavos || row.escrow !== 'HOLD_AUTHORIZED') {
+        throw new ApiError(409, 'ESCROW_INVALID', 'Escrow needs support review before release.');
+      }
+      await mockPayments.capture({ bookingId: row.id, customerId: row.customerId, amountCentavos: detail.totalCentavos, paymentMethod: row.paymentMethod });
+      const split = splitPayout(gross);
+      const txnId = crypto.randomUUID();
+      await tx.insert(ledgerEntries).values([
+        { txnId, bookingId: row.id, account: `escrow:${row.id}`, amountCentavos: -detail.totalCentavos, kind: 'ESCROW_RELEASE' },
+        { txnId, bookingId: row.id, account: `pro_wallet:${row.proId}`, amountCentavos: split.proCentavos, kind: 'ESCROW_RELEASE' },
+        { txnId, bookingId: row.id, account: 'platform_revenue', amountCentavos: split.platformCentavos + row.trustFeeCentavos, kind: 'ESCROW_RELEASE' },
+      ].filter((entry) => entry.amountCentavos !== 0));
+      const [changed] = await tx.update(bookingTable).set({ status: 'COMPLETED', escrow: 'COMPLETED' }).where(eq(bookingTable.id, row.id)).returning();
+      await tx.insert(bookingEvents).values({ bookingId: row.id, status: 'COMPLETED', actorId: c.get('userId'), note: 'Customer completion PIN verified.', createdAt: await serverNow(tx) });
+      await tx.update(proProfiles).set({ jobsDone: sql`${proProfiles.jobsDone} + 1` }).where(eq(proProfiles.userId, row.proId!));
+      return { booking: changed! };
+    });
+    if (result.error) throw result.error;
+    return c.json({ booking: await bookingDetails(c.get('db'), result.booking!) });
   });
