@@ -20,6 +20,26 @@
 
 ## Priority: Prototype Demo Readiness (upcoming demo)
 
+**Implementation plan — Demo milestone (in required order)**
+- [x] A1: Demo flags and database-generated booking codes (`0002_demo_and_pros`); migrated dev/test and schema assertions pass.
+- [ ] A3: Booking creation, mock escrow hold, idempotency.
+- [ ] A4: Status machine and participant reads (owner cancellation policy pending).
+- [ ] A5: Catalog add-on quotes and approval holds.
+- [ ] A6: Authorized R2 uploads.
+- [ ] A7: Completion PIN and escrow release.
+- [ ] A8: Wallet and cashout.
+- [ ] A9: Tips, reviews, bulletin, chat, directory.
+- [ ] C1: App API client.
+- [ ] C2: Email code auth screens.
+- [ ] C3: Customer API flows.
+- [ ] C4: Pro API flows.
+- [ ] D1: Guarded demo seed.
+- [ ] D2: Demo sign-in.
+- [ ] D3: Reset and backup.
+- [ ] B2: OrderRoom live sockets.
+- [ ] B3: Real GPS and simulator fallback.
+- [ ] D4: Demo checklist.
+
 **Demo data (`servio-api/scripts/seed-demo.ts`, `npm run db:seed-demo`)**
 - [ ] Demo accounts with fixed sign-in codes that work only outside production: customer **Sophia M.**, Pro **Daniel K.**, plus Chris L., Ava L., Kevin T., Sophia (tutor role), and an admin.
 - [ ] Pro profiles: KYC approved, online, locations around Bel-Air / Poblacion, Makati; SKUs each Pro offers; ratings and jobs done matching the app.

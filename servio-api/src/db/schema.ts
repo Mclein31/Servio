@@ -8,6 +8,7 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  pgSequence,
   pgTable,
   primaryKey,
   smallint,
@@ -66,6 +67,7 @@ export const users = pgTable(
     avatarKey: text('avatar_key'),
     role: userRole('role').notNull().default('CUSTOMER'),
     isActive: boolean('is_active').notNull().default(true),
+    isDemo: boolean('is_demo').notNull().default(false),
     createdAt: created(),
     updatedAt: updated(),
   },
@@ -204,12 +206,15 @@ export interface AddressSnapshot {
   landmark?: string;
 }
 
+export const bookingCodeSeq = pgSequence('booking_code_seq', { startWith: 8800, maxValue: 999999, cycle: false });
+
 export const bookings = pgTable(
   'bookings',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     /** Human-readable order code, e.g. SRV-8821. */
-    code: text('code').notNull(),
+    code: text('code').notNull().default(sql`'SRV-' || nextval('booking_code_seq')::text`),
+    isDemo: boolean('is_demo').notNull().default(false),
     customerId: uuid('customer_id')
       .notNull()
       .references(() => users.id),
@@ -312,6 +317,7 @@ export const dispatchOffers = pgTable(
 export const bulletinRequests = pgTable(
   'bulletin_requests',
   {
+    isDemo: boolean('is_demo').notNull().default(false),
     id: uuid('id').primaryKey().defaultRandom(),
     authorId: uuid('author_id')
       .notNull()
