@@ -37,7 +37,7 @@ export class HomePage {
     void this.auth.refreshProfile();
   }
   readonly firstName = computed(() => this.auth.user()?.fullName?.split(' ')[0] ?? 'neighbor');
-  readonly categories = CATEGORIES.slice(0, 4);
+  readonly categories = CATEGORIES;
   readonly bulletin = computed(() => this.community.requests().slice(0, 3));
   readonly helpers = this.community.helpers;
   readonly categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));

@@ -97,11 +97,19 @@
               <h3>{{ h.title }}</h3>
               <p>{{ h.helper }} · {{ h.when }}</p>
             </ion-label>
-            <span class="done-pill" slot="end">Completed</span>
+            @if (h.status === 'CANCELLED') {
+              <span class="cancel-pill" slot="end">Cancelled</span>
+            } @else {
+              <span class="done-pill" slot="end">Completed</span>
+            }
           </ion-item>
           <div class="history-body" slot="content">
             <div class="kv"><span>Order</span><span>#{{ h.id }}</span></div>
-            <div class="kv"><span>Total paid (released from escrow)</span><span class="price">{{ h.amountPhp | php }}</span></div>
+            @if (h.status === 'CANCELLED') {
+              <div class="kv"><span>Status</span><span class="price-cancelled">Cancelled · Refunded</span></div>
+            } @else {
+              <div class="kv"><span>Total paid (released from escrow)</span><span class="price">{{ h.amountPhp | php }}</span></div>
+            }
             <a class="text-btn" routerLink="/tabs/directory">Book again</a>
           </div>
         </ion-accordion>

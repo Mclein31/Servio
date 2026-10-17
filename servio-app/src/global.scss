@@ -409,3 +409,38 @@ ion-modal.servio-fullscreen {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Tablet Responsiveness (640px - 1024px) ---------- */
+@media (min-width: 640px) {
+  .servio-section {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  ion-header {
+    background: var(--servio-surface);
+  }
+
+  .servio-app-bar,
+  .servio-detail-bar {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .servio-action-bar {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .sheet-panel {
+    max-width: 600px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 24px 24px 0 0;
+  }
+}

@@ -35,10 +35,14 @@ export class ProfilePage {
 
   readonly orders = inject(OrderService);
   readonly mock = this.auth.settings.useMockApi;
-  readonly liveMetrics = computed(() => [
-    { value: String(this.orders.history().length + (this.orders.isActive() ? 1 : 0)), label: 'Bookings', icon: 'document-text-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
-    { value: String(this.orders.history().length), label: 'Completed', icon: 'checkmark-circle-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
-  ]);
+  readonly liveMetrics = computed(() => {
+    const history = this.orders.history();
+    const completedCount = history.filter((h) => h.status === 'COMPLETED').length;
+    return [
+      { value: String(history.length + (this.orders.isActive() ? 1 : 0)), label: 'Bookings', icon: 'document-text-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
+      { value: String(completedCount), label: 'Completed', icon: 'checkmark-circle-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
+    ];
+  });
   readonly metrics = [
     { value: '12', label: 'Requests', icon: 'document-text-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
     { value: '28', label: 'Jobs Done', icon: 'checkmark-circle-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },

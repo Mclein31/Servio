@@ -40,6 +40,15 @@ function minutesAgo(min: number): Date {
  * customer screens and the Servio Pro screens read and drive this order, so
  * the escrow lifecycle (ADR-002) can be walked end to end on one device.
  */
+export interface OrderHistoryItem {
+  id: string;
+  title: string;
+  helper: string;
+  when: string;
+  amountPhp: number;
+  status: OrderStatus;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private readonly wallet = inject(WalletService);
@@ -49,8 +58,11 @@ export class OrderService {
   private readonly community = inject(CommunityService);
   readonly loading = signal(false);
   readonly error = signal('');
-  private readonly liveHistory = signal<{ id: string; title: string; helper: string; when: string; amountPhp: number }[]>([]);
-  readonly history = computed(() => this.api.settings.useMockApi() ? PAST_ORDERS : this.liveHistory());
+  private readonly mockHistory = signal<OrderHistoryItem[]>(
+    PAST_ORDERS.map((p) => ({ ...p, status: 'COMPLETED' as OrderStatus }))
+  );
+  private readonly liveHistory = signal<OrderHistoryItem[]>([]);
+  readonly history = computed(() => this.api.settings.useMockApi() ? this.mockHistory() : this.liveHistory());
   readonly travelBookings = signal<Pick<Order, 'id' | 'coordinates' | 'status' | 'expectedArrivalAt'>[]>([]);
   private revision = 0;
   private polling = false;
@@ -130,6 +142,11 @@ export class OrderService {
 
   /** Checkout: authorize a fresh escrow hold and dispatch. */
   async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress): Promise<void> {
+    const user = this.auth.user();
+    if (helper && user) {
+      const isSelf = helper.id === user.id || (this.api.settings.useMockApi() && !!user.fullName && helper.name === user.fullName);
+      if (isSelf) throw new Error('You cannot book your own service.');
+    }
     if (!this.api.settings.useMockApi()) {
       if (!sku) throw new Error('Choose a catalog service.');
       if (!place) throw new Error('Choose and confirm your service address.');
@@ -203,6 +220,17 @@ export class OrderService {
       status: 'COMPLETED',
       statusTimes: { ...cur.statusTimes, COMPLETED: new Date() },
     }));
+    this.mockHistory.update((hist) => [
+      {
+        id: o.code ?? o.id,
+        title: o.sku.name,
+        helper: o.helper.name,
+        when: 'Today, ' + (timeLabel(new Date()) ?? 'just now'),
+        amountPhp: this.escrowTotalPhp(),
+        status: 'COMPLETED',
+      },
+      ...hist.filter((h) => h.id !== (o.code ?? o.id)),
+    ]);
     this.wallet.credit(base, o.sku.name, `Order #${o.id} · Completed`);
     for (const a of addons) {
       this.wallet.credit(splitPayout(a.sku.pricePhp).proPhp, `Add-on: ${a.sku.name}`, `Order #${o.id}`);
@@ -223,6 +251,7 @@ export class OrderService {
     }
     clearDemoState();
     this.wallet.reset();
+    this.mockHistory.set(PAST_ORDERS.map((p) => ({ ...p, status: 'COMPLETED' as OrderStatus })));
     this.state.set(this.seedOrder());
   }
 
@@ -252,8 +281,9 @@ export class OrderService {
       const result = await this.api.get<{ bookings: BookingDto[] }>('/bookings', { role: this.auth.user()?.role === 'PRO' ? 'pro' : 'customer', limit: 100 });
       if (revision !== this.revision) return;
       this.travelBookings.set(this.auth.user()?.role === 'PRO' ? result.bookings.filter((b) => b.status === 'EN_ROUTE' && b.proId === this.auth.user()?.id).map((b) => ({ id: b.id, status: b.status, coordinates: [b.lat,b.lng] as const, expectedArrivalAt: b.expectedArrivalAt })) : []);
-      this.liveHistory.set(result.bookings.filter((b) => b.status === 'COMPLETED').map((b) => ({ id: b.code, title: b.skuName,
+      this.liveHistory.set(result.bookings.filter((b) => ['COMPLETED', 'CANCELLED'].includes(b.status)).map((b) => ({ id: b.code, title: b.skuName,
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
+        status: b.status,
         amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
       const current = result.bookings.find((b) => b.id === this.state().id);
       const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status)) ?? result.bookings[0];
@@ -288,9 +318,30 @@ export class OrderService {
   }
 
   async cancel(reason: string): Promise<void> {
-    if (this.api.settings.useMockApi()) { this.setStatus('CANCELLED'); return; }
+    if (this.api.settings.useMockApi()) {
+      const o = this.state();
+      this.state.update((cur) => ({
+        ...cur,
+        status: 'CANCELLED',
+        escrow: 'REFUNDED',
+        statusTimes: { ...cur.statusTimes, CANCELLED: new Date() },
+      }));
+      this.mockHistory.update((hist) => [
+        {
+          id: o.code ?? o.id,
+          title: o.sku.name,
+          helper: o.helper.name,
+          when: 'Today, ' + (timeLabel(new Date()) ?? 'just now'),
+          amountPhp: this.escrowTotalPhp(),
+          status: 'CANCELLED',
+        },
+        ...hist.filter((h) => h.id !== (o.code ?? o.id)),
+      ]);
+      return;
+    }
     await this.api.post(`/bookings/${this.state().id}/status`, { to: 'CANCELLED', reason });
     await this.load(this.state().id);
+    await this.refresh();
   }
 
   async review(rating: number, compliments: string[], body: string, tipPhp: number): Promise<void> {

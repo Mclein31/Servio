@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { IonIcon } from '@ionic/angular';
 import { HelperSummary } from '../../models/ui.models';
 import { AvatarComponent } from '../avatar/avatar.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-helper-card',
@@ -25,7 +26,9 @@ import { AvatarComponent } from '../avatar/avatar.component';
       </div>
       <span class="price-tag">₱{{ helper.hourlyRatePhp | number: '1.0-0' }}/{{ helper.rateUnit ?? 'hr' }}</span>
       @if (!compact) {
-        @if (actionMode === 'book') {
+        @if (isOwn()) {
+          <button type="button" class="action self" (click)="onSelf($event)">Your Profile</button>
+        } @else if (actionMode === 'book') {
           <button type="button" class="action book" (click)="onBook($event)">Book Now</button>
         } @else {
           <button type="button" class="action available" (click)="onBook($event)" [disabled]="!helper.isAvailable">
@@ -52,7 +55,7 @@ import { AvatarComponent } from '../avatar/avatar.component';
       box-sizing: border-box;
     }
     .card:active { transform: scale(0.985); }
-    .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; min-height: 54px; }
     .ribbon {
       font-size: 10px;
       font-weight: 700;
@@ -100,6 +103,7 @@ import { AvatarComponent } from '../avatar/avatar.component';
     .available:disabled { background: #F3F4F6; color: #9CA3AF; }
     .book { background: #D04A00; color: #FFFFFF; }
     .book:active { background: #C24400; }
+    .self { background: #F3F4F6; color: #4B5563; }
     .compact { padding: 14px; gap: 4px; }
   `,
 })
@@ -111,8 +115,21 @@ export class HelperCardComponent {
   @Output() selected = new EventEmitter<string>();
   @Output() book = new EventEmitter<string>();
 
+  private readonly auth = inject(AuthService, { optional: true });
+  readonly isOwn = computed(() => {
+    const u = this.auth?.user();
+    if (!u || !this.helper) return false;
+    if (u.id === this.helper.id) return true;
+    return (this.auth?.settings.useMockApi() ?? true) && !!u.fullName && u.fullName === this.helper.name;
+  });
+
   onBook(event: Event): void {
     event.stopPropagation();
     this.book.emit(this.helper.id);
+  }
+
+  onSelf(event: Event): void {
+    event.stopPropagation();
+    this.selected.emit(this.helper.id);
   }
 }

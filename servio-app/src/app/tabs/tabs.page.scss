@@ -3,18 +3,10 @@
   --border: 0;
   --color: #9CA3AF;
   --color-selected: #FF5C00;
-  height: calc(var(--servio-tab-bar-height) + 8px);
-  padding-bottom: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  padding-top: 4px;
+  height: calc(var(--servio-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+  padding: 2px 8px calc(2px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -4px 16px rgba(17, 24, 39, 0.05);
   contain: none;
-}
-
-:host-context(.plt-ios) .servio-tab-bar {
-  height: calc(var(--servio-tab-bar-height) + env(safe-area-inset-bottom, 0px) + 4px);
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
 }
 
 ion-tab-button {
@@ -22,7 +14,7 @@ ion-tab-button {
   --padding-end: 0;
   --ripple-color: transparent;
   max-width: none;
-  height: var(--servio-tab-bar-height);
+  height: 100%;
 }
 
 .tab-pill {
@@ -30,23 +22,23 @@ ion-tab-button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   width: 100%;
-  max-width: 66px;
-  min-width: 48px;
-  height: 40px;
-  border-radius: 12px;
+  max-width: 62px;
+  min-width: 44px;
+  height: 36px;
+  border-radius: 10px;
   transition: background-color 0.2s ease;
 
   ion-icon {
-    font-size: 20px;
+    font-size: 18px;
     margin: 0;
   }
 
   ion-label {
     margin: 0;
-    font-size: 11px;
-    line-height: 13px;
+    font-size: 10px;
+    line-height: 12px;
     font-weight: 500;
   }
 }
@@ -59,22 +51,38 @@ ion-tab-button.tab-selected .tab-pill {
   }
 }
 
-@media (max-width: 360px) {
+@media (min-width: 640px) {
   .servio-tab-bar {
-    padding-left: 4px;
-    padding-right: 4px;
+    display: flex;
+    justify-content: center;
+
+    ion-tab-button {
+      max-width: 100px;
+    }
   }
 
   .tab-pill {
-    height: 38px;
+    max-width: 72px;
+  }
+}
+
+@media (max-width: 360px) {
+  .servio-tab-bar {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .tab-pill {
+    min-width: 40px;
+    height: 34px;
 
     ion-icon {
-      font-size: 18px;
+      font-size: 17px;
     }
 
     ion-label {
-      font-size: 10px;
-      line-height: 12px;
+      font-size: 9.5px;
+      line-height: 11px;
     }
   }
 }

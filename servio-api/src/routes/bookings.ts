@@ -69,12 +69,13 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     const [sku] = await tx.select().from(serviceSkus).where(and(eq(serviceSkus.id, input.skuId), eq(serviceSkus.isActive, true))).for('share');
     if (!sku) throw new ApiError(422, 'SKU_UNAVAILABLE', 'Choose an available service from the catalog.');
     if (input.proId) {
+      if (input.proId === customerId) throw new ApiError(422, 'SELF_BOOKING_NOT_ALLOWED', 'You cannot book your own service.');
       const [pro] = await tx.select({ id: users.id }).from(users)
         .innerJoin(proProfiles, eq(proProfiles.userId, users.id))
         .innerJoin(proSkus, eq(proSkus.proId, users.id))
         .where(and(eq(users.id, input.proId), eq(users.role, 'PRO'), eq(users.isActive, true),
           eq(proProfiles.kycStatus, 'APPROVED'), eq(proSkus.skuId, sku.id)));
-      if (!pro || input.proId === customerId) throw new ApiError(422, 'PRO_UNAVAILABLE', 'Choose an approved Pro who offers this service.');
+      if (!pro) throw new ApiError(422, 'PRO_UNAVAILABLE', 'Choose an approved Pro who offers this service.');
     }
     const total = sku.priceCentavos + trustFeeCentavos;
     if (!Number.isSafeInteger(total) || total > 2_147_483_647) throw new ApiError(422, 'AMOUNT_TOO_LARGE', 'This booking exceeds the supported amount.');
