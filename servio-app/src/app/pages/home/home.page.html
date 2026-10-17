@@ -48,7 +48,7 @@
     </div>
     <div class="category-row">
       @for (c of categories; track c.id) {
-        <button type="button" class="category" [style.background]="c.tint" (click)="openCategory(c.id)">
+        <button type="button" class="category" [style.backgroundColor]="c.tint" (click)="openCategory(c.id)">
           <span class="well" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
           <span class="cat-label">{{ c.label }}</span>
           <span class="cat-caption">{{ c.caption }}</span>
@@ -74,8 +74,8 @@
         @for (r of bulletin(); track r.id) {
           <li>
             <a class="bulletin-row" routerLink="/tabs/bulletin">
-              <span class="req-icon" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
-                <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
+              <span class="req-icon" [style.backgroundColor]="categoryById[r.category]?.tint ?? 'var(--servio-orange-tint)'" [style.color]="categoryById[r.category]?.accent ?? 'var(--servio-brand-orange)'">
+                <ion-icon [name]="categoryById[r.category]?.icon ?? 'newspaper-outline'" aria-hidden="true"></ion-icon>
               </span>
               <span class="req-body">
                 <span class="req-title">{{ r.title }}</span>
@@ -104,35 +104,38 @@
 
   <!-- Active tracking mini-widget -->
   @if (orders.isActive()) {
-    <div class="bottom-space"></div>
-    <a class="tracking-widget" routerLink="/tabs/tracking" aria-label="Open live tracking">
-      <div class="tw-header">
-        <div class="tw-helper-info">
-          <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="42" [online]="true"></app-avatar>
-          <div class="tw-id-block">
-            <div class="tw-name-row">
-              <span class="tw-helper-name">{{ orders.order().helper.name }}</span>
-              <span class="tw-order-num">#{{ orders.order().code ?? orders.order().id }}</span>
+    <div class="tracking-dock">
+      <a class="tracking-widget" routerLink="/tabs/tracking" aria-label="Open live tracking">
+        <div class="tw-header">
+          <div class="tw-helper-info">
+            <app-avatar [src]="orders.order().helper.avatarUrl" [name]="orders.order().helper.name" [size]="42" [online]="true"></app-avatar>
+            <div class="tw-id-block">
+              <div class="tw-name-row">
+                <span class="tw-helper-name">{{ orders.order().helper.name }}</span>
+                <span class="tw-order-num">#{{ orders.order().code ?? orders.order().id }}</span>
+              </div>
+              <span class="tw-service-tag">{{ orders.order().sku.name }}</span>
             </div>
-            <span class="tw-service-tag">{{ orders.order().sku.name }}</span>
+          </div>
+          <ion-icon name="chevron-forward" class="tw-arrow" aria-hidden="true"></ion-icon>
+        </div>
+
+        <div class="tw-status-banner">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="tw-status-text">{{ statusLine() }}</span>
+        </div>
+
+        <div class="tw-progress" role="progressbar" [attr.aria-valuenow]="miniProgress().index + 1" aria-valuemin="1" aria-valuemax="4">
+          <div class="tw-bar"><span class="tw-fill" [style.transform]="'scaleX(' + miniProgress().fill + ')'"></span></div>
+          <div class="tw-steps">
+            @for (s of miniSteps; track s; let i = $index) {
+              <span [class.done]="i <= miniProgress().index">{{ s }}</span>
+            }
           </div>
         </div>
-        <ion-icon name="chevron-forward" class="tw-arrow" aria-hidden="true"></ion-icon>
-      </div>
-
-      <div class="tw-status-banner">
-        <span class="live-dot" aria-hidden="true"></span>
-        <span class="tw-status-text">{{ statusLine() }}</span>
-      </div>
-
-      <div class="tw-progress" role="progressbar" [attr.aria-valuenow]="miniProgress().index + 1" aria-valuemin="1" aria-valuemax="4">
-        <div class="tw-bar"><span class="tw-fill" [style.transform]="'scaleX(' + miniProgress().fill + ')'"></span></div>
-        <div class="tw-steps">
-          @for (s of miniSteps; track s; let i = $index) {
-            <span [class.done]="i <= miniProgress().index">{{ s }}</span>
-          }
-        </div>
-      </div>
-    </a>
+      </a>
+    </div>
   }
+
+  <div class="spacer"></div>
 </ion-content>

@@ -67,6 +67,7 @@ pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.
     if (booking!.status !== 'PENDING_ACCEPTANCE' || offer!.response !== 'PENDING') throw new ApiError(409, 'OFFER_CLOSED', 'This offer is no longer available.');
     if (offer!.expiresAt <= now) { await advanceDispatch(tx, booking!, c.env.LAUNCH_CITY); return null; }
     if (action === 'accept') {
+      if (booking!.customerId === proId) throw new ApiError(403, 'SELF_BOOKING_NOT_ALLOWED', 'You cannot accept your own booking.');
       const [profile] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, proId));
       if (profile!.kycStatus !== 'APPROVED' || !profile!.isOnline) throw new ApiError(403, 'PRO_UNAVAILABLE', 'Go online as an approved Pro before accepting.');
       await tx.update(dispatchOffers).set({ response: 'ACCEPTED', respondedAt: now }).where(eq(dispatchOffers.id, id));

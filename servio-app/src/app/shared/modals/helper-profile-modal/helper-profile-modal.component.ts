@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { IonContent, IonFooter, IonIcon, ModalController } from '@ionic/angular';
 import { CommunityService } from '../../../core/services/community.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { HelperProfile, ServiceSku } from '../../models/domain.models';
 import { AvatarComponent } from '../../components/avatar/avatar.component';
 import { PhpPipe } from '../../pipes/php.pipe';
@@ -89,9 +90,16 @@ import { PhpPipe } from '../../pipes/php.pipe';
       </ion-content>
       <ion-footer class="ion-no-border">
         <div class="servio-action-bar">
-          <button type="button" class="pill-btn block" (click)="bookService()">
-            Book Service · <span class="price">{{ (chosen() ?? h.skus[0]).pricePhp | php: 'whole' }}</span>
-          </button>
+          @if (isSelf()) {
+            <button type="button" class="pill-btn-outline block" disabled>
+              Your Pro Profile
+            </button>
+            <p class="self-note">You cannot book your own service.</p>
+          } @else {
+            <button type="button" class="pill-btn block" (click)="bookService()">
+              Book Service · <span class="price">{{ (chosen() ?? h.skus[0]).pricePhp | php: 'whole' }}</span>
+            </button>
+          }
         </div>
       </ion-footer>
     }
@@ -103,10 +111,18 @@ export class HelperProfileModalComponent implements OnInit {
 
   private readonly modals = inject(ModalController);
   private readonly router = inject(Router);
-
   private readonly community = inject(CommunityService);
+  private readonly auth = inject(AuthService);
+
   readonly helper = signal<HelperProfile | null>(null);
   readonly chosen = signal<ServiceSku | null>(null);
+  readonly isSelf = computed(() => {
+    const u = this.auth.user();
+    const h = this.helper();
+    if (!u || !h) return false;
+    if (u.id === h.id) return true;
+    return this.auth.settings.useMockApi() && !!u.fullName && u.fullName === h.name;
+  });
 
   async ngOnInit(): Promise<void> {
     try {
@@ -118,6 +134,7 @@ export class HelperProfileModalComponent implements OnInit {
   }
 
   async bookService(): Promise<void> {
+    if (this.isSelf()) return;
     const h = this.helper();
     const sku = this.chosen() ?? h?.skus[0];
     await this.modals.dismiss();

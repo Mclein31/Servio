@@ -1,6 +1,6 @@
 # SERVIO — Operational Roadmap & Task Checklist
 
-> **Status:** Active Roadmap · **Updated:** 2026-10-16
+> **Status:** Active Roadmap · **Updated:** 2026-10-17
 > **Legend:** `[ ]` Not Started | `[/]` In Progress | `[x]` Completed
 > **Branches:** `main` = app (frontend). `feature/app-and-backend` = `servio-api/` work in progress.
 
@@ -21,6 +21,7 @@
 ## Priority: Prototype Demo Readiness (upcoming demo)
 
 - [x] Launch city: Tuguegarao City, Cagayan; verified OSM center/barangays, embedded 1.80 km OSRM route, location data, city ETA profile and pricing caveat.
+- [x] UI & Backend Bugfix Pass (2026-10-17): tracking dock layout, order history cancellation tracking, self-booking prevention (frontend & backend), community category card layout, navigation height compaction & universal Android safe-area insets, mobile & tablet responsive layouts.
 
 **Implementation plan — Demo milestone (in required order)**
 - [x] A1: Demo flags and database-generated booking codes (`0002_demo_and_pros`); migrated dev/test and schema assertions pass.

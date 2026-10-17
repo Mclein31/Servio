@@ -39,7 +39,11 @@ export class DirectoryPage {
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
         const category = params.get('category');
-        if (category && this.chips.some((c) => c.id === category)) this.active.set(category);
+        if (category && this.chips.some((c) => c.id === category)) {
+          this.active.set(category);
+        } else if (!category) {
+          this.active.set('all');
+        }
         const q = params.get('q');
         if (q !== null) this.query.set(q);
         const helper = params.get('helper');

@@ -92,7 +92,7 @@
 
 <ion-footer class="ion-no-border">
   <div class="servio-action-bar">
-    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="saving() ? 'Authorizing…' : 'Slide to authorize'" [disabled]="!sku() || !address() || saving()" (confirmed)="authorize()"></app-slide-to-confirm>
+    <app-slide-to-confirm label="Slide to Authorize & Book" [doneLabel]="saving() ? 'Authorizing…' : 'Slide to authorize'" [disabled]="!sku() || !address() || saving() || isOwnHelper()" (confirmed)="authorize()"></app-slide-to-confirm>
     <p class="fine">Demo payment — no real money will be charged.</p>
   </div>
 </ion-footer>

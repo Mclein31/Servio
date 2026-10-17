@@ -3,6 +3,7 @@ import { DecimalPipe, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonFooter, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular';
 import { CommunityService } from '../../core/services/community.service';
+import { AuthService } from '../../core/services/auth.service';
 import { HelperProfile, ServiceSku } from '../../shared/models/domain.models';
 import { OrderService } from '../../core/services/order.service';
 import { PaymentMethod } from '../../shared/models/domain.models';
@@ -34,6 +35,7 @@ export class CheckoutPage {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   readonly addresses = inject(AddressService);
+  readonly auth = inject(AuthService);
 
   @ViewChild(SlideToConfirmComponent) slide?: SlideToConfirmComponent;
   readonly community = inject(CommunityService);
@@ -48,6 +50,14 @@ export class CheckoutPage {
   readonly payment = signal<PaymentMethod>('GCASH');
   readonly address = this.addresses.selected;
 
+  readonly isOwnHelper = computed(() => {
+    const u = this.auth.user();
+    const h = this.helper();
+    if (!u || !h) return false;
+    if (u.id === h.id) return true;
+    return this.auth.settings.useMockApi() && !!u.fullName && u.fullName === h.name;
+  });
+
   readonly feePhp = this.community.trustFeePhp;
   readonly totalPhp = computed(() => roundCentavos((this.sku()?.pricePhp ?? 0) + this.feePhp()));
 
@@ -60,6 +70,9 @@ export class CheckoutPage {
       const sku = (helper?.skus ?? this.community.skus()).find((s) => s.id === this.query.get('sku')) ?? (helper?.skus ?? this.community.skus())[0];
       if (!sku) throw new Error('No catalog services are available yet.');
       this.sku.set(sku);
+      if (this.isOwnHelper()) {
+        this.error.set('You cannot book your own service.');
+      }
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load checkout.'); }
   }
 
@@ -73,6 +86,11 @@ export class CheckoutPage {
 
   async authorize(): Promise<void> {
     if (this.saving() || !this.sku()) return;
+    if (this.isOwnHelper()) {
+      this.error.set('You cannot book your own service.');
+      this.slide?.reset();
+      return;
+    }
     if (!this.address()) { this.error.set('Choose and confirm your service address first.'); this.slide?.reset(); return; }
     this.saving.set(true); this.error.set('');
     const window = scheduleWindow(this.schedule());

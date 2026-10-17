@@ -36,7 +36,7 @@ export class TrackingPage {
       case 'EN_ROUTE': return { label: 'On the Way', icon: 'bicycle', tone: 'enroute' };
       case 'ARRIVED': return { label: 'Arrived', icon: 'home', tone: 'arrived' };
       case 'IN_PROGRESS': return { label: 'In Progress', icon: 'construct', tone: 'enroute' };
-      case 'CANCELLED': return { label: 'Cancelled', icon: 'close-circle', tone: 'accepted' };
+      case 'CANCELLED': return { label: 'Cancelled', icon: 'close-circle', tone: 'cancelled' };
       case 'COMPLETED': return { label: 'Completed', icon: 'checkmark-circle', tone: 'arrived' };
       default: return { label: 'Pending', icon: 'time', tone: 'accepted' };
     }
@@ -50,6 +50,7 @@ export class TrackingPage {
       case 'EN_ROUTE': return `${o.helper.name.split(' ')[0]} is on the way for your service.`;
       case 'ARRIVED': return `${o.helper.name.split(' ')[0]} has arrived. Meet at ${o.address.landmark.split(' · ')[0]}.`;
       case 'IN_PROGRESS': return 'Work in progress. Inspect the result before sharing your PIN.';
+      case 'CANCELLED': return 'This booking was cancelled and your escrow payment was refunded.';
       case 'COMPLETED': return 'Job complete and escrow released. Thanks for booking!';
       default: return '';
     }

@@ -12,16 +12,19 @@
   gap: 16px;
   padding: 16px;
   border-radius: var(--servio-radius-hero);
+  max-width: 680px;
+  margin: 0 auto;
 }
 
 .order-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .order-text {
-  flex: 1 1 auto;
+  flex: 1 1 180px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -71,6 +74,11 @@
   &.arrived {
     background: var(--servio-green-surface);
     color: var(--servio-green-text);
+  }
+
+  &.cancelled {
+    background: var(--servio-red-surface);
+    color: var(--servio-red-strong);
   }
 }
 
@@ -189,6 +197,8 @@
 }
 
 .history {
+  max-width: 680px;
+  margin: 0 auto;
   padding: 4px 0;
   overflow: hidden;
 
@@ -216,6 +226,20 @@
   color: var(--servio-green-strong);
   font-size: 11px;
   font-weight: 700;
+}
+
+.cancel-pill {
+  padding: 4px 10px;
+  border-radius: 30px;
+  background: var(--servio-red-surface);
+  color: var(--servio-red-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.price-cancelled {
+  color: var(--servio-red-strong);
+  font-weight: 600;
 }
 
 .history-body {
@@ -246,14 +270,23 @@
   }
 }
 
+@media (min-width: 640px) {
+  .active {
+    padding: 24px;
+    gap: 20px;
+  }
+
+  .comm {
+    padding: 14px 18px;
+  }
+}
+
 @media (max-width: 360px) {
   .order-head {
-    flex-wrap: wrap;
     gap: 8px;
   }
 
   .status-chip {
-    align-self: flex-start;
     padding: 4px 8px;
     font-size: 11px;
   }

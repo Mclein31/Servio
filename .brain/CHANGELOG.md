@@ -2,6 +2,24 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.32] — 2026-10-17
+### Fixed
+- **Tracking Card Layout & Dock**: Replaced hardcoded negative margin hack (`-124px`) with a sticky `.tracking-dock` container and responsive `.tracking-widget` (centered with `max-width: 680px`), eliminating content overlap on Home tab and awkward layouts on tablet screens.
+- **Order History Cancellation Tracking**: Updated `OrderService.history` to record both `COMPLETED` and `CANCELLED` bookings. Cancellation transitions the order state with `escrow: 'REFUNDED'`, records the cancellation timestamp, and displays a dedicated cancelled pill and refund note in Order History and Live Tracking.
+- **Self-Booking Prevention (Defense in Depth)**:
+  - `servio-api`: Added validation in `POST /bookings` rejecting direct bookings when `input.proId === customerId` (`SELF_BOOKING_NOT_ALLOWED`), and guarded `POST /pro/jobs/:id/accept` against accepting jobs booked by the same user.
+  - `servio-app`: Added checks in `OrderService.book()`, `checkout.page`, `helper-card.component`, and `helper-profile-modal.component` preventing users from booking their own service, disabling the booking button and displaying "Your Profile" / "Your Pro Profile". Gated name-matching heuristic strictly to mock mode to prevent false positives in live multi-user environments.
+- **Community Category Card (Beauty & Care)**: Exposed all 5 service categories on the Home tab, widened card width to min 124px, added multi-line wrapping with line clamp for labels and captions, uniform 126px min-height, and a 5-column tablet grid (`repeat(5, minmax(0, 1fr))`) on screens >= 640px to eliminate card overflow and uneven heights.
+- **Navigation Bar Compaction & Universal Safe Area**: Reduced `--servio-tab-bar-height` to 44px, compacted tab pills (36px), icons (18px), labels (10px), and reduced `--servio-app-bar-height` to 54px. Removed restrictive `:host-context(.plt-ios)` from `.servio-tab-bar` so `env(safe-area-inset-bottom, 0px)` universally protects Android 14+ edge-to-edge gesture navigation as well as iOS. Unified Home app bar height to `var(--servio-app-bar-height)` to eliminate header tab-switch jank.
+- **Mobile & Tablet Responsiveness**: Added responsive container constraints (`max-width: 720px; margin: 0 auto;`) for sections, action bars, bottom sheets, and tab dock. Added 3-column and 4-column tablet breakpoints to Directory helper grid.
+- **Profile Metric Accuracy**: Fixed `ProfilePage.liveMetrics` to filter completed bookings (`h.status === 'COMPLETED'`) so cancelled orders do not artificially increment the "Completed" jobs metric.
+
+### Verified
+- Automated code-reviewer subagent audit completed; all 7 prioritized findings addressed and verified with sign-off.
+- `servio-app` unit tests: all 15 test files (53 tests) pass cleanly.
+- `servio-app` linting: passed with 0 errors.
+- `servio-api` typecheck: passed with 0 errors.
+
 ## [0.5.31] — 2026-10-17
 ### Fixed
 - Directory category navigation filter leak: resolved issue where newly onboarded Pros appeared under all categories regardless of active filter chip due to `POST /me/upgrade-pro` linking every catalog SKU and setting placeholder headline `'Community Service Professional'`.
