@@ -118,7 +118,11 @@ export class CommunityService {
   }
   async acceptRequest(id: string): Promise<void> {
     if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');
-    await this.api.post(`/bulletin/${id}/accept`, {});
+    const { request } = await this.api.post<{ request: Pick<BulletinDto, 'id' | 'status' | 'acceptedProId' | 'bookingId'> }>(`/bulletin/${id}/accept`, {});
+    this.bulletinRevision++;
+    this.liveRequests.update((rows) => rows.map((row) => row.id === id
+      ? { ...row, status: request.status, acceptedProId: request.acceptedProId, bookingId: request.bookingId }
+      : row));
   }
   async releaseRequest(id: string): Promise<void> {
     if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');

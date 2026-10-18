@@ -27,6 +27,43 @@ describe('email-code auth', () => {
     await auth.refreshProfile();expect(auth.user()?.fullName).toBe('Ready User');
     resolve('signed-avatar');await vi.waitFor(()=>expect(auth.avatarUrl()).toBe('signed-avatar'));
   });
+  it('does not let an older profile refresh restore the previous avatar after a profile save', async () => {
+    token.set('session');
+    const auth = TestBed.inject(AuthService);
+    let finishRefresh!: (value: unknown) => void;
+    api.get.mockReturnValueOnce(new Promise((resolve) => { finishRefresh = resolve; }));
+    const refreshing = auth.refreshProfile(true);
+    await vi.waitFor(() => expect(api.get).toHaveBeenCalled());
+
+    const updated = { ...newUser, fullName: 'New Photo Owner', avatarKey: 'new-avatar' };
+    api.patch.mockResolvedValueOnce({ me: updated });
+    api.imageUrl.mockResolvedValueOnce('signed-new-avatar');
+    await auth.updateProfile(updated.fullName!, null, updated.avatarKey);
+    expect(auth.user()?.avatarKey).toBe('new-avatar');
+    expect(auth.avatarUrl()).toBe('signed-new-avatar');
+
+    finishRefresh({ me: { ...newUser, fullName: 'New Photo Owner', avatarKey: 'old-avatar' }, pro: null });
+    await refreshing;
+    expect(auth.user()?.avatarKey).toBe('new-avatar');
+    expect(auth.avatarUrl()).toBe('signed-new-avatar');
+  });
+  it('does not restore Customer mode from a profile refresh after switching to Pro', async () => {
+    token.set('session');
+    const auth = TestBed.inject(AuthService);
+    let finishRefresh!: (value: unknown) => void;
+    api.get.mockReturnValueOnce(new Promise((resolve) => { finishRefresh = resolve; }));
+    const refreshing = auth.refreshProfile(true);
+    await vi.waitFor(() => expect(api.get).toHaveBeenCalled());
+
+    const approvedPro = { userId: newUser.id, isOnline: false, kycStatus: 'APPROVED', jobsDone: 0, ratingAvg: '5.00', ratingCount: 1 };
+    api.post.mockResolvedValueOnce({ me: { ...newUser, role: 'PRO' }, pro: approvedPro });
+    await auth.switchRole('PRO');
+
+    finishRefresh({ me: newUser, pro: null });
+    await refreshing;
+    expect(auth.user()?.role).toBe('PRO');
+    expect(auth.pro()?.kycStatus).toBe('APPROVED');
+  });
   it('normalizes email, displays the dev note, verifies via API and saves the returned session', async () => {
     const auth = TestBed.inject(AuthService);
     api.post.mockResolvedValueOnce({ devNote: 'Development: use the API log.' });

@@ -5,10 +5,10 @@ import { CommunityService } from './community.service';
 import { DiscoveryLocationService } from './discovery-location.service';
 import { ApiService } from '../api/api.service';
 describe('nonblocking discovery loading',()=>{
- const get=vi.fn();const imageUrl=vi.fn();const point=signal<{lat:number;lng:number;at:number}|null>(null);
+ const get=vi.fn();const post=vi.fn();const imageUrl=vi.fn();const point=signal<{lat:number;lng:number;at:number}|null>(null);
  const refresh=vi.fn();
  beforeEach(()=>{vi.resetAllMocks();point.set(null);TestBed.configureTestingModule({providers:[
-  {provide:ApiService,useValue:{settings:{ready:Promise.resolve(),useMockApi:()=>false},get,imageUrl}},
+  {provide:ApiService,useValue:{settings:{ready:Promise.resolve(),useMockApi:()=>false},get,post,imageUrl}},
   {provide:DiscoveryLocationService,useValue:{point,query:()=>point()?{lat:point()!.lat,lng:point()!.lng}:{},refresh}},
  ]});});afterEach(()=>TestBed.resetTestingModule());
  it('loads discovery without waiting for a slow saved address refresh',async()=>{
@@ -42,6 +42,15 @@ describe('nonblocking discovery loading',()=>{
   expect(get).toHaveBeenCalledWith('/bulletin',{lat:17.8,lng:121.9});
   resolveOld({pros:[{id:'stale'}]});await old;
   expect(community.helpers()).toEqual([]);
+ });
+ it('keeps the server-confirmed Bulletin reservation instead of waiting for a feed refresh',async()=>{
+  get.mockResolvedValue({requests:[{id:'request',authorId:'customer',skuId:'sku',acceptedProId:null,bookingId:null,title:'Repair',description:'Leak',categoryId:'repairs',
+   author:'Customer',createdAt:new Date().toISOString(),neighborhood:'Ugac Norte',distanceKm:null,priceCentavos:1000,unit:'job',status:'OPEN',lat:null,lng:null}]});
+  post.mockResolvedValue({request:{id:'request',status:'ACCEPTED',acceptedProId:'current-pro',bookingId:null}});
+  const community=TestBed.inject(CommunityService);
+  await community.bulletin();
+  await community.acceptRequest('request');
+  expect(community.requests()[0]).toMatchObject({id:'request',status:'ACCEPTED',acceptedProId:'current-pro',bookingId:null});
  });
 
 });

@@ -34,7 +34,8 @@ export class AuthService {
   readonly pro = signal<AppPro | null>(null);
   readonly needsProfile = computed(() => !this.user()?.fullName);
   private loadedToken?: string;
-  private profileLoading?: { token: string; promise: Promise<void> };
+  private profileRevision = 0;
+  private profileLoading?: { token: string; revision: number; promise: Promise<void> };
 
   constructor() {
     effect(() => {
@@ -55,20 +56,23 @@ export class AuthService {
     const token = await this.sessions.get();
     if (!token) { this.user.set(null); this.avatarUrl.set(''); this.pro.set(null); return; }
     if (!force && this.loadedToken === token && this.user()) return;
-    if (this.profileLoading?.token !== token) {
+    const revision = this.profileRevision;
+    if (this.profileLoading?.token !== token || this.profileLoading.revision !== revision) {
       const promise = (async () => {
         if (this.settings.useMockApi()) {
           this.user.set({ id: 'mock-customer', email: this.pendingEmail() ?? 'demo.customer@servio.test', fullName: 'Sophia M.', role: 'CUSTOMER', phoneNumber: null, avatarKey: null });
           this.pro.set(null);
         } else {
           const result = await this.api.get<{ me: AppUser; pro: AppPro | null }>('/me');
-          if (this.sessions.token() !== token) return;
+          if (this.sessions.token() !== token || this.profileRevision !== revision) return;
           this.user.set(result.me); this.pro.set(result.pro);
           void this.loadAvatar(result.me,token);
         }
-        this.loadedToken = token;
-      })().finally(() => { if (this.profileLoading?.token === token) this.profileLoading = undefined; });
-      this.profileLoading = { token, promise };
+        if (this.profileRevision === revision) this.loadedToken = token;
+      })().finally(() => {
+        if (this.profileLoading?.token === token && this.profileLoading.revision === revision) this.profileLoading = undefined;
+      });
+      this.profileLoading = { token, revision, promise };
     }
     await this.profileLoading.promise;
   }
@@ -100,11 +104,17 @@ export class AuthService {
     return true;
   }
   async updateProfile(fullName: string, phoneNumber: string | null, avatarKey?: string | null): Promise<void> {
+    const revision = ++this.profileRevision;
     if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber, ...(avatarKey!==undefined?{ avatarKey }: {}) } : u);
     else {
       const token = this.sessions.token();
       const result = await this.api.patch<{ me: AppUser }>('/me', { fullName, phoneNumber, ...(avatarKey!==undefined?{ avatarKey }: {}) });
-      if (this.sessions.token() === token) { this.user.set(result.me); if(token) await this.loadAvatar(result.me,token); }
+      if (this.sessions.token() === token && revision === this.profileRevision) {
+        this.profileRevision++;
+        if (token) this.loadedToken = token;
+        this.user.set(result.me);
+        if(token) await this.loadAvatar(result.me,token);
+      }
     }
   }
   private async loadAvatar(user: AppUser, token: string): Promise<void> {
@@ -126,12 +136,15 @@ export class AuthService {
       return;
     }
     const token = this.sessions.token();
+    const revision = ++this.profileRevision;
     const cleanCategory = typeof categoryId === 'string'
       ? categoryId
       : (categoryId && typeof categoryId === 'object' ? (categoryId as any).category || (categoryId as any).value : undefined);
     const body = cleanCategory ? { categoryId: cleanCategory, ...(headline ? { headline } : {}) } : {};
     const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/upgrade-pro', body);
-    if (this.sessions.token() === token) {
+    if (this.sessions.token() === token && revision === this.profileRevision) {
+      this.profileRevision++;
+      if (token) this.loadedToken = token;
       this.user.set(result.me);
       this.pro.set(result.pro);
     }
@@ -140,12 +153,15 @@ export class AuthService {
   async updateTrade(categoryId: string, headline?: string): Promise<void> {
     if (this.settings.useMockApi()) return;
     const token = this.sessions.token();
+    const revision = ++this.profileRevision;
     const cleanCategory = typeof categoryId === 'string'
       ? categoryId
       : (categoryId && typeof categoryId === 'object' ? (categoryId as any).category || (categoryId as any).value || 'repairs' : 'repairs');
     const body = { categoryId: cleanCategory, ...(headline ? { headline } : {}) };
     const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/pro-trade', body);
-    if (this.sessions.token() === token) {
+    if (this.sessions.token() === token && revision === this.profileRevision) {
+      this.profileRevision++;
+      if (token) this.loadedToken = token;
       this.user.set(result.me);
       this.pro.set(result.pro);
     }
@@ -169,8 +185,11 @@ export class AuthService {
       return;
     }
     const token = this.sessions.token();
+    const revision = ++this.profileRevision;
     const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/switch-role', { role });
-    if (this.sessions.token() === token) {
+    if (this.sessions.token() === token && revision === this.profileRevision) {
+      this.profileRevision++;
+      if (token) this.loadedToken = token;
       this.user.set(result.me);
       this.pro.set(result.pro);
     }
@@ -179,6 +198,7 @@ export class AuthService {
   landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
 
   async clearLocal(): Promise<void> {
+    this.profileRevision++;
     this.loadedToken = undefined; this.user.set(null); this.avatarUrl.set(''); this.pro.set(null);
     await this.sessions.clear(); clearDemoState();
   }

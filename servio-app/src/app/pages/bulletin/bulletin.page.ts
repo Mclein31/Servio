@@ -68,7 +68,6 @@ export class BulletinPage {
       await this.community.acceptRequest(request.id);
       // Keep an accepted card visible even when it was opened through the Urgent/Open filter.
       this.filter.set('ALL');
-      await this.community.bulletin();
     } catch (error) {
       this.actionError.set(error instanceof Error ? error.message : 'Could not accept this request.');
       await this.community.bulletin().catch(() => undefined);

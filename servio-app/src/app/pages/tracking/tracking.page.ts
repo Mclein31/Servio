@@ -31,7 +31,7 @@ export class TrackingPage {
   readonly auth = inject(AuthService);
   private readonly alerts = inject(AlertController);
   readonly cancelling = signal(false);
-  readonly history = this.orders.history;
+  readonly history = computed(() => this.orders.history().filter((item) => item.status !== 'CANCELLED'));
   readonly partner = computed(() => {
     const o = this.orders.order();
     const isPro = this.auth.user()?.role === 'PRO';

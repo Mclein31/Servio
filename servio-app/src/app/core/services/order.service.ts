@@ -286,8 +286,9 @@ export class OrderService {
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
         status: b.status,
         amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
-      const current = result.bookings.find((b) => b.id === this.state().id);
-      const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status)) ?? result.bookings[0];
+      const current = result.bookings.find((b) => b.id === this.state().id && b.status !== 'CANCELLED');
+      const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status))
+        ?? result.bookings.find((b) => b.status === 'COMPLETED');
       const order = selected ? await this.fromApi(selected) : this.emptyOrder();
       if (revision === this.revision) { this.state.set(order); this.error.set(''); if(selected)void this.hydrateImages(selected,revision); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
@@ -338,6 +339,7 @@ export class OrderService {
         },
         ...hist.filter((h) => h.id !== (o.code ?? o.id)),
       ]);
+      this.state.set(this.emptyOrder());
       return;
     }
     await this.api.post(`/bookings/${this.state().id}/status`, { to: 'CANCELLED', reason });
