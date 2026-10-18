@@ -26,7 +26,9 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
           typeof envelope?.message === 'string' ? envelope.message : 'Cannot reach SERVIO. Check the Wi-Fi and API address.',
           typeof envelope?.requestId === 'string' ? envelope.requestId : undefined);
         if (failure.status === 401 && !request.url.startsWith(`${base}/auth/`)) void sessions.clear();
-        void toasts.create({ message: failure.message, duration: 3500, position: 'top' }).then((toast) => toast.present());
+        if (!request.url.includes('/uploads/')) {
+          void toasts.create({ message: failure.message, duration: 3500, position: 'top' }).then((toast) => toast.present());
+        }
         return throwError(() => failure);
       }));
     }));
