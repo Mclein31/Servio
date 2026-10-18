@@ -169,8 +169,11 @@ export class ProfilePage {
           {
             text: 'Activate & Switch',
             handler: async (selectedCategory) => {
+              const category = typeof selectedCategory === 'string'
+                ? selectedCategory
+                : (selectedCategory?.category || selectedCategory?.value || 'repairs');
               try {
-                await this.auth.upgradeToPro(selectedCategory || 'repairs');
+                await this.auth.upgradeToPro(category);
                 void this.community.refresh();
                 const toast = await this.toasts.create({ message: 'Welcome to Servio Pro! You are now in Pro mode.', duration: 2200, position: 'top' });
                 await toast.present();
@@ -203,9 +206,12 @@ export class ProfilePage {
           {
             text: 'Update Category',
             handler: async (selectedCategory) => {
-              if (!selectedCategory) return;
+              const category = typeof selectedCategory === 'string'
+                ? selectedCategory
+                : (selectedCategory?.category || selectedCategory?.value || 'repairs');
+              if (!category) return;
               try {
-                await this.auth.updateTrade(selectedCategory);
+                await this.auth.updateTrade(category);
                 void this.community.refresh();
                 const toast = await this.toasts.create({ message: 'Service category updated successfully.', duration: 2000, position: 'top' });
                 await toast.present();

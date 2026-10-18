@@ -36,8 +36,14 @@ me.patch('/me', validate('json', PatchProfile), async (c) => {
   return c.json({ me: user });
 });
 
-const UpgradeProSchema = v.strictObject({
-  categoryId: v.optional(v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech'])),
+const UpgradeProSchema = v.object({
+  categoryId: v.optional(v.union([
+    v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech']),
+    v.object({
+      category: v.optional(v.string()),
+      value: v.optional(v.string()),
+    }),
+  ])),
   headline: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(80))),
 });
 
@@ -63,7 +69,14 @@ me.post('/me/upgrade-pro', validate('json', UpgradeProSchema), async (c) => {
       .where(eq(users.id, userId))
       .returning(profileFields);
 
-    const targetCategory = input.categoryId ?? 'repairs';
+    const rawCat = typeof input.categoryId === 'string'
+      ? input.categoryId
+      : (typeof input.categoryId === 'object' && input.categoryId !== null
+        ? (input.categoryId as any).category || (input.categoryId as any).value
+        : undefined);
+    const targetCategory = rawCat && ['tutoring', 'repairs', 'errands', 'beauty', 'tech'].includes(String(rawCat).toLowerCase())
+      ? String(rawCat).toLowerCase()
+      : 'repairs';
     const headline = input.headline ?? DEFAULT_TRADE_HEADLINES[targetCategory] ?? 'Repairs Specialist';
 
     const [existingPro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
@@ -111,15 +124,31 @@ me.post('/me/upgrade-pro', validate('json', UpgradeProSchema), async (c) => {
   return c.json(result);
 });
 
-const SetProTradeSchema = v.strictObject({
-  categoryId: v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech']),
+const SetProTradeSchema = v.object({
+  categoryId: v.union([
+    v.picklist(['tutoring', 'repairs', 'errands', 'beauty', 'tech']),
+    v.object({
+      category: v.optional(v.string()),
+      value: v.optional(v.string()),
+    }),
+  ]),
   headline: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2), v.maxLength(80))),
 });
 
 me.post('/me/pro-trade', validate('json', SetProTradeSchema), async (c) => {
-  const { categoryId, headline: customHeadline } = c.req.valid('json');
+  const input = c.req.valid('json');
   const db = c.get('db');
   const userId = c.get('userId');
+  const rawCat = typeof input.categoryId === 'string'
+    ? input.categoryId
+    : (typeof input.categoryId === 'object' && input.categoryId !== null
+      ? (input.categoryId as any).category || (input.categoryId as any).value
+      : 'repairs');
+  const categoryId = rawCat && ['tutoring', 'repairs', 'errands', 'beauty', 'tech'].includes(String(rawCat).toLowerCase())
+    ? String(rawCat).toLowerCase()
+    : 'repairs';
+  const customHeadline = input.headline;
+
   const result = await db.transaction(async (tx) => {
     const [current] = await tx.select(profileFields).from(users).where(eq(users.id, userId)).limit(1);
     if (!current) throw new ApiError(404, 'NOT_FOUND', 'User not found.');
@@ -148,7 +177,7 @@ me.post('/me/pro-trade', validate('json', SetProTradeSchema), async (c) => {
   return c.json(result);
 });
 
-const SwitchRoleSchema = v.strictObject({
+const SwitchRoleSchema = v.object({
   role: v.picklist(['CUSTOMER', 'PRO']),
 });
 

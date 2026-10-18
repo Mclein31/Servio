@@ -125,7 +125,10 @@ export class AuthService {
       return;
     }
     const token = this.sessions.token();
-    const body = categoryId ? { categoryId, ...(headline ? { headline } : {}) } : {};
+    const cleanCategory = typeof categoryId === 'string'
+      ? categoryId
+      : (categoryId && typeof categoryId === 'object' ? (categoryId as any).category || (categoryId as any).value : undefined);
+    const body = cleanCategory ? { categoryId: cleanCategory, ...(headline ? { headline } : {}) } : {};
     const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/upgrade-pro', body);
     if (this.sessions.token() === token) {
       this.user.set(result.me);
@@ -136,7 +139,10 @@ export class AuthService {
   async updateTrade(categoryId: string, headline?: string): Promise<void> {
     if (this.settings.useMockApi()) return;
     const token = this.sessions.token();
-    const body = { categoryId, ...(headline ? { headline } : {}) };
+    const cleanCategory = typeof categoryId === 'string'
+      ? categoryId
+      : (categoryId && typeof categoryId === 'object' ? (categoryId as any).category || (categoryId as any).value || 'repairs' : 'repairs');
+    const body = { categoryId: cleanCategory, ...(headline ? { headline } : {}) };
     const result = await this.api.post<{ me: AppUser; pro: AppPro | null }>('/me/pro-trade', body);
     if (this.sessions.token() === token) {
       this.user.set(result.me);
