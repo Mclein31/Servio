@@ -19,7 +19,7 @@
           <strong>{{ o.customerName }}</strong>
           <span class="verified">Verified customer</span>
         </div>
-        <button type="button" class="icon-btn tinted" (click)="call()" aria-label="Call customer (masked)">
+        <button type="button" class="icon-btn tinted" (click)="call()" aria-label="Call customer">
           <ion-icon name="call" aria-hidden="true"></ion-icon>
         </button>
         <a class="icon-btn tinted" [routerLink]="['/order', o.id, 'chat']" aria-label="Message customer">

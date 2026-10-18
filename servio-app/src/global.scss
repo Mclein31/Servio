@@ -367,21 +367,6 @@ ion-modal.servio-fullscreen {
 }
 
 /* ---------- Leaflet tweaks ---------- */
-.leaflet-container {
-  font-family: var(--servio-font);
-  background: #F2EFE9;
-}
-
-/* Approximates the CARTO Light look on keyless OSM tiles so the orange route stays the hero. */
-.servio-tiles-light {
-  filter: grayscale(0.85) brightness(1.08) contrast(0.88);
-}
-
-.leaflet-control-attribution {
-  font-size: 9px;
-  background: rgba(255, 255, 255, 0.75) !important;
-}
-
 /* ---------- Accessibility ---------- */
 .sr-only {
   position: absolute !important;

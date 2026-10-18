@@ -98,36 +98,13 @@
 .tick {
   width: 112px;
   height: 112px;
-
-  circle {
-    fill: var(--servio-green-surface);
-    stroke: var(--servio-green);
-    stroke-width: 4;
-    stroke-dasharray: 277;
-    stroke-dashoffset: 277;
-    animation: draw 0.6s ease-out forwards;
-  }
-
-  path {
-    fill: none;
-    stroke: var(--servio-green-strong);
-    stroke-width: 7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 64;
-    stroke-dashoffset: 64;
-    animation: draw 0.4s ease-out 0.5s forwards;
-  }
+  color: var(--servio-green-strong);
+  border-radius: 50%;
+  background: var(--servio-green-surface);
 }
 
 .success-btn {
   max-width: 360px;
-}
-
-@keyframes draw {
-  to {
-    stroke-dashoffset: 0;
-  }
 }
 
 @keyframes beam {

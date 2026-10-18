@@ -45,9 +45,7 @@
                 "src"
               ]
             },
-            "allowedCommonJsDependencies": [
-              "leaflet"
-            ]
+            "allowedCommonJsDependencies": ["leaflet"]
           },
           "configurations": {
             "production": {

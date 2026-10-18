@@ -1,3 +1,4 @@
+import { BookingCallService } from '../../../core/services/booking-call.service';
 import { TrackingControlsComponent } from '../../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -93,14 +94,9 @@ export class JobExecutePage {
     await sheet.present();
   }
 
-  async call(): Promise<void> {
-    const a = await this.alerts.create({
-      header: 'Masked call',
-      subHeader: `Calling ${this.orders.order().customerName}`,
-      message: 'Voice calls are not available in this demo. Use the booking chat.',
-      buttons: [{ text: 'End call', role: 'cancel' }],
-    });
-    await a.present();
+  private readonly calls = inject(BookingCallService);
+  call(): Promise<void> {
+    return this.calls.call(this.orders.order().id);
   }
 
   private openExternal(url: string): void {

@@ -1,3 +1,4 @@
+import { BookingCallService } from '../../core/services/booking-call.service';
 import { TrackingControlsComponent } from '../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -61,14 +62,9 @@ export class TrackingPage {
     this.map?.refresh();
   }
 
-  async call(): Promise<void> {
-    const alert = await this.alerts.create({
-      header: 'Masked call',
-      subHeader: `Calling ${this.orders.order().helper.name}`,
-      message: 'Voice calls are not available in this demo. Use the booking chat to contact your helper.',
-      buttons: [{ text: 'End call', role: 'cancel' }],
-    });
-    await alert.present();
+  private readonly calls = inject(BookingCallService);
+  call(): Promise<void> {
+    return this.calls.call(this.orders.order().id);
   }
 
   async cancel(): Promise<void> {

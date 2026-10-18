@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { Geolocation } from '@capacitor/geolocation';
-import * as L from 'leaflet';
 import { AddressService, SavedAddress } from '../../core/services/address.service';
 import { TUGUEGARAO_CENTER } from '../../core/data/launch-city';
+import * as L from 'leaflet';
+import { ReverseGeocodingService } from '../../core/services/reverse-geocoding.service';
 import { servioTileLayer } from '../../shared/utils/map-tiles';
 
 @Component({
@@ -22,15 +23,16 @@ import { servioTileLayer } from '../../shared/utils/map-tiles';
         <div #mapHost class="map" role="region" aria-label="Choose service location on map"></div>
         <button class="pill-btn-outline" type="button" (click)="locate()" [disabled]="locating()">{{ locating() ? 'Finding location…' : 'Use my current location' }}</button>
         <p class="pin-status" aria-live="polite">{{ pin() ? 'Pin selected: ' + pin()![0].toFixed(5) + ', ' + pin()![1].toFixed(5) : 'Select a pin before saving.' }}</p>
+        <p class="pin-status" aria-live="polite">{{ geocoding() ? 'Finding address…' : 'Review the address and add any missing house or barangay details.' }}</p>
         <form (ngSubmit)="save()">
           <label>Label<input name="label" [(ngModel)]="label" maxlength="50" required placeholder="Home or work"></label>
           <label>Address / landmark<input name="street" [(ngModel)]="street" maxlength="200" required placeholder="House, building or entrance"></label>
           <label>Barangay<input name="barangay" [(ngModel)]="barangay" maxlength="100" required placeholder="e.g. Ugac Norte"></label>
-          <label>City<input value="Tuguegarao City" readonly></label>
+          <label>City<input name="city" [(ngModel)]="city" required></label>
           <label>Directions (optional)<input name="landmark" [(ngModel)]="landmark" maxlength="200" placeholder="How your Pro can find you"></label>
           <label class="check"><input type="checkbox" name="default" [(ngModel)]="isDefault" [disabled]="wasDefault">Use as default address</label>
           @if (wasDefault) { <p class="pin-status">This is your default. Make another address the default to change it.</p> }
-          <button class="pill-btn" type="submit" [disabled]="saving() || !pin() || !label.trim() || !street.trim() || !barangay.trim()">{{ saving() ? 'Saving…' : 'Confirm pin & save address' }}</button>
+          <button class="pill-btn" type="submit" [disabled]="saving() || geocoding() || !pin() || !label.trim() || !street.trim() || !barangay.trim() || !city.trim()">{{ saving() ? 'Saving…' : 'Confirm pin & save address' }}</button>
           <button class="text-btn" type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button>
         </form>
       } @else {
@@ -64,6 +66,11 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   @ViewChild('mapHost') host?: ElementRef<HTMLElement>;
   readonly editing = signal(false); readonly saving = signal(false); readonly locating = signal(false); readonly error = signal('');
   readonly pin = signal<readonly [number,number] | null>(null);
+  private readonly geocoder = inject(ReverseGeocodingService);
+  readonly geocoding = signal(false);
+  city = 'Tuguegarao City';
+  private geocodeRevision = 0;
+  private lookupTimer?: ReturnType<typeof setTimeout>;
   label = 'Home'; street = ''; barangay = ''; landmark = ''; isDefault = false; wasDefault = false;
   private editorRevision = 0; private locationRevision = 0;
   private id?: string; private map?: L.Map; private marker?: L.Marker;
@@ -72,24 +79,42 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   ionViewWillLeave(): void { this.closeEditor(); }
   edit(a?: SavedAddress): void {
     this.closeEditor(); this.error.set(''); this.id = a?.id; this.label = a?.label ?? 'Home'; this.street = a?.street ?? '';
-    this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length; this.wasDefault = a?.isDefault ?? false;
+    this.city = a?.city ?? 'Tuguegarao City'; this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length; this.wasDefault = a?.isDefault ?? false;
     this.pin.set(a ? [a.lat,a.lng] : null); this.editing.set(true);
   }
   ngAfterViewChecked(): void {
     if (!this.host || this.map || !this.editing()) return;
     this.map = L.map(this.host.nativeElement).setView([...(this.pin() ?? TUGUEGARAO_CENTER)] as [number,number],16);
     servioTileLayer().addTo(this.map);
-    this.map.on('click', (e: L.LeafletMouseEvent) => this.selectPin(e.latlng.lat,e.latlng.lng));
-    const pin = this.pin(); if (pin) this.selectPin(...pin);
+    this.map.on('click', (event: L.LeafletMouseEvent) => this.selectPin(event.latlng.lat,event.latlng.lng));
+    const pin = this.pin(); if(pin) this.moveMarker(...pin);
     requestAnimationFrame(() => this.map?.invalidateSize());
   }
-  selectPin(lat: number, lng: number): void {
-    this.pin.set([lat,lng]);
-    if (!this.map) return;
-    if (!this.marker) {
-      this.marker = L.marker([lat,lng], { draggable:true, icon:L.divIcon({ html:'<span style="display:block;width:24px;height:24px;border:4px solid white;border-radius:50%;background:#ef6500;box-shadow:0 2px 8px #555"></span>', className:'address-pin', iconSize:[24,24], iconAnchor:[12,12] }) }).addTo(this.map);
-      this.marker.on('dragend', () => { const p=this.marker!.getLatLng(); this.pin.set([p.lat,p.lng]); });
+  private moveMarker(lat: number, lng: number): void {
+    if(!this.map) return;
+    if(!this.marker) {
+      this.marker = L.marker([lat,lng], { draggable:true, title:'Service entrance', icon:L.divIcon({ className:'address-pin', html:'<span style="display:block;width:28px;height:28px;border:4px solid white;border-radius:50%;background:#ef6500;box-shadow:0 2px 8px #555"></span>', iconSize:[28,28], iconAnchor:[14,14] }) }).addTo(this.map);
+      this.marker.on('dragend', () => { const point=this.marker!.getLatLng(); this.selectPin(point.lat,point.lng); });
     } else this.marker.setLatLng([lat,lng]);
+  }
+  selectPin(lat: number, lng: number): void {
+    this.locationRevision++; this.locating.set(false);
+    this.pin.set([lat,lng]);
+    this.moveMarker(lat,lng);
+    clearTimeout(this.lookupTimer);
+    const revision = ++this.geocodeRevision;
+    this.street = ''; this.barangay = ''; this.city = '';
+    this.geocoding.set(true); this.error.set('');
+    this.lookupTimer = setTimeout(() => { void this.fillAddress(lat,lng,revision); }, 350);
+  }
+  private async fillAddress(lat: number,lng: number,revision: number): Promise<void> {
+    try {
+      const fields = await this.geocoder.lookup(lat,lng);
+      if(revision !== this.geocodeRevision || !this.editing()) return;
+      this.street = fields.street; this.barangay = fields.barangay; this.city = fields.city;
+      if(!fields.street || !fields.barangay || !fields.city) this.error.set('Some address details could not be found. Fill in the missing fields before saving.');
+    } catch { if(revision === this.geocodeRevision) this.error.set('Could not look up this address. Enter the address details manually or move the pin to try again.'); }
+    finally { if(revision === this.geocodeRevision) { this.geocoding.set(false); } }
   }
   async locate(): Promise<void> {
     const editor = this.editorRevision; const request = ++this.locationRevision;
@@ -99,9 +124,9 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
     finally { if (editor === this.editorRevision && request === this.locationRevision) this.locating.set(false); }
   }
   async save(): Promise<void> {
-    const pin = this.pin(); if (!pin || this.saving() || !this.label.trim() || !this.street.trim() || !this.barangay.trim()) return;
+    const pin = this.pin(); if (!pin || this.geocoding() || !this.city.trim() || this.saving() || !this.label.trim() || !this.street.trim() || !this.barangay.trim()) return;
     this.saving.set(true); this.error.set('');
-    try { await this.addresses.save({ label:this.label.trim(),street:this.street.trim(),barangay:this.barangay.trim(),city:'Tuguegarao City',landmark:this.landmark.trim() || null,lat:pin[0],lng:pin[1],isDefault:this.isDefault },this.id); this.closeEditor(); if(this.choosing) this.back(); }
+    try { await this.addresses.save({ label:this.label.trim(),street:this.street.trim(),barangay:this.barangay.trim(),city:this.city.trim(),landmark:this.landmark.trim() || null,lat:pin[0],lng:pin[1],isDefault:this.isDefault },this.id); this.closeEditor(); if(this.choosing) this.back(); }
     catch (e) { this.fail(e); } finally { this.saving.set(false); }
   }
   choose(a: SavedAddress): void { this.addresses.selectedId.set(a.id); this.back(); }
@@ -109,6 +134,6 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   async remove(a: SavedAddress): Promise<void> { await this.mutate(() => this.addresses.remove(a.id)); }
   private async mutate(action: () => Promise<void>): Promise<void> { if(this.saving()) return; this.saving.set(true); this.error.set(''); try { await action(); } catch(e) { this.fail(e); } finally { this.saving.set(false); } }
   private fail(e: unknown): void { this.error.set(e instanceof Error ? e.message : 'Could not save address.'); }
-  closeEditor(): void { this.editorRevision++; this.locationRevision++; this.locating.set(false); this.map?.remove(); this.map=undefined; this.marker=undefined; this.editing.set(false); }
+  closeEditor(): void { this.editorRevision++; this.locationRevision++; this.locating.set(false); this.geocodeRevision++; this.geocoding.set(false); clearTimeout(this.lookupTimer); this.map?.remove(); this.map=undefined; this.marker=undefined; this.editing.set(false); }
   ngOnDestroy(): void { this.closeEditor(); }
 }

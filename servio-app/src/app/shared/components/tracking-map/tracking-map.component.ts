@@ -244,7 +244,7 @@ function destinationIcon(): L.DivIcon {
     className: 'servio-destination',
     iconSize: [40, 48],
     iconAnchor: [20, 46],
-    html: `<span class="dest-pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z" fill="#fff"/></svg></span><span class="dest-label">You</span>`,
+    html: `<span class="dest-pin"><ion-icon name="home" style="color:white;font-size:16px;transform:rotate(45deg)" aria-hidden="true"></ion-icon></span><span class="dest-label">You</span>`,
   });
 }
 

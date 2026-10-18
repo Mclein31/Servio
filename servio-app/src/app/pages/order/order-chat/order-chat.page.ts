@@ -1,3 +1,4 @@
+import { BookingCallService } from '../../../core/services/booking-call.service';
 import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Subscription } from 'rxjs';
@@ -5,7 +6,7 @@ import { LiveService } from '../../../core/services/live.service';
 import { MessageDto } from '../../../core/api/customer.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { Location } from '@angular/common';
-import { AlertController, IonContent, IonFooter, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
+import { IonContent, IonFooter, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
 import { SEED_CHAT } from '../../../core/data/mock-data';
 import { OrderService } from '../../../core/services/order.service';
 import { TrackingService } from '../../../core/services/tracking.service';
@@ -32,7 +33,6 @@ export class OrderChatPage {
   readonly orders = inject(OrderService);
   readonly sim = inject(TrackingService);
   private readonly location = inject(Location);
-  private readonly alerts = inject(AlertController);
 
   readonly auth = inject(AuthService);
   readonly peer = computed(() => { const o = this.orders.order(); return this.auth.user()?.role === 'PRO' ? { name: o.customerName, avatarUrl: o.customerAvatarUrl, online: false } : { name: o.helper.name, avatarUrl: o.helper.avatarUrl, online: o.helper.isAvailable }; });
@@ -110,14 +110,9 @@ export class OrderChatPage {
 
   outgoing(m: ChatMessage): boolean { return m.from === (this.auth.user()?.role === 'PRO' ? 'helper' : 'customer'); }
 
-  async call(): Promise<void> {
-    const a = await this.alerts.create({
-      header: 'Masked call',
-      subHeader: `Contact ${this.peer().name}`,
-      message: 'Voice calls are not available in this demo. Use the booking chat.',
-      buttons: [{ text: 'End call', role: 'cancel' }],
-    });
-    await a.present();
+  private readonly calls = inject(BookingCallService);
+  call(): Promise<void> {
+    return this.calls.call(this.orders.order().id);
   }
 
   private push(m: Omit<ChatMessage, 'id' | 'time'>): void {

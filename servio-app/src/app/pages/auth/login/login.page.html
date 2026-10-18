@@ -6,7 +6,7 @@
     <form (submit)="$event.preventDefault(); submit()">
       <label class="field-label" for="email">Email address</label>
       <div class="phone-field" [class.invalid]="showHint()">
-        <span class="prefix" aria-hidden="true">&#64; <ion-icon name="lock-closed"></ion-icon></span>
+        <span class="prefix" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon> <ion-icon name="lock-closed"></ion-icon></span>
         <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com"
           maxlength="255" [value]="email()" (input)="onInput($event)" aria-describedby="email-help" />
       </div>

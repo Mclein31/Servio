@@ -22,7 +22,7 @@ export function slideReleaseConfirms(progress: number): boolean {
     <div #trackEl class="track" [class.done]="done()" [class.disabled]="disabled">
       <div class="fill" [style.width.px]="fillWidth()"></div>
       <span class="label" [style.opacity]="1 - progress() * 1.4">
-        <span class="chev" aria-hidden="true">›››</span> {{ label }} <span class="chev" aria-hidden="true">›››</span>
+        <span class="chev" aria-hidden="true"><ion-icon name="chevron-forward"></ion-icon><ion-icon name="chevron-forward"></ion-icon><ion-icon name="chevron-forward"></ion-icon></span> {{ label }} <span class="chev" aria-hidden="true"><ion-icon name="chevron-forward"></ion-icon><ion-icon name="chevron-forward"></ion-icon><ion-icon name="chevron-forward"></ion-icon></span>
       </span>
       <span class="done-label" [style.opacity]="done() ? 1 : 0">{{ doneLabel }}</span>
       <button
@@ -75,7 +75,8 @@ export function slideReleaseConfirms(progress: number): boolean {
       pointer-events: none;
     }
     .done-label { padding-left: 0; transition: opacity 0.2s ease; }
-    .chev { letter-spacing: -2px; opacity: 0.7; animation: shimmer 1.6s ease-in-out infinite; }
+    .chev { display: inline-flex; align-items: center; opacity: 0.7; animation: shimmer 1.6s ease-in-out infinite; }
+    .chev ion-icon + ion-icon { margin-left: -8px; }
     .thumb {
       position: absolute;
       top: 6px;
