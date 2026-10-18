@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, ne, or, sql, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql, type SQLWrapper } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
 import { cityProfile, haversineKm } from '../config/cities';
@@ -71,18 +71,45 @@ community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuer
     .where(and(input.id ? eq(users.id,input.id) : undefined,eq(users.role, 'PRO'), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'),
       sql`EXISTS (SELECT 1 FROM pro_skus p JOIN service_skus s ON s.id=p.sku_id WHERE p.pro_id=${users.id} AND s.is_active=true ${input.category ? sql`AND s.category_id=${input.category}` : sql``})`))
     .orderBy(sql`CASE WHEN ${input.lat !== undefined} AND ${proProfiles.lastLocatedAt} BETWEEN NOW() - INTERVAL '15 minutes' AND NOW() THEN ${distanceSql(proProfiles.lastLat, proProfiles.lastLng, origin)} END ASC NULLS LAST`, desc(proProfiles.ratingAvg), asc(users.id)).limit(100);
+
+  const proIds = rows.map((row) => row.id);
+  const skusByPro = new Map<string, Array<typeof serviceSkus.$inferSelect>>();
+  if (proIds.length > 0) {
+    const skuRows = await c.get('db').select({ proId: proSkus.proId, sku: serviceSkus })
+      .from(proSkus)
+      .innerJoin(serviceSkus, eq(serviceSkus.id, proSkus.skuId))
+      .where(and(inArray(proSkus.proId, proIds), eq(serviceSkus.isActive, true), input.category ? eq(serviceSkus.categoryId, input.category) : undefined));
+    for (const row of skuRows) {
+      const current = skusByPro.get(row.proId) ?? [];
+      current.push(row.sku);
+      skusByPro.set(row.proId, current);
+    }
+  }
+
+  const reviewsByPro = new Map<string, Array<{ id: string; author: string | null; rating: number; body: string | null; createdAt: Date }>>();
+  if (proIds.length > 0) {
+    const reviewRows = await c.get('db').select({ proId: reviews.subjectId, id: reviews.id, author: users.fullName, rating: reviews.rating, body: reviews.body, createdAt: reviews.createdAt })
+      .from(reviews)
+      .innerJoin(users, eq(users.id, reviews.authorId))
+      .where(inArray(reviews.subjectId, proIds))
+      .orderBy(desc(reviews.createdAt));
+    for (const row of reviewRows) {
+      const current = reviewsByPro.get(row.proId) ?? [];
+      current.push({ id: row.id, author: row.author, rating: row.rating, body: row.body, createdAt: row.createdAt });
+      reviewsByPro.set(row.proId, current);
+    }
+  }
+
   const pros = [];
   for (const row of rows) {
-    const skus = await c.get('db').select({ sku: serviceSkus }).from(proSkus).innerJoin(serviceSkus, eq(serviceSkus.id, proSkus.skuId))
-      .where(and(eq(proSkus.proId, row.id), eq(serviceSkus.isActive, true), input.category ? eq(serviceSkus.categoryId, input.category) : undefined));
+    const skus = skusByPro.get(row.id) ?? [];
     if (!skus.length) continue;
-    const feedback = await c.get('db').select({ id: reviews.id, author: users.fullName, rating: reviews.rating, body: reviews.body, createdAt: reviews.createdAt })
-      .from(reviews).innerJoin(users, eq(users.id, reviews.authorId)).where(eq(reviews.subjectId, row.id)).orderBy(desc(reviews.createdAt)).limit(10);
+    const feedback = (reviewsByPro.get(row.id) ?? []).slice(0, 10);
     const p = row.profile;
     pros.push({ id: row.id, name: row.name ?? 'SERVIO Pro', avatarKey: row.avatarKey, headline: p.headline, bio: p.bio, credentials: p.credentials,
       yearsExperience: p.yearsExperience, jobsDone: p.jobsDone, rating: Number(p.ratingAvg), ratingCount: p.ratingCount,
       isOnline: p.isOnline, distanceKm: input.lat !== undefined && p.lastLocatedAt && Date.now()-p.lastLocatedAt.getTime()>=0 && Date.now()-p.lastLocatedAt.getTime()<15*60000 && p.lastLat != null && p.lastLng != null ? haversineKm(origin, { lat: p.lastLat, lng: p.lastLng }) : null,
-      fromPriceCentavos: Math.min(...skus.map((s) => s.sku.priceCentavos)), skus: skus.map((s) => s.sku), reviews: feedback });
+      fromPriceCentavos: Math.min(...skus.map((s) => s.priceCentavos)), skus, reviews: feedback });
   }
   pros.sort((a,b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || b.rating - a.rating);
   return c.json({ pros });
