@@ -57,16 +57,22 @@ describe.runIf(hasDb)('owner saved service addresses', () => {
     for (const input of [
       { ...home, street: '' }, { ...home, label: 'x'.repeat(51) }, { ...home, lat: 91 },
       { ...home, lat: '17.613' }, { ...home, userId: f.pro.id }, { ...home, city: 'Other City' },
-      { ...home, lat: 18, lng: 122 }, { ...home, isDefault: 'true' }, { ...home, price: 1 },
+      { ...home, isDefault: 'true' }, { ...home, price: 1 },
     ]) expect((await create(input)).status).toBe(422);
     const address = await saved();
-    for (const input of [{}, { isDefault: false }, { lng: 0 }, { city: 'Other City' }, { userId: f.pro.id }]) expect((await patch(address.id, input)).status).toBe(422);
+    for (const input of [{}, { isDefault: false }, { lng: 181 }, { city: 'Other City' }, { userId: f.pro.id }]) expect((await patch(address.id, input)).status).toBe(422);
     expect(await list()).toMatchObject([{ id: address.id, ...home, isDefault: true }]);
     const original = await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id));
-    const response = await api('/bookings', json({ skuId: 'sku-ac-leak', address: { street: home.street, barangay: home.barangay, city: home.city }, lat: 0, lng: 0, schedule: 'ASAP', paymentMethod: 'GCASH' }, f.headers.customer));
+    const response = await api('/bookings', json({ skuId: 'sku-ac-leak', address: { street: home.street, barangay: home.barangay, city: 'Other City' }, lat: 0, lng: 0, schedule: 'ASAP', paymentMethod: 'GCASH' }, f.headers.customer));
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({ error: { code: 'OUTSIDE_SERVICE_AREA' } });
     expect(await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id))).toEqual(original);
+  });
+
+  it('accepts saving and editing pins beyond the former 10 km radius', async () => {
+    const address = await saved({ ...home, lat: 17.72, lng: 121.8 });
+    expect((await patch(address.id, { lat: 17.75, lng: 121.85 })).status).toBe(200);
+    expect(await list()).toMatchObject([{ id: address.id, lat: 17.75, lng: 121.85 }]);
   });
 
   it('serializes simultaneous first addresses and default changes, maintaining exactly one default', async () => {

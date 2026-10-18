@@ -28,7 +28,7 @@ export async function advanceDispatch(tx: Transaction, booking: typeof bookings.
         AND p.last_located_at <= ${now} AND p.last_located_at > ${new Date(now.getTime() - profile.freshLocationSeconds * 1000)}
         AND NOT EXISTS (SELECT 1 FROM dispatch_offers d WHERE d.booking_id=${booking.id} AND d.pro_id=u.id)
         AND NOT EXISTS (SELECT 1 FROM dispatch_offers d WHERE d.pro_id=u.id AND d.response='PENDING' AND d.expires_at > ${now})
-    ) eligible WHERE distance_km <= ${profile.dispatchRadiusKm}
+    ) eligible
     ORDER BY distance_km, rating_avg DESC, id LIMIT 1
   `) : { rows: [] };
   const next = result.rows[0];

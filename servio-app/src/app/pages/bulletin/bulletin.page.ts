@@ -1,4 +1,3 @@
-import { DiscoveryLocationComponent } from '../../shared/components/discovery-location/discovery-location.component';
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -28,7 +27,7 @@ const PIN_COORDS: [number, number][] = [
   selector: 'app-bulletin',
   templateUrl: 'bulletin.page.html',
   styleUrl: 'bulletin.page.scss',
-  imports: [DiscoveryLocationComponent,DecimalPipe, IonFooter, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
+  imports: [DecimalPipe, IonFooter, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BulletinPage {

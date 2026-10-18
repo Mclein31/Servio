@@ -1,3 +1,4 @@
+import { LatestFrameQueue } from './latest-frame-queue';
 import { DurableObject } from 'cloudflare:workers';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import * as v from 'valibot';
@@ -16,7 +17,7 @@ export type GpsFix=v.InferOutput<typeof Gps> & { receivedAt:number };
 
 /** Hibernatable sockets keep only identity attachments; Postgres owns status and money. */
 export class OrderRoom extends DurableObject<Bindings> {
-  private tail:Promise<unknown>=Promise.resolve();
+  private readonly frames=new LatestFrameQueue<WebSocket,string|ArrayBuffer>((ws,message)=>this.receive(ws,message));
   async fetch(request:Request):Promise<Response> {
     if (new URL(request.url).pathname==='/notify' && request.method==='POST') {
       const event=await request.json() as { type:string; eventId?:string; reset?:boolean };
@@ -62,8 +63,8 @@ export class OrderRoom extends DurableObject<Bindings> {
     return null;
   }
   webSocketMessage(ws:WebSocket,message:string|ArrayBuffer):Promise<void> {
-    const next=this.tail.then(()=>this.receive(ws,message));
-    this.tail=next.catch(()=>undefined); return next;
+    if(message==='ping')return this.receive(ws,message);
+    return this.frames.enqueue(ws,message);
   }
   private async receive(ws:WebSocket,message:string|ArrayBuffer) {
     const actor=ws.deserializeAttachment() as Attachment;
@@ -105,6 +106,6 @@ export class OrderRoom extends DurableObject<Bindings> {
       }
     } finally { await connection.close(); }
   }
-  webSocketClose(ws:WebSocket,code:number,reason:string) { ws.close(code,reason); }
-  webSocketError(ws:WebSocket) { ws.close(1011,'Reconnect'); }
+  webSocketClose(ws:WebSocket,code:number,reason:string) { this.frames.remove(ws);ws.close(code,reason); }
+  webSocketError(ws:WebSocket) { this.frames.remove(ws);ws.close(1011,'Reconnect'); }
 }

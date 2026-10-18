@@ -27,7 +27,7 @@ The MVP is strictly focused on establishing a working two-sided on-demand servic
    - Payment authorization (Escrow hold via Card / Digital Wallet / Cash with platform guarantee).
 
 4. **Technician Dispatch & Job Lifecycle:**
-   - Provider radar broadcast to nearest online, qualified technicians within a 10km radius.
+   - Provider radar broadcast to nearest online, qualified technicians ordered by distance, without a fixed radius cutoff (owner update, 2026-10-18).
    - 60-second acceptance countdown for providers.
    - Real-time job status updates:
      - `PENDING_ACCEPTANCE`

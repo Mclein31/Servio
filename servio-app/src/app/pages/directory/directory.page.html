@@ -5,7 +5,6 @@
 </ion-header>
 
 <ion-content class="servio-page">
-  <app-discovery-location></app-discovery-location>
   @if (community.error()) { <p class="servio-section" role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
   <div class="servio-section intro">
     <p class="servio-subtitle">Browse neighbors offering skills and services.</p>

@@ -6,18 +6,18 @@ import { DiscoveryLocationService } from './discovery-location.service';
 import { ApiService } from '../api/api.service';
 describe('nonblocking discovery loading',()=>{
  const get=vi.fn();const imageUrl=vi.fn();const point=signal<{lat:number;lng:number;at:number}|null>(null);
- const refreshGranted=vi.fn();
+ const refresh=vi.fn();
  beforeEach(()=>{vi.resetAllMocks();point.set(null);TestBed.configureTestingModule({providers:[
   {provide:ApiService,useValue:{settings:{ready:Promise.resolve(),useMockApi:()=>false},get,imageUrl}},
-  {provide:DiscoveryLocationService,useValue:{point,query:()=>point()?{lat:point()!.lat,lng:point()!.lng}:{},refreshGranted}},
+  {provide:DiscoveryLocationService,useValue:{point,query:()=>point()?{lat:point()!.lat,lng:point()!.lng}:{},refresh}},
  ]});});afterEach(()=>TestBed.resetTestingModule());
- it('loads discovery without waiting for a slow GPS fix',async()=>{
-  let resolve!:()=>void;refreshGranted.mockReturnValue(new Promise<void>(r=>resolve=r));
+ it('loads discovery without waiting for a slow saved address refresh',async()=>{
+  let resolve!:()=>void;refresh.mockReturnValue(new Promise<void>(r=>resolve=r));
   get.mockImplementation(async(path:string)=>path==='/catalog'?{skus:[],addons:[],trustFeeCentavos:5000,cancellationFees:{}}:path==='/pros'?{pros:[]}:{requests:[]});
   const community=TestBed.inject(CommunityService);await community.refresh();
   expect(get).toHaveBeenCalledWith('/pros',{});expect(community.loading()).toBe(false);resolve();
  });
- it('renders helper data before its avatar finishes and hides distances after location expiry',async()=>{
+ it('renders helper data before its avatar finishes and hides distances when the saved pin is removed',async()=>{
   let resolve!:(url:string)=>void;imageUrl.mockReturnValue(new Promise<string>(r=>resolve=r));
   point.set({lat:17.61,lng:121.72,at:Date.now()});
   get.mockResolvedValue({pros:[{id:'pro',name:'Helper',avatarKey:'avatar',headline:'Tutor',rating:5,ratingCount:1,distanceKm:1.2,
@@ -27,4 +27,21 @@ describe('nonblocking discovery loading',()=>{
   point.set(null);expect(community.helpers()[0].distanceKm).toBe(Infinity);
   resolve('signed-photo');await vi.waitFor(()=>expect(community.helpers()[0].avatarUrl).toBe('signed-photo'));
  });
+ it('refreshes both lists after the saved pin changes and rejects results for the previous pin',async()=>{
+  point.set({lat:17.61,lng:121.72,at:Date.now()});
+  let resolveOld!:(value:unknown)=>void;
+  get.mockImplementation((path:string,query:Record<string,number>)=>{
+   if(path==='/pros' && query['lat']===17.61)return new Promise(resolve=>resolveOld=resolve);
+   return Promise.resolve(path==='/pros'?{pros:[]}:{requests:[]});
+  });
+  const community=TestBed.inject(CommunityService);
+  const old=community.directory();await community.bulletin();
+  TestBed.tick();
+  point.set({lat:17.8,lng:121.9,at:Date.now()});TestBed.tick();
+  await vi.waitFor(()=>expect(get).toHaveBeenCalledWith('/pros',{lat:17.8,lng:121.9}));
+  expect(get).toHaveBeenCalledWith('/bulletin',{lat:17.8,lng:121.9});
+  resolveOld({pros:[{id:'stale'}]});await old;
+  expect(community.helpers()).toEqual([]);
+ });
+
 });

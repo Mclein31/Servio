@@ -1,9 +1,10 @@
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
+import type { MessageDto } from '../api/customer.models';
 import { ApiService } from '../api/api.service';
 
 export interface LiveFix { type:'gps'; lat:number; lng:number; accuracy:number; heading?:number|null; ts:number; receivedAt:number; simulated?:boolean }
-export interface LiveEvent { resource:string; type:string; reset?:boolean; fix?:LiveFix }
+export interface LiveEvent { resource:string; type:string; reset?:boolean; fix?:LiveFix; message?:MessageDto }
 interface Channel { listeners:number; socket?:WebSocket; retry?:ReturnType<typeof setTimeout>; heartbeat?:ReturnType<typeof setInterval>; renew?:ReturnType<typeof setTimeout>; active:boolean; attempts:number }
 
 @Injectable({ providedIn:'root' })
@@ -45,11 +46,11 @@ export class LiveService implements OnDestroy {
       ws.onmessage=(message)=>{
         if(!channel.active || message.data==='pong') return;
         try {
-          const data=JSON.parse(String(message.data)) as Omit<LiveFix,'type'> & { type:string; reset?:boolean; serverNow?:number };
+          const data=JSON.parse(String(message.data)) as Omit<LiveFix,'type'> & { type:string; reset?:boolean; serverNow?:number; message?:MessageDto };
           if(data.type==='connected' && typeof data.serverNow==='number') this.serverOffsetMs.set(data.serverNow-Date.now());
           if(data.type==='gps' && Number.isFinite(data.lat) && Number.isFinite(data.lng) && Number.isFinite(data.receivedAt)) this.gps.set({ resource,fix:{ ...data,type:'gps' } });
           if(data.reset && this.gps()?.resource===resource) this.gps.set(null);
-          this.eventsSubject.next({ resource,type:data.type,reset:data.reset });
+          this.eventsSubject.next({ resource,type:data.type,reset:data.reset,message:data.message });
         } catch { /* Ignore invalid transport frames; REST remains the source of record. */ }
       };
       ws.onerror=()=>ws.close();

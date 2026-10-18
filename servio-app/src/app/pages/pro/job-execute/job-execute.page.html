@@ -39,7 +39,7 @@
         <ion-icon name="map-outline" aria-hidden="true"></ion-icon> Open in Waze / Maps
       </button>
       @if (o.status === 'EN_ROUTE') {
-        <p class="live"><span class="dot" aria-hidden="true"></span>Sharing live location · {{ sim.etaLabel() }}</p>
+        <p class="live"><span class="dot" aria-hidden="true"></span>{{ sim.reconnecting() ? 'GPS not yet confirmed by the server' : 'Sharing live location' }} · {{ sim.etaLabel() }}</p>
       }
     </section>
 

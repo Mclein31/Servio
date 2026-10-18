@@ -5,7 +5,8 @@ import { authGuard, entryGuard, guestGuard, proGuard } from './core/guards/auth.
 
 const loadOrder = async (route: { paramMap: { get(name: string): string | null } }) => {
   const orders = inject(OrderService);
-  await orders.load(route.paramMap.get('id')!);
+  const id=route.paramMap.get('id')!;
+  if(orders.order().id!==id)await orders.load(id);
   return true;
 };
 

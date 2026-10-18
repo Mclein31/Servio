@@ -13,7 +13,6 @@ export interface CityProfile {
   freshLocationSeconds: number;
   noShowGraceMinutes: number;
   acceptedTimeoutMinutes: number;
-  dispatchRadiusKm: number;
 }
 
 /** Add a city here and select it with LAUNCH_CITY; consumers use the same estimator/policy. */
@@ -23,7 +22,6 @@ export const CITY_PROFILES: Record<string, CityProfile> = {
     roadFactor: 1.3, averageSpeedKmh: 20,
     minTravelMinutes: 15, maxTravelMinutes: 60, defaultTravelMinutes: 30,
     freshLocationSeconds: 120, noShowGraceMinutes: 30, acceptedTimeoutMinutes: 15,
-    dispatchRadiusKm: 10,
   },
 };
 

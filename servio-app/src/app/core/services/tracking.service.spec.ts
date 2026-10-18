@@ -72,10 +72,10 @@ describe('live tracking source and native GPS lifecycle',()=>{
     expect(Geolocation.watchPosition).toHaveBeenCalledTimes(1);
     expect(Geolocation.clearWatch).not.toHaveBeenCalled();
   });
-  it('arrives at the chosen booking pin even before a route is available',()=>{
+  it('keeps the destination without inventing provider GPS on arrival',()=>{
     const tracking=TestBed.inject(TrackingService); TestBed.tick();
     order.update((o)=>({ ...o,status:'ARRIVED',coordinates:[17.625,121.735] })); TestBed.tick();
-    expect(tracking.sample(tracking.displayDistance()).point).toEqual([17.625,121.735]);
+    expect(tracking.hasFix()).toBe(false);
     expect(tracking.destination).toEqual([17.625,121.735]);
     expect(tracking.routeReady()).toBe(false);
   });

@@ -37,6 +37,6 @@ catalog.get('/catalog', async (c) => {
   const fee = Number(c.env.TRUST_FEE_CENTAVOS ?? TRUST_FEE_CENTAVOS);
   const profile = cityProfile(c.env.LAUNCH_CITY);
   return c.json({ categories: cats, skus, addons, cancellationFees: CANCELLATION_FEES,
-    serviceArea: { city: profile.addressCity, name: profile.name, center: profile.center, radiusKm: profile.dispatchRadiusKm },
+    serviceArea: { city: profile.addressCity, name: profile.name, center: profile.center, radiusKm: null },
     trustFeeCentavos: Number.isInteger(fee) && fee >= 0 ? fee : TRUST_FEE_CENTAVOS });
 });

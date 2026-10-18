@@ -103,8 +103,8 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
   private init(): void {
     const route = this.sim.route;
     const startDist = this.sim.displayDistance();
-    const [done, left] = route.split(startDist);
-    const start = route.sample(startDist);
+    const [done, left] = this.sim.routeReady()?route.split(startDist):[[],[]];
+    const start = this.sim.sample(startDist);
     this.bearing = route.smoothedBearing(startDist, 30);
 
     const map = L.map(this.mapEl.nativeElement, {
@@ -128,11 +128,12 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     this.remainingCasing = L.polyline(toLatLngs(left), { color: '#FFFFFF', weight: 9, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
     this.remaining = L.polyline(toLatLngs(left), { color: '#FF5C00', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
 
-    this.originMarker = L.marker(toLatLng(this.sim.origin), { icon: originIcon(), interactive: false, keyboard: false }).addTo(map);
+    this.originMarker = L.marker(toLatLng(this.sim.origin), { opacity:this.sim.mode()==='sim'?1:0, icon: originIcon(), interactive: false, keyboard: false }).addTo(map);
     this.destinationMarker = L.marker(toLatLng(this.sim.destination), { icon: destinationIcon(), interactive: false, keyboard: false, zIndexOffset: 500 }).addTo(map);
 
     const helper = this.orders.order().helper;
     this.rider = L.marker(toLatLng(start.point), {
+      opacity:this.sim.mode()==='sim'||this.sim.hasFix()?1:0,
       icon: riderIcon(helper.avatarUrl, helper.name),
       interactive: false,
       keyboard: false,
@@ -173,8 +174,9 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     const sample = this.sim.sample(d);
     const [done, left] = route.split(d);
 
-    this.rider!.setOpacity(this.sim.mode()==='sim' || this.sim.hasFix() || this.sim.arrived()?1:0);
+    this.rider!.setOpacity(this.sim.mode()==='sim' || this.sim.hasFix()?1:0);
     this.rider!.setLatLng(toLatLng(sample.point));
+    this.originMarker?.setOpacity(this.sim.mode()==='sim'?1:0);
     this.originMarker?.setLatLng(toLatLng(this.sim.origin));
     this.destinationMarker?.setLatLng(toLatLng(this.sim.destination));
     const visible = this.sim.routeReady() ? 1 : 0;
@@ -203,7 +205,8 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
   /** Keep rider and destination in view, leaving room for the ETA chip. */
   private frameCamera(animate: boolean): void {
     if (!this.map || !this.rider) return;
-    const bounds = L.latLngBounds([this.rider.getLatLng(), toLatLng(this.sim.destination)]);
+    const destination=toLatLng(this.sim.destination);
+    const bounds = L.latLngBounds(this.sim.mode()==='live'&&!this.sim.hasFix()?[destination,destination]:[this.rider.getLatLng(),destination]);
     this.map.fitBounds(bounds, {
       paddingTopLeft: [40, this.showEtaChip ? 104 : 56],
       paddingBottomRight: [40, 40],

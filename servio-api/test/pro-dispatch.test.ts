@@ -114,7 +114,16 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     expect(refunds).toHaveLength(2); await balanced();
   });
 
-  it.each(['stale','offline','unapproved','unqualified','distant','future'])('excludes %s candidates', async (kind) => {
+  it('offers a qualified Pro beyond 10 km when nearer candidates are offline', async () => {
+    await client.db.update(proProfiles).set({ isOnline: false }).where(eq(proProfiles.userId, ids[2]!));
+    await client.db.update(proProfiles).set({ lastLat: 17.85, lastLocatedAt: new Date() }).where(eq(proProfiles.userId, ids[1]!));
+    expect((await poll()).offer).not.toBeNull();
+    expect((await offers())[0]).toMatchObject({ proId: ids[1] });
+    expect((await offers())[0]!.distanceM).toBeGreaterThan(10000);
+    expect(await balance()).toBe('115000'); await balanced();
+  });
+
+  it.each(['stale','offline','unapproved','unqualified','future'])('excludes %s candidates', async (kind) => {
     await client.db.update(proProfiles).set({ isOnline: false }).where(eq(proProfiles.userId, ids[2]!));
     if (kind === 'unqualified') await client.db.delete(proSkus).where(eq(proSkus.proId, ids[1]!));
     else await client.db.update(proProfiles).set(kind === 'stale' ? { lastLocatedAt: new Date(Date.now() - 121000) } : kind === 'future' ? { lastLocatedAt: new Date(Date.now() + 60000) } : kind === 'offline' ? { isOnline: false } : kind === 'unapproved' ? { kycStatus: 'PENDING' } : { lastLat: 18 }).where(eq(proProfiles.userId, ids[1]!));

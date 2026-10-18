@@ -38,7 +38,7 @@ describe('live customer data and escrow screens', () => {
     expect(orders.hasOrder()).toBe(false); expect(orders.order().completionPin).toBe('');
     await orders.load(booking.id);
     expect(orders.order().code).toBe('SRV-8821'); expect(orders.order().sku.name).toBe('Booked snapshot');
-    expect(orders.escrowTotalPhp()).toBe(1150); expect(orders.pendingAddon()?.photoUrl).toContain('storage.example');
+    expect(orders.escrowTotalPhp()).toBe(1150); await vi.waitFor(()=>expect(orders.pendingAddon()?.photoUrl).toContain('storage.example'));
     api.post.mockRejectedValueOnce(new Error('Hold failed'));
     await expect(orders.decideAddon('quote', true)).rejects.toThrow('Hold failed');
     expect(orders.escrowTotalPhp()).toBe(1150);

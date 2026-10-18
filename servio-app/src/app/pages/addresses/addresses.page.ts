@@ -19,7 +19,7 @@ import { servioTileLayer } from '../../shared/utils/map-tiles';
     <ion-content class="servio-page"><div class="wrap">
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
       @if (editing()) {
-        <p>Tap the map or drag the pin to your entrance. Service is available within 10 km of Tuguegarao city proper.</p>
+        <p>Tap the map or drag the pin to your entrance. Choose your address in Tuguegarao City.</p>
         <div #mapHost class="map" role="region" aria-label="Choose service location on map"></div>
         <button class="pill-btn-outline" type="button" (click)="locate()" [disabled]="locating()">{{ locating() ? 'Finding location…' : 'Use my current location' }}</button>
         <p class="pin-status" aria-live="polite">{{ pin() ? 'Pin selected: ' + pin()![0].toFixed(5) + ', ' + pin()![1].toFixed(5) : 'Select a pin before saving.' }}</p>

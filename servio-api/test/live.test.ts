@@ -86,7 +86,7 @@ describe.runIf(hasDb)('OrderRoom sockets in Miniflare',()=>{
   it('broadcasts committed chat, add-on and status invalidations without exposing a PIN',async()=>{
     const customer=await connect(f.headers.customer); const pro=await connect(f.headers.pro);
     expect((await api(`/bookings/${f.booking.id}/messages`,json({ body:'Gate 2, please.' },f.headers.customer))).status).toBe(201);
-    expect(await pro.next('message')).toEqual({ type:'message',bookingId:f.booking.id });
+    expect(await pro.next('message')).toMatchObject({ type:'message',bookingId:f.booking.id,message:{body:'Gate 2, please.',senderId:f.customer.id} });
     expect((await api(`/bookings/${f.booking.id}/status`,json({ to:'ARRIVED' },f.headers.pro))).status).toBe(200);
     expect(await customer.next('status')).toEqual({ type:'status',bookingId:f.booking.id });
     const quote=await api(`/bookings/${f.booking.id}/addons`,json({ addonSkuId:'addon-drain-hose',photoKey:f.evidenceKey,note:'Worn hose' },f.headers.pro));

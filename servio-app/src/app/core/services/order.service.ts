@@ -65,6 +65,7 @@ export class OrderService {
   readonly history = computed(() => this.api.settings.useMockApi() ? this.mockHistory() : this.liveHistory());
   readonly travelBookings = signal<Pick<Order, 'id' | 'coordinates' | 'status' | 'expectedArrivalAt'>[]>([]);
   private revision = 0;
+  private readonly imageCache=new Map<string,{url:string;until:number}>();
   private polling = false;
   private identity = '';
 
@@ -111,7 +112,7 @@ export class OrderService {
       if (!/^[0-9a-f-]{36}$/.test(userId ?? '') || !/^[0-9a-f-]{36}$/.test(id ?? '')) return;
       const stop = this.live.watch(`booking:${id}`);
       const subscription = this.live.events.subscribe((event) => {
-        if (event.resource === `booking:${id}` && ['connected','status','addon','message'].includes(event.type)) {
+        if (event.resource === `booking:${id}` && ['connected','status','addon'].includes(event.type)) {
           void this.load(id).catch(() => undefined);
           if (event.type === 'status' && this.auth.user()?.role === 'PRO') void this.wallet.refresh();
         }
@@ -124,7 +125,7 @@ export class OrderService {
       const mock = this.api.settings.useMockApi();
       const identity = `${mock}:${user?.id ?? ''}:${user?.role ?? ''}`;
       if (this.identity !== identity) {
-        this.identity = identity; this.revision++; this.stateMode.set(mock);
+        this.identity = identity; this.imageCache.clear(); this.revision++; this.stateMode.set(mock);
         this.state.set(mock ? this.loadOrder() : this.emptyOrder()); this.liveHistory.set([]); this.travelBookings.set([]);
       }
       if (mock) return;
@@ -266,10 +267,10 @@ export class OrderService {
   async load(id: string): Promise<void> {
     if (this.api.settings.useMockApi()) return;
     const revision = ++this.revision;
-    await this.community.catalog();
-    const { booking } = await this.api.get<{ booking: BookingDto }>(`/bookings/${id}`);
+    const [,result]=await Promise.all([this.community.catalog(),this.api.get<{ booking:BookingDto }>(`/bookings/${id}`)]);
+    const {booking}=result;
     const order = await this.fromApi(booking);
-    if (revision === this.revision) { this.rememberTravel(booking); this.state.set(order); }
+    if (revision === this.revision) { this.rememberTravel(booking); this.state.set(order); void this.hydrateImages(booking,revision); }
   }
 
   async refresh(): Promise<void> {
@@ -288,7 +289,7 @@ export class OrderService {
       const current = result.bookings.find((b) => b.id === this.state().id);
       const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status)) ?? result.bookings[0];
       const order = selected ? await this.fromApi(selected) : this.emptyOrder();
-      if (revision === this.revision) { this.state.set(order); this.error.set(''); }
+      if (revision === this.revision) { this.state.set(order); this.error.set(''); if(selected)void this.hydrateImages(selected,revision); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
     finally { this.loading.set(false); }
   }
@@ -359,15 +360,28 @@ export class OrderService {
       id: b.id, coordinates: [b.lat, b.lng], code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
       sku: { ...(sku ?? this.emptyOrder().sku), id: b.skuId, name: b.skuName, pricePhp: b.priceCentavos / 100 },
       helper: { ...(helper ?? this.emptyOrder().helper), id: b.proId ?? '', name: b.pro?.name ?? 'Finding a Pro',
-        avatarUrl: await this.community.image(b.pro?.avatarKey ?? null).catch(() => ''), rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
-      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: await this.community.image(b.customer?.avatarKey ?? null).catch(() => ''),
+        avatarUrl: this.state().helper.id===b.proId ? this.state().helper.avatarUrl : '', rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
+      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: this.state().customerId===b.customerId ? this.state().customerAvatarUrl : '',
       address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
       paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
       completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,
       statusTimes: Object.fromEntries(currentEvents.map((e) => [e.status, new Date(e.createdAt)])),
-      addons: await Promise.all(b.addons.map(async (a) => ({ id: a.id, sku: { id: a.addonSkuId, name: a.addonName, pricePhp: a.priceCentavos / 100, detail: '' },
-        photoUrl: await this.community.image(a.photoKey), note: a.note, createdAt: new Date(a.createdAt), decision: a.decision }))),
+      addons: b.addons.map((a) => ({ id: a.id, sku: { id: a.addonSkuId, name: a.addonName, pricePhp: a.priceCentavos / 100, detail: '' },
+        photoUrl: this.state().id===b.id ? this.state().addons.find(old=>old.id===a.id)?.photoUrl ?? '' : '', note: a.note, createdAt: new Date(a.createdAt), decision: a.decision })),
     };
+  }
+
+  private async hydrateImages(booking:BookingDto,revision:number):Promise<void>{
+    const identity=this.identity;
+    const image=async(key:string|null):Promise<string>=>{
+      if(!key)return '';
+      const cached=this.imageCache.get(key);if(cached && cached.until>Date.now())return cached.url;
+      const url=await this.community.image(key).catch(()=>'');
+      if(url && identity===this.identity)this.imageCache.set(key,{url,until:Date.now()+45000});return url;
+    };
+    const [helper,customer,addons]=await Promise.all([image(booking.pro?.avatarKey??null),image(booking.customer?.avatarKey??null),Promise.all(booking.addons.map(a=>image(a.photoKey)))]);
+    if(revision!==this.revision||identity!==this.identity||this.state().id!==booking.id)return;
+    this.state.update(order=>({...order,helper:{...order.helper,avatarUrl:helper},customerAvatarUrl:customer,addons:order.addons.map(a=>({...a,photoUrl:addons[booking.addons.findIndex(b=>b.id===a.id)]??a.photoUrl}))}));
   }
 
   private emptyOrder(): Order {

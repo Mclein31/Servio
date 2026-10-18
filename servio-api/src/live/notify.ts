@@ -12,9 +12,12 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
   await next();
   if(c.req.method!=='POST' || c.res.status<200 || c.res.status>=300) return;
   const path=c.req.path;
-  try {
+  const notify=async()=>{try {
     const match=/\/bookings\/([0-9a-f-]{36})\/(status|verify-pin|addons(?:\/[^/]+\/decision)?|messages|review)$/.exec(path);
-    if(match) await send(c.env,`booking:${match[1]}`,{ type:match[2]!.startsWith('addons')?'addon':match[2]==='messages'?'message':'status',bookingId:match[1] });
+    if(match) {
+      const payload=match[2]==='messages' ? await c.res.clone().json() as {message:unknown} : undefined;
+      await send(c.env,`booking:${match[1]}`,{ type:match[2]!.startsWith('addons')?'addon':match[2]==='messages'?'message':'status',bookingId:match[1],...(payload ? {message:payload.message} : {}) });
+    }
     if(path.endsWith('/demo/reset-order')) {
       const body=await c.res.clone().json() as { booking:{ id:string } };
       await send(c.env,`booking:${body.booking.id}`,{ type:'status',bookingId:body.booking.id,reset:true });
@@ -35,5 +38,9 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
   } catch {
     // A committed booking/payment never becomes an HTTP failure because a room is unavailable.
     console.error(JSON.stringify({ requestId:c.get('requestId'),code:'LIVE_NOTIFY_FAILED' }));
-  }
+  }};
+  // Run after commit without holding the caller's successful REST response open.
+  let execution: {waitUntil(promise:Promise<unknown>):void} | undefined;
+  try { execution=c.executionCtx; } catch { /* Direct request tests have no execution context. */ }
+  if(execution)execution.waitUntil(notify());else await notify();
 });

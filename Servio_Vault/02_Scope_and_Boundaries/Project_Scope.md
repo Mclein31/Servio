@@ -21,7 +21,7 @@ To maintain velocity, architectural integrity, and prevent feature creep, this d
 | Feature Category | MVP (Phase 1) | Post-MVP (Phase 2) | Anti-Scope (Out-of-Scope Forever) |
 | :--- | :--- | :--- | :--- |
 | **Service Catalog** | Standardized fixed-price SKUs, diagnostic visits, unit counters (e.g. 1-3 AC units) | Seasonal packages, subscription bundles | Open-ended text bidding ("name your price" auctions) |
-| **Technician Matching** | Algorithmic proximity radar (10km), 60s acceptance countdown | Provider preference filters, scheduled recurring bookings | Unvetted public job boards, direct customer cold-calling |
+| **Technician Matching** | Algorithmic proximity radar (nearest first, no fixed radius), 60s acceptance countdown | Provider preference filters, scheduled recurring bookings | Unvetted public job boards, direct customer cold-calling |
 | **Geospatial & Tracking** | Live polyline route tracking, dynamic ETA, GPS map pins | Geofenced auto-arrival check-ins, turn-by-turn in-app turn navigator | Background surveillance when offline |
 | **Payment & Finance** | In-app Escrow hold, credit card/wallet capture, Completion OTP release | Split payments, tipping, instant cashout rails | Unescrowed direct cash without platform record, Crypto/Web3 |
 | **Communication** | In-app order-scoped text chat & masked VoIP calling | Automated voice IVR notifications, canned responses | Unrestricted social friending, off-app phone leakage |
@@ -71,3 +71,5 @@ The core MVP must strictly implement this state machine:
 - [[Screen_Inventory]] — The screens that implement this scope.
 - [[Order_Lifecycle_State_Machine]] — State machine details.
 - [[MOC_Servio]] — Back to Master Map of Content.
+
+Owner update (2026-10-18): remove the fixed 10 km limit for address pins, booking validation and provider matching. Valid coordinates and Tuguegarao city selection remain required. Earlier radius references are superseded by ADR-035.

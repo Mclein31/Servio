@@ -78,7 +78,7 @@ export class TrackingService implements OnDestroy {
       if(o.status==='COMPLETED') return 'Job complete';
       if(o.status==='CANCELLED') return 'Booking cancelled';
       if(this.mode()==='sim') return `Simulated route · ${formatDistance(this.remainingM())}`;
-      if(this.reconnecting()) return 'Reconnecting…';
+      if(this.reconnecting()) return this.hasFix()?'Last known location · reconnecting…':'Waiting for helper GPS…';
       if(this.live.gps()?.fix.simulated) return this.routeReady() ? `Simulated route · ${formatDistance(this.remainingM())}` : 'Simulated location · route unavailable';
       if(!this.routeReady()) return 'Live location · route unavailable';
       return o.expectedArrivalAt?`Expected at ${new Date(o.expectedArrivalAt).toLocaleTimeString('en-PH',{ hour:'numeric',minute:'2-digit' })}`:'Live location';
@@ -102,7 +102,7 @@ export class TrackingService implements OnDestroy {
             this.generation++;
             this.park(atDestination?this.route.total:this.latest().distance);
             if(atDestination && this.mode()==='live' && this.context().coordinates) {
-              this.rawPoint.set(this.context().coordinates!);
+              // Arrival status does not fabricate a provider GPS fix.
               if(!this.roadGeometry) this.routeReady.set(false);
             }
           }
@@ -115,7 +115,7 @@ export class TrackingService implements OnDestroy {
         else this.park(['ARRIVED','IN_PROGRESS','COMPLETED'].includes(status)?this.route.total:this.startDistance);
         if(this.mode()==='live') {
           this.routeReady.set(false);
-          if(atDestination && this.context().coordinates) this.rawPoint.set(this.context().coordinates!);
+
           const data=this.live.gps(); if(data?.resource===`booking:${this.context().id}`) this.ingest(data.fix); }
         else this.routeReady.set(true);
       });
@@ -145,7 +145,7 @@ export class TrackingService implements OnDestroy {
         let stopped=false; let watchId:string|undefined;
         void Geolocation.watchPosition({ enableHighAccuracy:true,timeout:15000,maximumAge:0,minimumUpdateInterval:1000,interval:1000 },(position,error)=>{
           if(stopped) return;
-          if(error || !position) { this.locationError.set('Location unavailable. Enable precise location, or use the demo route indoors.'); return; }
+          if(error || !position) { this.locationError.set('Location unavailable. Enable precise location and keep SERVIO open.'); return; }
           this.locationError.set('');
           const fix={ lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,heading:position.coords.heading,ts:position.timestamp };
           if(this.travelTargets().length) this.send(fix);
@@ -173,7 +173,7 @@ export class TrackingService implements OnDestroy {
   }
   sample(distance:number):RouteSample & { smoothBearing:number } {
     const sample=this.route.sample(distance);
-    return { ...sample,...(!this.routeReady() && this.rawPoint()?{ point:this.rawPoint()! }:{}),smoothBearing:this.route.smoothedBearing(distance,30) };
+    return { ...sample,...(this.mode()==='live' && (!this.routeReady() || this.context().status!=='EN_ROUTE') && this.rawPoint()?{ point:this.rawPoint()! }:{}),smoothBearing:this.route.smoothedBearing(distance,30) };
   }
   replay():void {
     if(this.orders.api.settings.useMockApi()) this.orders.setStatus('EN_ROUTE');
