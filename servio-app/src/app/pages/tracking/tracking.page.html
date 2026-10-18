@@ -12,7 +12,7 @@
   @let o = orders.order();
 
   @if (orders.error()) { <p class="servio-section" role="alert">{{ orders.error() }} <button class="text-btn" (click)="orders.refresh()">Retry</button></p> }
-  @if (orders.hasOrder()) {
+  @if (orders.isActive()) {
   <div class="servio-section">
     <section class="active servio-card" aria-labelledby="order-title">
       <!-- Header card -->
@@ -85,7 +85,7 @@
     </section>
   </div>
 
-  } @else { <p class="servio-section">{{ orders.loading() ? 'Loading bookings…' : 'No bookings yet. Find a helper to get started.' }}</p> }
+  } @else { <p class="servio-section">{{ orders.loading() ? 'Loading bookings…' : 'No active bookings right now. Find a helper to get started.' }}</p> }
   <!-- Order history -->
   <div class="servio-section">
     <div class="servio-section-head"><h2>Order History</h2></div>
