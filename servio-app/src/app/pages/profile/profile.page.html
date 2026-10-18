@@ -39,14 +39,14 @@
     </section>
   </div>
 
-  @if (mock()) {
+  @if (mock() || auth.user()?.role === 'PRO') {
   <div class="servio-section">
     <div class="servio-section-head">
       <h2>My Services</h2>
-      <button type="button" class="see-all">Manage <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></button>
+      <button type="button" class="see-all" (click)="manageServices()">Manage <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon></button>
     </div>
     <div class="services servio-card">
-      @for (s of services; track s.name) {
+      @for (s of services(); track s.name) {
         <div class="service">
           <span class="svc-icon" [style.background]="s.tint" [style.color]="s.ink"><ion-icon [name]="s.icon" aria-hidden="true"></ion-icon></span>
           <div class="svc-text">

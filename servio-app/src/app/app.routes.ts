@@ -28,6 +28,8 @@ export const routes: Routes = [
   { path: 'tracking', redirectTo: 'tabs/tracking' },
   { path: 'addresses', canActivate: [authGuard], loadComponent: () => import('./pages/addresses/addresses.page').then((m) => m.AddressesPage) },
   { path: 'profile/edit', canActivate: [authGuard], data: { editing: true }, loadComponent: () => import('./pages/auth/profile-setup/profile-setup.page').then((m) => m.ProfileSetupPage) },
+  { path: 'payment-methods', canActivate: [authGuard], loadComponent: () => import('./pages/payment-methods/payment-methods.page').then(m => m.PaymentMethodsPage) },
+  { path: 'help', canActivate: [authGuard], loadComponent: () => import('./pages/help/help.page').then(m => m.HelpPage) },
   { path: 'profile', redirectTo: 'tabs/profile' },
   // Screen-inventory aliases: these open as modals over their parent tab.
   { path: 'helper/:id', redirectTo: ({ params }) => `/tabs/directory?helper=${params['id']}` },

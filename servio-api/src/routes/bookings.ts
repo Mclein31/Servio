@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
 import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
-import { addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users, messages } from '../db/schema';
+import { bulletinRequests, addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users, messages } from '../db/schema';
 import type { AppEnv } from '../env';
 import { bookingDetails, participantBooking, serverNow } from '../lib/bookings';
 import { registerBookingSocial } from './booking-social';
@@ -29,6 +29,7 @@ const CreateBooking = v.pipe(v.strictObject({
   scheduleEndAt: v.optional(timestamp),
   paymentMethod: v.picklist(['GCASH', 'CARD']),
   proId: v.optional(v.pipe(v.string(), v.uuid())),
+  bulletinId: v.optional(v.pipe(v.string(), v.uuid())),
 }), v.check((input) => input.schedule === 'ASAP'
   ? !input.scheduleStartAt && !input.scheduleEndAt
   : !!input.scheduleStartAt && !!input.scheduleEndAt && Date.parse(input.scheduleEndAt) > Date.parse(input.scheduleStartAt),
@@ -48,7 +49,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   }
   const requestHash = await sha256Hex(JSON.stringify([
     input.skuId, input.address.street, input.address.barangay, input.address.city, input.address.landmark ?? null,
-    input.lat, input.lng, input.schedule, input.paymentMethod, input.proId ?? null, input.scheduleStartAt ?? null, input.scheduleEndAt ?? null,
+    input.lat, input.lng, input.schedule, input.paymentMethod, input.proId ?? null, input.scheduleStartAt ?? null, input.scheduleEndAt ?? null, ...(input.bulletinId ? [input.bulletinId] : []),
   ]));
   const trustFeeCentavos = Number(c.env.TRUST_FEE_CENTAVOS ?? TRUST_FEE_CENTAVOS);
   if (!Number.isInteger(trustFeeCentavos) || trustFeeCentavos < 0 || trustFeeCentavos > 2_147_483_647) {
@@ -63,6 +64,13 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
         if (existing.requestHash !== requestHash) throw new ApiError(409, 'IDEMPOTENCY_CONFLICT', 'This key was already used for a different booking.');
         return existing;
       }
+    }
+    if (input.bulletinId) {
+      const [request] = await tx.select().from(bulletinRequests).where(eq(bulletinRequests.id, input.bulletinId)).for('update');
+      if (!request) throw new ApiError(404, 'NOT_FOUND', 'Bulletin request not found.');
+      if (request.authorId !== customerId) throw new ApiError(403, 'REQUEST_OWNER_REQUIRED', 'Only the customer who posted this request can authorize its booking.');
+      if (request.bookingId || request.status !== 'ACCEPTED') throw new ApiError(409, 'REQUEST_CLOSED', 'This request is no longer awaiting checkout.');
+      if (!request.acceptedProId || input.proId !== request.acceptedProId || input.skuId !== request.skuId) throw new ApiError(409, 'REQUEST_CHANGED', 'The request or accepting Pro changed. Reopen the bulletin before booking.');
     }
     const [customer] = await tx.select().from(users).where(eq(users.id, customerId));
     if (customer!.role === 'ADMIN') throw new ApiError(403, 'CUSTOMER_REQUIRED', 'Staff accounts cannot book services.');
@@ -100,6 +108,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
       { txnId, account: `customer:${customerId}`, amountCentavos: -total, bookingId: row!.id, kind: 'ESCROW_HOLD' },
       { txnId, account: `escrow:${row!.id}`, amountCentavos: total, bookingId: row!.id, kind: 'ESCROW_HOLD' },
     ]);
+    if (input.bulletinId) await tx.update(bulletinRequests).set({ bookingId: row!.id }).where(eq(bulletinRequests.id, input.bulletinId));
     return row!;
   });
   return c.json({ booking: await bookingDetails(c.get('db'), booking) }, 201);
@@ -212,6 +221,7 @@ bookings.post('/bookings/:id/status', validate('param', idSchema), validate('jso
       }
     }
     const [changed] = await tx.update(bookingTable).set(patch).where(eq(bookingTable.id, booking.id)).returning();
+    await tx.update(bulletinRequests).set({ status: to === 'CANCELLED' ? 'CANCELLED' : to === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ACCEPTED' }).where(eq(bulletinRequests.bookingId, booking.id));
     await tx.insert(bookingEvents).values({ bookingId: booking.id, status: to, actorId: userId, note, createdAt: now });
     await tx.insert(messages).values({ bookingId: booking.id, body: `Booking status: ${to.replaceAll('_', ' ').toLowerCase()}.`, createdAt: now });
     return changed!;
@@ -302,6 +312,7 @@ bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
         { txnId, bookingId: row.id, account: 'platform_revenue', amountCentavos: split.platformCentavos + row.trustFeeCentavos, kind: 'ESCROW_RELEASE' },
       ].filter((entry) => entry.amountCentavos !== 0));
       const [changed] = await tx.update(bookingTable).set({ status: 'COMPLETED', escrow: 'COMPLETED' }).where(eq(bookingTable.id, row.id)).returning();
+      await tx.update(bulletinRequests).set({ status: 'COMPLETED' }).where(eq(bulletinRequests.bookingId, row.id));
       await tx.insert(bookingEvents).values({ bookingId: row.id, status: 'COMPLETED', actorId: c.get('userId'), note: 'Customer completion PIN verified.', createdAt: await serverNow(tx) });
       await tx.insert(messages).values({ bookingId: row.id, body: 'Job completed. Escrow released after customer PIN verification.', createdAt: await serverNow(tx) });
       await tx.update(proProfiles).set({ jobsDone: sql`${proProfiles.jobsDone} + 1` }).where(eq(proProfiles.userId, row.proId!));

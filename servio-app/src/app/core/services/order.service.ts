@@ -141,7 +141,7 @@ export class OrderService {
   }
 
   /** Checkout: authorize a fresh escrow hold and dispatch. */
-  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress): Promise<void> {
+  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress, bulletinId?: string): Promise<void> {
     const user = this.auth.user();
     if (helper && user) {
       const isSelf = helper.id === user.id || (this.api.settings.useMockApi() && !!user.fullName && helper.name === user.fullName);
@@ -152,7 +152,7 @@ export class OrderService {
       if (!place) throw new Error('Choose and confirm your service address.');
       const { booking } = await this.api.post<{ booking: BookingDto }>('/bookings', {
         skuId: sku.id, address: { street: place.street, barangay: place.barangay, city: place.city, ...(place.landmark?.trim() ? { landmark: place.landmark.trim() } : {}) }, lat: place.lat, lng: place.lng,
-        schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}),
+        schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}), ...(bulletinId ? { bulletinId } : {}),
       }, { 'Idempotency-Key': key });
       await this.load(booking.id); return;
     }

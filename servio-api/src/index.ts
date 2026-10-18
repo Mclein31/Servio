@@ -18,6 +18,7 @@ import { pro } from './routes/pro';
 import { demo } from './routes/demo';
 import { me } from './routes/me';
 import { locations } from './routes/locations';
+import { support } from './routes/support';
 import { addresses } from './routes/addresses';
 
 const app = new Hono<AppEnv>();
@@ -34,6 +35,7 @@ v1.route('/', health);
 v1.route('/', catalog);
 v1.route('/', auth);
 v1.route('/', addresses);
+v1.route('/', support);
 v1.route('/', locations);
 v1.route('/', me);
 v1.route('/', bookings);

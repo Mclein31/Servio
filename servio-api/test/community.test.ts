@@ -154,3 +154,97 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
     expect((await api('/pros?lat=91&lng=121', { headers: f.headers.customer })).status).toBe(422);
   });
 });
+
+describe.runIf(hasDb)('bulletin Pro acceptance and customer confirmation', () => {
+  let f: Awaited<ReturnType<typeof bookingFixture>>;
+  let id: string;
+  const accept = (headers: Record<string,string>) => api(`/bulletin/${id}/accept`, json({}, headers));
+  beforeEach(async () => {
+    f = await bookingFixture();
+    const response = await api('/bulletin', json({ categoryId: 'repairs', skuId: 'sku-ac-leak', description: 'Fix leaking unit', neighborhood: 'Ugac Norte' }, f.headers.customer));
+    id = ((await response.json()) as { request: { id: string } }).request.id;
+  });
+  afterEach(async () => { await f.close(); });
+  it('reserves a request once without creating a booking or authorizing a hold', async () => {
+    const before = await f.db.select().from(ledgerEntries);
+    expect((await accept(f.headers.customer)).status).toBe(403);
+    expect((await accept(f.headers.other)).status).toBe(403);
+    const responses = await Promise.all([accept(f.headers.pro), accept(f.headers.pro)]);
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+    const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
+    expect(row).toMatchObject({ status: 'ACCEPTED', acceptedProId: f.pro.id, bookingId: null });
+    expect(await f.db.select().from(ledgerEntries)).toHaveLength(before.length);
+  });
+  it('requires approved KYC and the offered SKU', async () => {
+    await f.db.update(proProfiles).set({ kycStatus: 'PENDING' }).where(eq(proProfiles.userId,f.pro.id));
+    expect((await accept(f.headers.pro)).status).toBe(403);
+    await f.db.update(proProfiles).set({ kycStatus: 'APPROVED' }).where(eq(proProfiles.userId,f.pro.id));
+    await f.db.delete(proSkus).where(eq(proSkus.proId,f.pro.id));
+    expect((await accept(f.headers.pro)).status).toBe(403);
+  });
+  it('allows only the author to confirm checkout and prevents duplicate bookings', async () => {
+    expect((await accept(f.headers.pro)).status).toBe(200);
+    const input = { bulletinId: id, skuId: 'sku-ac-leak', proId: f.pro.id,
+      address: { street:'Gate 1',barangay:'Ugac Norte',city:'Tuguegarao City' },lat:17.618111,lng:121.718927,schedule:'ASAP',paymentMethod:'GCASH' };
+    expect((await api('/bookings',json(input,f.headers.other))).status).toBe(403);
+    const responses = await Promise.all([api('/bookings',json(input,f.headers.customer)),api('/bookings',json(input,f.headers.customer))]);
+    expect(responses.map((r)=>r.status).sort()).toEqual([201,409]);
+    const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
+    expect(row!.bookingId).toBeTruthy();
+    expect((await api(`/bulletin/${id}/release`,json({},f.headers.pro))).status).toBe(409);
+  });
+  it('releases a reservation only for participants and restores the original urgency', async () => {
+    await f.db.update(bulletinRequests).set({ urgent:true,status:'URGENT' }).where(eq(bulletinRequests.id,id));
+    expect((await accept(f.headers.pro)).status).toBe(200);
+    expect((await api(`/bulletin/${id}/release`,json({},f.headers.other))).status).toBe(403);
+    expect((await api(`/bulletin/${id}/release`,json({},f.headers.customer))).status).toBe(200);
+    const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
+    expect(row).toMatchObject({ status:'URGENT',acceptedProId:null,bookingId:null });
+  });
+});
+
+describe.runIf(hasDb)('bulletin acceptance races and rollback', () => {
+  let f: Awaited<ReturnType<typeof bookingFixture>>;
+  let id: string;
+  beforeEach(async () => {
+    f = await bookingFixture();
+    await f.db.insert(proProfiles).values({ userId:f.other.id,kycStatus:'APPROVED' });
+    await f.db.insert(proSkus).values({ proId:f.other.id,skuId:'sku-ac-leak' });
+    const response = await api('/bulletin',json({categoryId:'repairs',skuId:'sku-ac-leak',description:'Leak',neighborhood:'Ugac Norte'},f.headers.customer));
+    id = ((await response.json()) as {request:{id:string}}).request.id;
+  });
+  afterEach(async () => { vi.restoreAllMocks(); await f.close(); });
+  const accept = (headers:Record<string,string>) => api(`/bulletin/${id}/accept`,json({},headers));
+  const checkout = () => api('/bookings',json({bulletinId:id,skuId:'sku-ac-leak',proId:f.pro.id,
+    address:{street:'Gate',barangay:'Ugac Norte',city:'Tuguegarao City'},lat:17.618111,lng:121.718927,schedule:'ASAP',paymentMethod:'GCASH'},f.headers.customer));
+  it('allows exactly one of two qualified Pros to reserve a request', async () => {
+    const results = await Promise.all([accept(f.headers.pro),accept(f.headers.other)]);
+    expect(results.map((r)=>r.status).sort()).toEqual([200,409]);
+  });
+  it('forbids a qualified Pro from accepting their own request', async () => {
+    await f.db.update(bulletinRequests).set({authorId:f.pro.id}).where(eq(bulletinRequests.id,id));
+    expect((await accept(f.headers.pro)).status).toBe(403);
+  });
+  it('rolls back booking linkage and funds on authorization failure, then permits retry', async () => {
+    expect((await accept(f.headers.pro)).status).toBe(200);
+    const before = await f.db.select().from(ledgerEntries);
+    vi.spyOn(mockPayments,'authorizeHold').mockRejectedValueOnce(new Error('Hold unavailable'));
+    expect((await checkout()).status).toBe(500);
+    const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
+    expect(row!.bookingId).toBeNull(); expect(await f.db.select().from(ledgerEntries)).toHaveLength(before.length);
+    expect((await checkout()).status).toBe(201);
+  });
+  it('rejects a mismatched Pro or SKU before authorizing a hold', async () => {
+    expect((await accept(f.headers.pro)).status).toBe(200);
+    const input = {bulletinId:id,skuId:'sku-ac-leak',proId:f.other.id,address:{street:'Gate',barangay:'Ugac Norte',city:'Tuguegarao City'},lat:17.618111,lng:121.718927,schedule:'ASAP',paymentMethod:'GCASH'};
+    expect((await api('/bookings',json(input,f.headers.customer))).status).toBe(409);
+    expect((await api('/bookings',json({...input,proId:f.pro.id,skuId:'sku-math'},f.headers.customer))).status).toBe(409);
+  });
+  it('serializes release against checkout and never creates a booking for a released request', async () => {
+    expect((await accept(f.headers.pro)).status).toBe(200);
+    const [booking,release] = await Promise.all([checkout(),api(`/bulletin/${id}/release`,json({},f.headers.pro))]);
+    expect([[201,409],[409,200]]).toContainEqual([booking.status,release.status]);
+    const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
+    expect(Boolean(row!.bookingId)).toBe(booking.status===201);
+  });
+});

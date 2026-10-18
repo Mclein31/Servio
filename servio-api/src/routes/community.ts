@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, sql, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or, sql, type SQLWrapper } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
 import { cityProfile, haversineKm } from '../config/cities';
 import { bulletinRequests, proProfiles, proSkus, reviews, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
+import { serverNow } from '../lib/bookings';
 import { ApiError } from '../lib/errors';
 import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
 import { validate } from '../lib/validation';
@@ -47,23 +48,26 @@ community.get('/bulletin', validate('query', v.pipe(v.strictObject({ ...location
 }), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
   const input = c.req.valid('query');
   const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
-  const rows = await c.get('db').select({ request: bulletinRequests, title: serviceSkus.name, priceCentavos: serviceSkus.priceCentavos, unit: serviceSkus.unit, author: users.fullName })
-    .from(bulletinRequests).innerJoin(serviceSkus, eq(serviceSkus.id, bulletinRequests.skuId)).innerJoin(users, eq(users.id, bulletinRequests.authorId))
-    .where(and(input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
+  const selection = { request: bulletinRequests, title: serviceSkus.name, priceCentavos: serviceSkus.priceCentavos, unit: serviceSkus.unit, author: users.fullName };
+  const query = () => c.get('db').select(selection).from(bulletinRequests).innerJoin(serviceSkus, eq(serviceSkus.id, bulletinRequests.skuId)).innerJoin(users, eq(users.id, bulletinRequests.authorId));
+  const rows = await query().where(and(input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
       input.filter === 'nearby' ? sql`${distanceSql(bulletinRequests.lat, bulletinRequests.lng, origin)} < 3` : undefined))
     .orderBy(desc(bulletinRequests.createdAt), desc(bulletinRequests.id)).limit(100);
-  const requests = rows.map((r) => ({ ...r.request, title: r.title, priceCentavos: r.priceCentavos, unit: r.unit, author: r.author ?? 'Neighbor',
+  const viewer = c.get('userId');
+  const pending = await query().where(and(or(eq(bulletinRequests.authorId, viewer), eq(bulletinRequests.acceptedProId, viewer)),eq(bulletinRequests.status,'ACCEPTED'),isNull(bulletinRequests.bookingId)));
+  const combined = [...new Map([...rows,...pending].map(row=>[row.request.id,row])).values()];
+  const requests = combined.map((r) => ({ ...r.request, bookingId: viewer === r.request.authorId || viewer === r.request.acceptedProId ? r.request.bookingId : null, title: r.title, priceCentavos: r.priceCentavos, unit: r.unit, author: r.author ?? 'Neighbor',
     distanceKm: r.request.lat != null && r.request.lng != null ? haversineKm(origin, { lat: r.request.lat, lng: r.request.lng }) : null,
-  })).filter((r) => input.filter !== 'nearby' || (r.distanceKm !== null && r.distanceKm < 3));
+  })).filter((r) => (r.status === 'ACCEPTED' && !r.bookingId && (r.authorId === viewer || r.acceptedProId === viewer)) || input.filter !== 'nearby' || (r.distanceKm !== null && r.distanceKm < 3));
   return c.json({ requests });
 });
 
-community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuery, category: v.optional(text(100)) }), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
+community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuery, id: v.optional(v.pipe(v.string(),v.uuid())), category: v.optional(text(100)) }), v.check((input) => paired(input), 'Provide both coordinates.'))), async (c) => {
   const input = c.req.valid('query');
   const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
   const rows = await c.get('db').select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey, profile: proProfiles })
     .from(users).innerJoin(proProfiles, eq(proProfiles.userId, users.id))
-    .where(and(eq(users.role, 'PRO'), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'),
+    .where(and(input.id ? eq(users.id,input.id) : undefined,eq(users.role, 'PRO'), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'),
       sql`EXISTS (SELECT 1 FROM pro_skus p JOIN service_skus s ON s.id=p.sku_id WHERE p.pro_id=${users.id} AND s.is_active=true ${input.category ? sql`AND s.category_id=${input.category}` : sql``})`))
     .orderBy(sql`${distanceSql(proProfiles.lastLat, proProfiles.lastLng, origin)} ASC NULLS LAST`, desc(proProfiles.ratingAvg), asc(users.id)).limit(100);
   const pros = [];
@@ -81,4 +85,48 @@ community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuer
   }
   pros.sort((a,b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || b.rating - a.rating);
   return c.json({ pros });
+});
+
+const bulletinId = v.strictObject({ id: v.pipe(v.string(), v.uuid()) });
+
+community.get('/bulletin/:id', validate('param', bulletinId), async (c) => {
+  const [request] = await c.get('db').select().from(bulletinRequests).where(eq(bulletinRequests.id, c.req.valid('param').id));
+  if (!request) throw new ApiError(404, 'NOT_FOUND', 'Request not found.');
+  const viewer = c.get('userId');
+  return c.json({ request: { ...request, bookingId: viewer === request.authorId || viewer === request.acceptedProId ? request.bookingId : null } });
+});
+
+// This reserves a bulletin only. The author must explicitly authorize checkout before a job exists.
+community.post('/bulletin/:id/accept', validate('param', bulletinId), validate('json', v.strictObject({})), async (c) => {
+  const proId = c.get('userId');
+  const request = await c.get('db').transaction(async (tx) => {
+    const [row] = await tx.select().from(bulletinRequests).where(eq(bulletinRequests.id, c.req.valid('param').id)).for('update');
+    if (!row) throw new ApiError(404, 'NOT_FOUND', 'Request not found.');
+    if (row.authorId === proId) throw new ApiError(403, 'SELF_ACCEPT_NOT_ALLOWED', 'You cannot accept your own request.');
+    const [qualified] = await tx.select({ id: users.id }).from(users)
+      .innerJoin(proProfiles, eq(proProfiles.userId, users.id)).innerJoin(proSkus, eq(proSkus.proId, users.id))
+      .innerJoin(serviceSkus, eq(serviceSkus.id, proSkus.skuId))
+      .where(and(eq(users.id, proId), eq(users.role, 'PRO'), eq(users.isActive, true),
+        eq(proProfiles.kycStatus, 'APPROVED'), eq(proSkus.skuId, row.skuId), eq(serviceSkus.isActive, true)));
+    if (!qualified) throw new ApiError(403, 'QUALIFIED_PRO_REQUIRED', 'Switch to an approved Pro account offering this service before accepting.');
+    if (row.status === 'ACCEPTED' && row.acceptedProId === proId && !row.bookingId) return row;
+    if (!['OPEN', 'URGENT'].includes(row.status) || row.acceptedProId || row.bookingId) throw new ApiError(409, 'REQUEST_CLOSED', 'This request has already been accepted or closed.');
+    const [changed] = await tx.update(bulletinRequests).set({ status: 'ACCEPTED', acceptedProId: proId, acceptedAt: await serverNow(tx) })
+      .where(eq(bulletinRequests.id, row.id)).returning();
+    return changed!;
+  });
+  return c.json({ request });
+});
+
+community.post('/bulletin/:id/release', validate('param', bulletinId), validate('json', v.strictObject({})), async (c) => {
+  const request = await c.get('db').transaction(async (tx) => {
+    const [row] = await tx.select().from(bulletinRequests).where(eq(bulletinRequests.id, c.req.valid('param').id)).for('update');
+    if (!row) throw new ApiError(404, 'NOT_FOUND', 'Request not found.');
+    if (row.authorId !== c.get('userId') && row.acceptedProId !== c.get('userId')) throw new ApiError(403, 'PARTICIPANT_REQUIRED', 'Only the customer or accepting Pro can release this request.');
+    if (row.bookingId || row.status !== 'ACCEPTED') throw new ApiError(409, 'REQUEST_CLOSED', 'This request is no longer awaiting confirmation.');
+    const [changed] = await tx.update(bulletinRequests).set({ status: row.urgent ? 'URGENT' : 'OPEN', acceptedProId: null, acceptedAt: null })
+      .where(eq(bulletinRequests.id, row.id)).returning();
+    return changed!;
+  });
+  return c.json({ request });
 });

@@ -11,20 +11,16 @@ import { filter, take } from 'rxjs';
 })
 export class AppComponent {
   readonly launching = signal(true);
+  readonly pageReady = signal(false);
 
   constructor() {
     const router = inject(Router);
     const destroyRef = inject(DestroyRef);
-    let minimumElapsed = false;
-    let pageReady = router.navigated;
-    const reveal = () => {
-      if (minimumElapsed && pageReady) this.launching.set(false);
-    };
+    this.pageReady.set(router.navigated);
 
     const timer = setTimeout(() => {
-      minimumElapsed = true;
-      reveal();
-    }, 1400);
+      this.launching.set(false);
+    }, 2000);
     destroyRef.onDestroy(() => clearTimeout(timer));
 
     router.events.pipe(
@@ -32,8 +28,7 @@ export class AppComponent {
       take(1),
       takeUntilDestroyed(destroyRef),
     ).subscribe(() => {
-      pageReady = true;
-      reveal();
+      this.pageReady.set(true);
     });
   }
 }

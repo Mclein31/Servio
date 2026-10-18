@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ledgerEntries, uploads, users } from '../src/db/schema';
-import { api, bookingFixture, hasDb } from './helpers';
+import { api, bookingFixture, hasDb, json } from './helpers';
 
 describe.runIf(hasDb)('real account profile editing',()=>{
   let f:Awaited<ReturnType<typeof bookingFixture>>;
@@ -27,6 +27,7 @@ describe.runIf(hasDb)('real account profile editing',()=>{
     const key=`uploads/avatar/2026/10/${crypto.randomUUID()}.png`;
     await f.db.insert(uploads).values({ key,ownerId:f.pro.id,purpose:'avatar',contentType:'image/png',contentLength:3 });
     expect((await patch({ avatarKey:key })).status).toBe(404);
+    await f.db.update(uploads).set({ ownerId:f.customer.id }).where(eq(uploads.key,key));
     expect((await patch({ avatarKey:key })).status).toBe(422);
   });
 
@@ -58,5 +59,22 @@ describe.runIf(hasDb)('real account profile editing',()=>{
     expect(blockedRes.status).toBe(409);
     const blockedJson = await blockedRes.json() as any;
     expect(blockedJson.error.code).toBe('ACTIVE_BOOKINGS_EXIST');
+  });
+});
+
+describe.runIf(hasDb)('saved Pro service category', () => {
+  let f: Awaited<ReturnType<typeof bookingFixture>>;
+  beforeEach(async()=>{ f=await bookingFixture(); });
+  afterEach(async()=>{ await f.close(); });
+  it('saves offered service IDs and returns them after reopening the account',async()=>{
+    const response=await api('/me/pro-trade',json({categoryId:'tutoring'},f.headers.pro));
+    expect(response.status).toBe(200);
+    const saved=await response.json() as {pro:{headline:string;skuIds:string[]}};
+    expect(saved.pro.headline).toBe('Academic Tutor'); expect(saved.pro.skuIds.length).toBeGreaterThan(0);
+    const reopened=await (await api('/me',{headers:f.headers.pro})).json() as {pro:{headline:string;skuIds:string[]}};
+    expect(reopened.pro.skuIds.sort()).toEqual(saved.pro.skuIds.sort());
+    expect(reopened.pro.headline).toBe('Academic Tutor');
+    const directory=await (await api('/pros?category=tutoring',{headers:f.headers.customer})).json() as {pros:{id:string}[]};
+    expect(directory.pros.some(p=>p.id===f.pro.id)).toBe(true);
   });
 });

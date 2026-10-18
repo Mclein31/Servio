@@ -18,6 +18,7 @@ export interface AppUser {
   isDemo?: boolean; id: string; email: string; role: 'CUSTOMER' | 'PRO' | 'ADMIN'; fullName: string | null; phoneNumber: string | null; avatarKey: string | null;
 }
 export interface AppPro {
+  headline?: string | null; skuIds?: string[];
   userId: string; isOnline: boolean; kycStatus: string; jobsDone: number; ratingAvg: string; ratingCount: number;
 }
 
