@@ -6,7 +6,7 @@ The API is a Cloudflare Worker backed by the SERVIO Neon production branch throu
 
 ## Current update — October 18, 2026
 
-Worker version: `639c8009-668e-48bd-91df-5e9f4aa734c2`.
+Worker version: `6d8fca71-c659-4d6c-b871-3d6fa67f39ca`.
 
 Applied additive migrations `0008_bulletin_acceptance` and `0009_profile_help_payments` using the existing direct production connection; migration history advanced from 8 to 10 entries. Do not run local database reset or seed commands against production.
 
@@ -32,3 +32,5 @@ The branded preload lasts two seconds with an orange spinner. Slow initial navig
 ## Staff support API
 
 Only an authenticated ADMIN may GET `/support/admin/requests` or POST `/support/admin/requests/:id` with status `OPEN`, `REVIEWING`, or `RESOLVED`. Users can list and submit their own reports at `/support/requests`. No external support email or promised response time is configured.
+
+Latest update also deploys owner request cancellation, individual service withdrawal and measured-origin/freshness-aware discovery. No additional migration was needed. Live endpoint smoke checks passed; client loading no longer waits for profile/helper photos or GPS. 191 backend and 83 client tests pass.

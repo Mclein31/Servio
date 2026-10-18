@@ -20,6 +20,7 @@
 </ion-header>
 
 <ion-content class="servio-page" [fullscreen]="false">
+  <app-discovery-location></app-discovery-location>
   <div class="servio-section first">
     @if (community.error()) { <p role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
     <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)" (filterClick)="openFilters()"></app-search-filter>

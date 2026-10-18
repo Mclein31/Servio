@@ -36,7 +36,7 @@ import { PhpPipe } from '../../pipes/php.pipe';
                   }
                 </span>
                 <span>{{ h.rating | number: '1.1-1' }} ({{ h.reviewCount }})</span>
-                <span>· {{ h.distanceKm }} km</span>
+                <span>{{ isFinite(h.distanceKm) ? '· ' + h.distanceKm + ' km away' : '· Distance unavailable' }}</span>
               </div>
             </div>
           </header>
@@ -115,6 +115,7 @@ import { PhpPipe } from '../../pipes/php.pipe';
   styleUrl: './helper-profile-modal.component.scss',
 })
 export class HelperProfileModalComponent implements OnInit {
+  readonly isFinite = Number.isFinite;
   @Input() helperId = 'daniel';
 
   private readonly modals = inject(ModalController);

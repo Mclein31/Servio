@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, or, sql, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, ne, or, sql, type SQLWrapper } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
 import { cityProfile, haversineKm } from '../config/cities';
@@ -50,14 +50,15 @@ community.get('/bulletin', validate('query', v.pipe(v.strictObject({ ...location
   const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
   const selection = { request: bulletinRequests, title: serviceSkus.name, priceCentavos: serviceSkus.priceCentavos, unit: serviceSkus.unit, author: users.fullName };
   const query = () => c.get('db').select(selection).from(bulletinRequests).innerJoin(serviceSkus, eq(serviceSkus.id, bulletinRequests.skuId)).innerJoin(users, eq(users.id, bulletinRequests.authorId));
-  const rows = await query().where(and(input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
+  const rows = await query().where(and(or(ne(bulletinRequests.status,'CANCELLED'),eq(bulletinRequests.authorId,c.get('userId'))),input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
       input.filter === 'nearby' ? sql`${distanceSql(bulletinRequests.lat, bulletinRequests.lng, origin)} < 3` : undefined))
     .orderBy(desc(bulletinRequests.createdAt), desc(bulletinRequests.id)).limit(100);
   const viewer = c.get('userId');
   const pending = await query().where(and(or(eq(bulletinRequests.authorId, viewer), eq(bulletinRequests.acceptedProId, viewer)),eq(bulletinRequests.status,'ACCEPTED'),isNull(bulletinRequests.bookingId)));
-  const combined = [...new Map([...rows,...pending].map(row=>[row.request.id,row])).values()];
+  const owned = await query().where(eq(bulletinRequests.authorId,viewer)).orderBy(desc(bulletinRequests.createdAt)).limit(100);
+  const combined = [...new Map([...rows,...pending,...owned].map(row=>[row.request.id,row])).values()];
   const requests = combined.map((r) => ({ ...r.request, bookingId: viewer === r.request.authorId || viewer === r.request.acceptedProId ? r.request.bookingId : null, title: r.title, priceCentavos: r.priceCentavos, unit: r.unit, author: r.author ?? 'Neighbor',
-    distanceKm: r.request.lat != null && r.request.lng != null ? haversineKm(origin, { lat: r.request.lat, lng: r.request.lng }) : null,
+    distanceKm: input.lat !== undefined && r.request.lat != null && r.request.lng != null ? haversineKm(origin, { lat: r.request.lat, lng: r.request.lng }) : null,
   })).filter((r) => (r.status === 'ACCEPTED' && !r.bookingId && (r.authorId === viewer || r.acceptedProId === viewer)) || input.filter !== 'nearby' || (r.distanceKm !== null && r.distanceKm < 3));
   return c.json({ requests });
 });
@@ -69,7 +70,7 @@ community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuer
     .from(users).innerJoin(proProfiles, eq(proProfiles.userId, users.id))
     .where(and(input.id ? eq(users.id,input.id) : undefined,eq(users.role, 'PRO'), eq(users.isActive, true), eq(proProfiles.kycStatus, 'APPROVED'),
       sql`EXISTS (SELECT 1 FROM pro_skus p JOIN service_skus s ON s.id=p.sku_id WHERE p.pro_id=${users.id} AND s.is_active=true ${input.category ? sql`AND s.category_id=${input.category}` : sql``})`))
-    .orderBy(sql`${distanceSql(proProfiles.lastLat, proProfiles.lastLng, origin)} ASC NULLS LAST`, desc(proProfiles.ratingAvg), asc(users.id)).limit(100);
+    .orderBy(sql`CASE WHEN ${input.lat !== undefined} AND ${proProfiles.lastLocatedAt} BETWEEN NOW() - INTERVAL '15 minutes' AND NOW() THEN ${distanceSql(proProfiles.lastLat, proProfiles.lastLng, origin)} END ASC NULLS LAST`, desc(proProfiles.ratingAvg), asc(users.id)).limit(100);
   const pros = [];
   for (const row of rows) {
     const skus = await c.get('db').select({ sku: serviceSkus }).from(proSkus).innerJoin(serviceSkus, eq(serviceSkus.id, proSkus.skuId))
@@ -80,7 +81,7 @@ community.get('/pros', validate('query', v.pipe(v.strictObject({ ...locationQuer
     const p = row.profile;
     pros.push({ id: row.id, name: row.name ?? 'SERVIO Pro', avatarKey: row.avatarKey, headline: p.headline, bio: p.bio, credentials: p.credentials,
       yearsExperience: p.yearsExperience, jobsDone: p.jobsDone, rating: Number(p.ratingAvg), ratingCount: p.ratingCount,
-      isOnline: p.isOnline, distanceKm: p.lastLat != null && p.lastLng != null ? haversineKm(origin, { lat: p.lastLat, lng: p.lastLng }) : null,
+      isOnline: p.isOnline, distanceKm: input.lat !== undefined && p.lastLocatedAt && Date.now()-p.lastLocatedAt.getTime()>=0 && Date.now()-p.lastLocatedAt.getTime()<15*60000 && p.lastLat != null && p.lastLng != null ? haversineKm(origin, { lat: p.lastLat, lng: p.lastLng }) : null,
       fromPriceCentavos: Math.min(...skus.map((s) => s.sku.priceCentavos)), skus: skus.map((s) => s.sku), reviews: feedback });
   }
   pros.sort((a,b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || b.rating - a.rating);
@@ -100,6 +101,7 @@ community.get('/bulletin/:id', validate('param', bulletinId), async (c) => {
 community.post('/bulletin/:id/accept', validate('param', bulletinId), validate('json', v.strictObject({})), async (c) => {
   const proId = c.get('userId');
   const request = await c.get('db').transaction(async (tx) => {
+    await tx.select({id:users.id}).from(users).where(eq(users.id,proId)).for('no key update');
     const [row] = await tx.select().from(bulletinRequests).where(eq(bulletinRequests.id, c.req.valid('param').id)).for('update');
     if (!row) throw new ApiError(404, 'NOT_FOUND', 'Request not found.');
     if (row.authorId === proId) throw new ApiError(403, 'SELF_ACCEPT_NOT_ALLOWED', 'You cannot accept your own request.');
@@ -129,4 +131,16 @@ community.post('/bulletin/:id/release', validate('param', bulletinId), validate(
     return changed!;
   });
   return c.json({ request });
+});
+
+community.post('/bulletin/:id/cancel',validate('param',bulletinId),validate('json',v.strictObject({})),async(c)=>{
+  const request=await c.get('db').transaction(async(tx)=>{
+    const [row]=await tx.select().from(bulletinRequests).where(eq(bulletinRequests.id,c.req.valid('param').id)).for('update');
+    if(!row)throw new ApiError(404,'NOT_FOUND','Request not found.');
+    if(row.authorId!==c.get('userId'))throw new ApiError(403,'REQUEST_OWNER_REQUIRED','Only the author can cancel this request.');
+    if(row.bookingId)throw new ApiError(409,'BOOKING_EXISTS','Open the booking to cancel it under the booking cancellation rules.');
+    if(row.status==='CANCELLED')return row;
+    if(!['OPEN','URGENT','ACCEPTED'].includes(row.status))throw new ApiError(409,'REQUEST_CLOSED','This request is already closed.');
+    const [changed]=await tx.update(bulletinRequests).set({status:'CANCELLED',acceptedProId:null,acceptedAt:null}).where(eq(bulletinRequests.id,row.id)).returning();return changed!;
+  });return c.json({request});
 });

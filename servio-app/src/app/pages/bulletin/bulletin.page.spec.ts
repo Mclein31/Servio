@@ -21,7 +21,7 @@ describe('Bulletin request interaction', () => {
   beforeEach(() => {
     vi.resetAllMocks(); requests.set([{...request}]); user.set({id:'pro',role:'PRO'});
     TestBed.configureTestingModule({ providers:[
-      {provide:CommunityService,useValue:{requests,acceptRequest,releaseRequest,bulletin:vi.fn().mockResolvedValue(undefined),error:signal('')}},
+      {provide:CommunityService,useValue:{requests,acceptRequest,releaseRequest,location:{locating:signal(false),point:signal(null),error:signal('')},bulletin:vi.fn().mockResolvedValue(undefined),error:signal('')}},
       {provide:AuthService,useValue:{user}}, {provide:OrderService,useValue:{load:vi.fn()}},
       {provide:Router,useValue:{navigate}}, {provide:SheetsService,useValue:{}},
       {provide:ActionSheetController,useValue:{}}, {provide:ActivatedRoute,useValue:{queryParamMap:of(convertToParamMap({}))}},

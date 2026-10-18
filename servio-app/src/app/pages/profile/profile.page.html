@@ -53,6 +53,7 @@
             <span class="svc-name">{{ s.name }}</span>
             <span class="svc-detail">{{ s.detail }}</span>
           </div>
+          <button type="button" class="text-btn" [disabled]="!!removingService()" (click)="removeService(s.id)" [attr.aria-label]="'Remove ' + s.name">{{ removingService() === s.id ? 'Removing…' : 'Remove' }}</button>
           <span class="price-tag">{{ s.pricePhp | php: 'whole' }}/{{ s.unit }}</span>
         </div>
       }

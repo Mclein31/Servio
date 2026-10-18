@@ -1,7 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import { bookings, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
+import { bulletinRequests, bookings, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
 import { ApiError } from '../lib/errors';
 import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
@@ -234,4 +234,19 @@ me.post('/me/payment-methods', validate('json',v.strictObject({ preferred:v.pick
   const [user] = await c.get('db').update(users).set({ preferredPaymentMethod:c.req.valid('json').preferred,updatedAt:new Date() })
     .where(eq(users.id,c.get('userId'))).returning({preferred:users.preferredPaymentMethod});
   return c.json({ preferred:user!.preferred,simulated:true,methods:['GCASH','CARD'] });
+});
+
+me.delete('/me/services/:skuId',validate('param',v.strictObject({skuId:v.pipe(v.string(),v.minLength(1),v.maxLength(100))})),async(c)=>{
+  const userId=c.get('userId');const skuId=c.req.valid('param').skuId;
+  await c.get('db').transaction(async(tx)=>{
+    const [actor]=await tx.select({role:users.role}).from(users).where(eq(users.id,userId)).for('no key update');
+    if(actor?.role==='ADMIN')throw new ApiError(403,'FORBIDDEN','Staff cannot change service listings.');
+    const [profile]=await tx.select().from(proProfiles).where(eq(proProfiles.userId,userId));
+    if(!profile)throw new ApiError(403,'PRO_REQUIRED','A Pro profile is required.');
+    await tx.delete(proSkus).where(and(eq(proSkus.proId,userId),eq(proSkus.skuId,skuId)));
+    await tx.update(bulletinRequests).set({status:sql`CASE WHEN ${bulletinRequests.urgent} THEN 'URGENT'::request_status ELSE 'OPEN'::request_status END`,acceptedProId:null,acceptedAt:null})
+      .where(and(eq(bulletinRequests.acceptedProId,userId),eq(bulletinRequests.skuId,skuId),sql`${bulletinRequests.bookingId} IS NULL`,eq(bulletinRequests.status,'ACCEPTED')));
+  });
+  const offered=await c.get('db').select({skuId:proSkus.skuId}).from(proSkus).where(eq(proSkus.proId,userId));
+  return c.json({skuIds:offered.map(s=>s.skuId)});
 });
