@@ -51,7 +51,7 @@ export class BulletinPage {
   ionViewWillEnter(): void {
     void this.community.refresh();
     this.stopRefresh();
-    this.refreshTimer = setInterval(() => void this.community.bulletin().catch(() => undefined), 10000);
+    this.refreshTimer = setInterval(() => void this.community.bulletin().catch(() => undefined), 30000);
   }
   ionViewDidLeave(): void { this.stopRefresh(); }
   private stopRefresh(): void { clearInterval(this.refreshTimer); this.refreshTimer = undefined; }

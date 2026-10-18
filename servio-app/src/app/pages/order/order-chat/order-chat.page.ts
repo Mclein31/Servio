@@ -77,8 +77,8 @@ export class OrderChatPage {
       if(['connected','message'].includes(event.type))void this.refresh();
     });
     void this.refresh();
-    // Live delivery is primary; incremental polling recovers missed/disconnected events.
-    this.timer=setInterval(()=>void this.refresh(),10000);
+    // Live delivery is primary; slower incremental polling recovers missed/disconnected events.
+    this.timer=setInterval(()=>void this.refresh(),30000);
   }
   ionViewDidEnter():void{void this.content?.scrollToBottom(0);}
   ionViewDidLeave(): void { this.stop(); }

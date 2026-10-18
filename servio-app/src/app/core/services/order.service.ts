@@ -146,7 +146,7 @@ export class OrderService {
         try { await this.refresh(); } finally { this.polling = false; }
       };
       void refresh();
-      const timer = setInterval(() => void refresh(), 4000);
+      const timer = setInterval(() => void refresh(), 30000);
       cleanup(() => clearInterval(timer));
     });
   }

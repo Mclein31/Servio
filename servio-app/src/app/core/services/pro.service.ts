@@ -46,7 +46,7 @@ export class ProService {
       this.offer.set(null);
       if (mock || user?.role !== 'PRO') return;
       void this.poll();
-      const timer = setInterval(() => void this.poll(), 3000);
+      const timer = setInterval(() => void this.poll(), 15000);
       cleanup(() => clearInterval(timer));
     });
   }
@@ -64,7 +64,6 @@ export class ProService {
       const previous = this.offer()?.id;
       this.serverOffsetMs.set(Date.parse(result.serverNow) - Date.now()); this.offer.set(result.offer); this.error.set('');
       if (result.offer && result.offer.id !== previous && this.router.url === '/pro') await this.router.navigateByUrl('/pro/radar-alert');
-      await this.wallet.refresh();
     } catch (error) {
       if (error instanceof ApiFailure && error.code === 'PRO_REQUIRED') this.deniedProUserId = userId;
       this.error.set(error instanceof Error ? error.message : 'Could not receive jobs.');
