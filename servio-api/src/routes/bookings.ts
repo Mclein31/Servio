@@ -112,6 +112,20 @@ bookings.get('/bookings/:id', validate('param', idSchema), async (c) => {
   return c.json({ booking: await bookingDetails(c.get('db'), row, c.get('userId'), c.env.PIN_SECRET) });
 });
 
+// Contact numbers are available only to the two participants of an accepted, active booking.
+bookings.get('/bookings/:id/contact', validate('param', idSchema), async (c) => {
+  const userId = c.get('userId');
+  const row = await participantBooking(c.get('db'), c.req.valid('param').id, userId);
+  c.header('Cache-Control', 'no-store');
+  if (!row.proId || !['ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(row.status)) {
+    throw new ApiError(409, 'CALL_UNAVAILABLE', 'Calls are available only during an assigned active booking.');
+  }
+  const peerId = row.customerId === userId ? row.proId : row.customerId;
+  const [peer] = await c.get('db').select({ phoneNumber: users.phoneNumber }).from(users)
+    .where(and(eq(users.id, peerId), eq(users.isActive, true)));
+  return c.json({ phoneNumber: peer?.phoneNumber ?? null });
+});
+
 const ListBookings = v.strictObject({
   role: v.optional(v.picklist(['customer', 'pro']), 'customer'),
   status: v.optional(v.picklist(bookingStatus.enumValues)),

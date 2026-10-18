@@ -1,6 +1,6 @@
 # SERVIO — Project Context
 
-> **Last Updated:** 2026-10-16
+> **Last Updated:** 2026-10-18
 > **Status:** Demo + real-user flow readiness on `feature/app-and-backend`
 > **Repository Root:** `/Users/mclein/Documents/Developer/Personal_Projects/SERVIO`  
 > **Knowledge Vault:** `vault/00_Index/MOC_Servio.md`
@@ -44,7 +44,7 @@ SERVIO eliminates this friction by treating services as **standardized catalog i
 
 ## 3. Technology Stack Guidelines (Target)
 
-**Current implementation:** Ionic 9 / Angular 22.2.3 / Capacitor 8 client; Hono Cloudflare Workers API, Drizzle/Postgres, R2 uploads and Durable Object booking/Pro sockets. Real email-code customer creation, editable account profiles and owner-scoped map-pinned addresses are implemented; payment holds/releases/tips/cashouts remain mock. Gmail credentials are owner-configured locally (`docs/EMAIL_SETUP.md`). `npm run native:demo` prepares LAN-capable Debug packages; Release uses strict network settings. The runbook and remaining physical-device checks are in `docs/DEMO_CHECKLIST.md`. No SERVIO cloud resources have been created or deployed by this work.
+**Current implementation:** Ionic 9 / Angular 22.2.3 / Capacitor 8 client; Hono Cloudflare Workers API, Drizzle/Postgres, R2 uploads and Durable Object booking/Pro sockets. Real email-code customer creation, editable account profiles and owner-scoped map-pinned addresses are implemented; payment holds/releases/tips/cashouts remain mock. Gmail credentials are owner-configured locally (`docs/EMAIL_SETUP.md`). `npm run native:demo` prepares LAN-capable Debug packages; Release uses strict network settings. The runbook and remaining physical-device checks are in `docs/DEMO_CHECKLIST.md`. No SERVIO cloud resources have been created or deployed by this work. Maps use key-free OpenStreetMap tiles with pin-triggered Nominatim address autofill via a cached, globally rate-limited API endpoint (`docs/MAPS.md`). Active booking calls open the peer’s number in the device dialer via a participant-only endpoint (ADR-031).
 
 
 - **Mobile Client:** **Ionic-Angular (`@ionic/angular` + Angular 17/18+ Standalone Components)** with **HTML5** and **SCSS** styling, packaged for mobile via **Capacitor**.

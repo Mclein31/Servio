@@ -34,9 +34,17 @@ simple = { limit = 10, period = 60 }
 name = "ORDER_ROOMS"
 class_name = "OrderRoom"
 
+[[durable_objects.bindings]]
+name = "GEOCODER"
+class_name = "Geocoder"
+
 [[migrations]]
 tag = "servio-order-room-v1"
 new_sqlite_classes = ["OrderRoom"]
+
+[[migrations]]
+tag = "servio-geocoder-v1"
+new_sqlite_classes = ["Geocoder"]
 
 [env.production]
 name = "servio-api"
@@ -62,3 +70,7 @@ bucket_name = "servio-uploads"
 [[env.production.durable_objects.bindings]]
 name = "ORDER_ROOMS"
 class_name = "OrderRoom"
+
+[[env.production.durable_objects.bindings]]
+name = "GEOCODER"
+class_name = "Geocoder"

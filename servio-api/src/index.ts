@@ -1,3 +1,4 @@
+export { Geocoder } from './locations/geocoder';
 export { OrderRoom } from './live/order-room';
 import { live } from './routes/live';
 import { notifyLive } from './live/notify';
@@ -16,6 +17,7 @@ import { wallet } from './routes/wallet';
 import { pro } from './routes/pro';
 import { demo } from './routes/demo';
 import { me } from './routes/me';
+import { locations } from './routes/locations';
 import { addresses } from './routes/addresses';
 
 const app = new Hono<AppEnv>();
@@ -32,6 +34,7 @@ v1.route('/', health);
 v1.route('/', catalog);
 v1.route('/', auth);
 v1.route('/', addresses);
+v1.route('/', locations);
 v1.route('/', me);
 v1.route('/', bookings);
 v1.route('/', uploads);

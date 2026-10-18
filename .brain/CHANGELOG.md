@@ -319,3 +319,9 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 - Synchronized `.brain/PROJECT_CONTEXT.md` and `.brain/ARCHITECTURE.md` with the 5-tab unified client topology.
 
 
+
+## 2026-10-18 — Address pinning, calls and icons
+
+- Owner selected key-free Leaflet/OpenStreetMap maps. Pin taps/drags/GPS reverse geocode through Nominatim with stale-response protection, caching and global request limits (`docs/MAPS.md`).
+- Tracking/chat/Pro call actions open the peer's number via a participant-only active-booking endpoint; missing numbers show the requested message.
+- Remaining UI glyph/custom success icons replaced with Ionicons. See ADR-031.

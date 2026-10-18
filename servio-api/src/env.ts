@@ -4,6 +4,9 @@ import type { Database } from './db/client';
 export interface Bindings {
   ENVIRONMENT: string;
   ORDER_ROOMS: DurableObjectNamespace;
+  GEOCODER: DurableObjectNamespace;
+  /** Reverse-geocoding endpoint; switch providers without releasing the app. */
+  GEOCODING_URL?: string;
   /** Key in config/cities.ts; defaults to tuguegarao. */
   LAUNCH_CITY?: string;
   /** Comma-separated origins allowed by CORS (includes the Capacitor app origins). */

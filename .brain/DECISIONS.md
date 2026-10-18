@@ -307,3 +307,11 @@
   4. **Admin Protection:** Staff/admin accounts (`users.role === 'ADMIN'`) are protected and cannot be mutated or demoted via self-service mobile endpoints.
   5. **Client UX Flow:** In `ProfilePage`, accounts with an approved Pro profile have a direct "Switch to Servio Pro" action calling `auth.switchRole('PRO')` without re-prompting. Non-pro customer accounts receive the "Become a Servio Pro" activation dialog calling `auth.upgradeToPro()`.
 
+
+## ADR-031: Key-free map address autofill and booking phone calls
+
+- **Date:** 2026-10-18
+- **Status:** Accepted (owner requested)
+- **Decision:** The owner chose a key-free alternative after confirming no Google key was available. Retain Leaflet with standard OpenStreetMap tiles for addresses, tracking and bulletin. Reverse geocode pin selections through authenticated `/locations/reverse` using Nominatim, a singleton rate limiter and bounded cache. Ignore stale responses and allow manual completion of missing details. See `docs/MAPS.md`.
+- **Calls:** The owner explicitly requested dialing the other participant's saved number. Active assigned booking participants can request their peer's number through `/bookings/:id/contact` and open the device dialer. This supersedes the earlier masked-only direction for this flow. Public discovery never includes these numbers. Missing numbers show “Call not available. User did not add his number”. These are carrier calls, not proxy masking or VoIP.
+- **Icons:** UI controls use registered Ionicons; artwork and QR graphics remain illustrations.

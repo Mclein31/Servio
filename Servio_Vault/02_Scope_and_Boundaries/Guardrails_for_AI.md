@@ -64,3 +64,7 @@ Before submitting any code, prompt, or architectural diagram, execute this menta
 - [[Domain_Model]] — Entity definitions.
 - [[Screen_Inventory]] — Authorized screens.
 - [[MOC_Servio]] — Back to Master Map of Content.
+
+## Owner-requested communication update — 2026-10-18
+
+ADR-031 supersedes the masked-only requirement for active-booking call actions: assigned booking participants may open the device dialer using their peer's saved number. Public discovery must still exclude phone numbers. The owner chose key-free Leaflet/OpenStreetMap maps with Nominatim address autofill; configuration is documented in `docs/MAPS.md`.
