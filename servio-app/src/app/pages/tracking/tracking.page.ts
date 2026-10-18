@@ -14,6 +14,16 @@ import { PhpPipe } from '../../shared/pipes/php.pipe';
 import { DecimalPipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 
+export function canShowProviderTracking(
+  role: 'CUSTOMER' | 'PRO' | 'ADMIN' | undefined,
+  customerId: string | undefined,
+  userId: string | undefined,
+  isActive: boolean,
+  isMockApi: boolean,
+): boolean {
+  return role === 'CUSTOMER' && isActive && (isMockApi || (!!userId && customerId === userId));
+}
+
 @Component({
   selector: 'app-tracking',
   templateUrl: 'tracking.page.html',
@@ -32,6 +42,13 @@ export class TrackingPage {
   private readonly alerts = inject(AlertController);
   readonly cancelling = signal(false);
   readonly history = computed(() => this.orders.history().filter((item) => item.status !== 'CANCELLED'));
+  readonly canTrackProvider = computed(() => canShowProviderTracking(
+    this.auth.user()?.role,
+    this.orders.order().customerId,
+    this.auth.user()?.id,
+    this.orders.isActive(),
+    this.orders.api.settings.useMockApi(),
+  ));
   readonly partner = computed(() => {
     const o = this.orders.order();
     const isPro = this.auth.user()?.role === 'PRO';
