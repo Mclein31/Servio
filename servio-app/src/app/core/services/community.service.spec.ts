@@ -52,5 +52,15 @@ describe('nonblocking discovery loading',()=>{
   await community.acceptRequest('request');
   expect(community.requests()[0]).toMatchObject({id:'request',status:'ACCEPTED',acceptedProId:'current-pro',bookingId:null});
  });
+ it('updates a cancelled Bulletin request from the mutation response without refetching the feed',async()=>{
+  get.mockResolvedValue({requests:[{id:'request',authorId:'customer',skuId:'sku',acceptedProId:'pro',bookingId:null,title:'Repair',description:'Leak',categoryId:'repairs',
+   author:'Customer',createdAt:new Date().toISOString(),neighborhood:'Ugac Norte',distanceKm:null,priceCentavos:1000,unit:'job',status:'ACCEPTED',lat:null,lng:null}]});
+  post.mockResolvedValue({request:{id:'request',status:'CANCELLED',acceptedProId:null,bookingId:null}});
+  const community=TestBed.inject(CommunityService);
+  await community.bulletin();
+  await community.cancelRequest('request');
+  expect(community.requests()[0]).toMatchObject({id:'request',status:'CANCELLED',acceptedProId:null});
+  expect(get).toHaveBeenCalledTimes(1);
+ });
 
 });

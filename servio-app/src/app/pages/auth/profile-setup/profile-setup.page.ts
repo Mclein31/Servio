@@ -67,7 +67,7 @@ export class ProfileSetupPage {
     if (!this.valid() || this.saving() || this.uploading()) return;
     this.saving.set(true); this.error.set('');
     try {
-      await this.auth.updateProfile(this.name().trim(), this.phone().trim() || null, this.avatarKey());
+      await this.auth.updateProfile(this.name().trim(), this.phone().trim() || null, this.avatarKey(), this.preview());
       await this.router.navigateByUrl(this.editing ? '/tabs/profile' : this.auth.landingPath(), { replaceUrl: true });
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not save your profile.'); }
     finally { this.saving.set(false); }

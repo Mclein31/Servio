@@ -37,15 +37,14 @@ describe('email-code auth', () => {
 
     const updated = { ...newUser, fullName: 'New Photo Owner', avatarKey: 'new-avatar' };
     api.patch.mockResolvedValueOnce({ me: updated });
-    api.imageUrl.mockResolvedValueOnce('signed-new-avatar');
-    await auth.updateProfile(updated.fullName!, null, updated.avatarKey);
+    await auth.updateProfile(updated.fullName!, null, updated.avatarKey, 'preview-new-avatar');
     expect(auth.user()?.avatarKey).toBe('new-avatar');
-    expect(auth.avatarUrl()).toBe('signed-new-avatar');
+    expect(auth.avatarUrl()).toBe('preview-new-avatar');
 
     finishRefresh({ me: { ...newUser, fullName: 'New Photo Owner', avatarKey: 'old-avatar' }, pro: null });
     await refreshing;
     expect(auth.user()?.avatarKey).toBe('new-avatar');
-    expect(auth.avatarUrl()).toBe('signed-new-avatar');
+    expect(auth.avatarUrl()).toBe('preview-new-avatar');
   });
   it('does not restore Customer mode from a profile refresh after switching to Pro', async () => {
     token.set('session');

@@ -103,7 +103,7 @@ export class AuthService {
     await this.refreshProfile(true);
     return true;
   }
-  async updateProfile(fullName: string, phoneNumber: string | null, avatarKey?: string | null): Promise<void> {
+  async updateProfile(fullName: string, phoneNumber: string | null, avatarKey?: string | null, avatarPreviewUrl?: string): Promise<void> {
     const revision = ++this.profileRevision;
     if (this.settings.useMockApi()) this.user.update((u) => u ? { ...u, fullName, phoneNumber, ...(avatarKey!==undefined?{ avatarKey }: {}) } : u);
     else {
@@ -113,7 +113,10 @@ export class AuthService {
         this.profileRevision++;
         if (token) this.loadedToken = token;
         this.user.set(result.me);
-        if(token) await this.loadAvatar(result.me,token);
+        if (avatarKey !== undefined && token) {
+          this.avatarUrl.set(avatarKey ? avatarPreviewUrl ?? '' : '');
+          if (avatarKey && !avatarPreviewUrl) void this.loadAvatar(result.me, token);
+        }
       }
     }
   }

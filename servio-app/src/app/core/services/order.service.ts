@@ -351,7 +351,6 @@ export class OrderService {
       return;
     }
     await this.api.post(`/bookings/${this.state().id}/status`, { to: 'CANCELLED', reason });
-    await this.load(this.state().id);
     await this.refresh();
   }
 
