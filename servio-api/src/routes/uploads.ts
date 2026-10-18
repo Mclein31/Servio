@@ -24,9 +24,8 @@ const Presign = v.pipe(v.strictObject({
 export const uploads = new Hono<AppEnv>();
 uploads.use('/uploads/*', withDb);
 
-function localMode(env: Bindings): boolean {
-  if (env.UPLOADS_MODE === 'local' && env.ENVIRONMENT === 'production') throw new ApiError(503, 'STORAGE_UNCONFIGURED', 'Local storage is disabled in production.');
-  return env.UPLOADS_MODE === 'local';
+function directUploadMode(env: Bindings): boolean {
+  return env.UPLOADS_MODE === 'worker' || env.UPLOADS_MODE === 'local';
 }
 function s3(env: Bindings) {
   if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !/^servio-/.test(env.R2_BUCKET_NAME)) {
@@ -51,7 +50,7 @@ uploads.post('/uploads/presign', requireUser, validate('json', Presign), async (
   const key = `uploads/${input.purpose}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${crypto.randomUUID()}.${UPLOAD_TYPES[input.contentType].extension}`;
   const row = { ...input, key, ownerId: c.get('userId'), createdAt: now };
   const base = new URL(c.req.url).origin + '/api/v1';
-  const uploadUrl = localMode(c.env) ? await localUrl(base, c.env, row, 'PUT', UPLOAD_TTL_SECONDS)
+  const uploadUrl = directUploadMode(c.env) ? await localUrl(base, c.env, row, 'PUT', UPLOAD_TTL_SECONDS)
     : await getSignedUrl(s3(c.env), new PutObjectCommand({ Bucket: c.env.R2_BUCKET_NAME, Key: key, ContentType: input.contentType, ContentLength: input.contentLength }),
       { expiresIn: UPLOAD_TTL_SECONDS, signableHeaders: new Set(['content-type', 'content-length']) });
   await c.get('db').insert(files).values(row);
@@ -60,7 +59,7 @@ uploads.post('/uploads/presign', requireUser, validate('json', Presign), async (
 
 /** Local demo equivalent of the R2 capability URL. No bearer header is required: the signature grants one key/method/type/length. */
 async function capability(c: import('hono').Context<AppEnv>) {
-  if (!localMode(c.env)) throw missing();
+  if (!directUploadMode(c.env)) throw missing();
   const key = c.req.param('key');
   if (!key || !UPLOAD_KEY.test(key)) throw missing();
   const [row] = await c.get('db').select().from(files).where(eq(files.key, key));
@@ -74,7 +73,12 @@ async function capability(c: import('hono').Context<AppEnv>) {
 
 uploads.put('/uploads/blob/:key{.+}', async (c) => {
   const row = await capability(c);
-  if (c.req.header('Content-Type') !== row.contentType || Number(c.req.header('Content-Length')) !== row.contentLength) {
+  const reqContentType = c.req.header('Content-Type')?.split(';')[0]?.trim();
+  const reqContentLength = c.req.header('Content-Length');
+  if (reqContentType && reqContentType !== row.contentType) {
+    throw new ApiError(422, 'UPLOAD_MISMATCH', 'Upload the exact declared type and length.');
+  }
+  if (reqContentLength && Number(reqContentLength) !== row.contentLength) {
     throw new ApiError(422, 'UPLOAD_MISMATCH', 'Upload the exact declared type and length.');
   }
   const reader = c.req.raw.body?.getReader();
@@ -135,7 +139,7 @@ uploads.get('/uploads/:key{.+}', requireUser, async (c) => {
     allowed = !!peer;
   }
   if (!allowed || !(await c.env.UPLOADS.head(key))) throw missing();
-  const downloadUrl = localMode(c.env) ? await localUrl(new URL(c.req.url).origin + '/api/v1', c.env, row, 'GET', DOWNLOAD_TTL_SECONDS)
+  const downloadUrl = directUploadMode(c.env) ? await localUrl(new URL(c.req.url).origin + '/api/v1', c.env, row, 'GET', DOWNLOAD_TTL_SECONDS)
     : await getSignedUrl(s3(c.env), new GetObjectCommand({ Bucket: c.env.R2_BUCKET_NAME, Key: key }), { expiresIn: DOWNLOAD_TTL_SECONDS });
   return c.json({ key, downloadUrl, expiresInSeconds: DOWNLOAD_TTL_SECONDS });
 });

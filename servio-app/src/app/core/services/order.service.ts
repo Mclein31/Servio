@@ -354,14 +354,16 @@ export class OrderService {
   private async fromApi(b: BookingDto): Promise<Order> {
     const sku = this.community.skus().find((s) => s.id === b.skuId);
     const helper = this.community.helpers().find((p) => p.id === b.proId);
+    const providerName = b.pro?.name ?? helper?.name ?? 'Finding a Pro';
+    const customerName = b.customer?.name ?? 'Customer';
     const resetIndex = b.events.reduce((last, e, i) => e.note?.startsWith('DEMO_RESET:') ? i : last, -1);
     const currentEvents = resetIndex >= 0 ? b.events.slice(resetIndex) : b.events;
     return {
       id: b.id, coordinates: [b.lat, b.lng], code: b.code, customerId: b.customerId, expectedArrivalAt: b.expectedArrivalAt, reviewed: b.reviewed,
       sku: { ...(sku ?? this.emptyOrder().sku), id: b.skuId, name: b.skuName, pricePhp: b.priceCentavos / 100 },
-      helper: { ...(helper ?? this.emptyOrder().helper), id: b.proId ?? '', name: b.pro?.name ?? 'Finding a Pro',
-        avatarUrl: this.state().helper.id===b.proId ? this.state().helper.avatarUrl : '', rating: b.pro?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? 0 },
-      customerName: b.customer?.name ?? 'Customer', customerAvatarUrl: this.state().customerId===b.customerId ? this.state().customerAvatarUrl : '',
+      helper: { ...(helper ?? this.emptyOrder().helper), id: b.proId ?? '', name: providerName,
+        avatarUrl: this.state().helper.id===b.proId ? this.state().helper.avatarUrl : '', rating: b.pro?.rating ?? helper?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? helper?.reviewCount ?? 0 },
+      customerName, customerAvatarUrl: this.state().customerId===b.customerId ? this.state().customerAvatarUrl : '',
       address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
       paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
       completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,

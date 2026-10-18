@@ -111,7 +111,12 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
     try {
       const fields = await this.geocoder.lookup(lat,lng);
       if(revision !== this.geocodeRevision || !this.editing()) return;
-      this.street = fields.street; this.barangay = fields.barangay; this.city = fields.city;
+      const city = fields.city && /tuguegarao/i.test(fields.city) ? 'Tuguegarao City' : (fields.city ?? 'Tuguegarao City');
+      this.street = fields.street; this.barangay = fields.barangay; this.city = city;
+      if (!/tuguegarao/i.test(city)) {
+        this.error.set('Choose a pin inside Tuguegarao City.');
+        return;
+      }
       if(!fields.street || !fields.barangay || !fields.city) this.error.set('Some address details could not be found. Fill in the missing fields before saving.');
     } catch { if(revision === this.geocodeRevision) this.error.set('Could not look up this address. Enter the address details manually or move the pin to try again.'); }
     finally { if(revision === this.geocodeRevision) { this.geocoding.set(false); } }

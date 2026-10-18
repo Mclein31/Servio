@@ -56,7 +56,11 @@ export class ProfileSetupPage {
       const blob = await (await fetch(shot.dataUrl)).blob();
       const key = await this.api.upload(blob,'avatar');
       this.avatarKey.set(key); this.preview.set(shot.dataUrl);
-    } catch (error) { if (!String(error).toLowerCase().includes('cancel')) this.error.set('The photo could not be saved. Please choose a JPEG or PNG up to 5 MB.'); }
+    } catch (error) {
+      if (!String(error).toLowerCase().includes('cancel')) {
+        this.error.set(error instanceof Error ? error.message : 'The photo could not be saved. Please choose a JPEG or PNG up to 5 MB.');
+      }
+    }
     finally { this.uploading.set(false); }
   }
   async save(): Promise<void> {

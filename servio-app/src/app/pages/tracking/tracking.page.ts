@@ -12,6 +12,7 @@ import { StepperComponent } from '../../shared/components/stepper/stepper.compon
 import { TrackingMapComponent } from '../../shared/components/tracking-map/tracking-map.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
 import { DecimalPipe } from '@angular/common';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-tracking',
@@ -27,9 +28,15 @@ export class TrackingPage {
   readonly orders = inject(OrderService);
   readonly community = inject(CommunityService);
   readonly sim = inject(TrackingService);
+  readonly auth = inject(AuthService);
   private readonly alerts = inject(AlertController);
   readonly cancelling = signal(false);
   readonly history = this.orders.history;
+  readonly partner = computed(() => {
+    const o = this.orders.order();
+    const isPro = this.auth.user()?.role === 'PRO';
+    return isPro ? { name: o.customerName, avatarUrl: o.customerAvatarUrl, rating: 0, reviewCount: 0, isAvailable: false } : { name: o.helper.name, avatarUrl: o.helper.avatarUrl, rating: o.helper.rating, reviewCount: o.helper.reviewCount, isAvailable: o.helper.isAvailable };
+  });
 
   readonly statusChip = computed(() => {
     switch (this.orders.order().status) {
@@ -45,11 +52,12 @@ export class TrackingPage {
 
   readonly banner = computed(() => {
     const o = this.orders.order();
-    if (this.orders.pendingAddon()) return `${o.helper.name} requested an add-on. Review it before work continues.`;
+    const partnerName = this.auth.user()?.role === 'PRO' ? o.customerName : o.helper.name;
+    if (this.orders.pendingAddon()) return `${partnerName} requested an add-on. Review it before work continues.`;
     switch (o.status) {
-      case 'ACCEPTED': return `${o.helper.name.split(' ')[0]} accepted your booking and is getting ready.`;
-      case 'EN_ROUTE': return `${o.helper.name.split(' ')[0]} is on the way for your service.`;
-      case 'ARRIVED': return `${o.helper.name.split(' ')[0]} has arrived. Meet at ${o.address.landmark.split(' · ')[0]}.`;
+      case 'ACCEPTED': return `${partnerName.split(' ')[0]} accepted your booking and is getting ready.`;
+      case 'EN_ROUTE': return `${partnerName.split(' ')[0]} is on the way for your service.`;
+      case 'ARRIVED': return `${partnerName.split(' ')[0]} has arrived. Meet at ${o.address.landmark.split(' · ')[0]}.`;
       case 'IN_PROGRESS': return 'Work in progress. Inspect the result before sharing your PIN.';
       case 'CANCELLED': return 'This booking was cancelled and your escrow payment was refunded.';
       case 'COMPLETED': return 'Job complete and escrow released. Thanks for booking!';

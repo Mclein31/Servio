@@ -51,7 +51,7 @@ name = "servio-api"
 # Public API at https://servio-api.mcleinonza0531.workers.dev; no per-version preview URLs.
 workers_dev = true
 preview_urls = false
-vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "r2", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost", R2_BUCKET_NAME = "servio-uploads" }
+vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "worker", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost", R2_BUCKET_NAME = "servio-uploads" }
 
 # Hyperdrive `servio-neon` → Neon project `servio`, branch production (direct URL, caching disabled).
 [[env.production.hyperdrive]]

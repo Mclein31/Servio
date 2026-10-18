@@ -17,11 +17,11 @@
     <section class="active servio-card" aria-labelledby="order-title">
       <!-- Header card -->
       <div class="order-head">
-        <app-avatar [src]="o.helper.avatarUrl" [name]="o.helper.name" [size]="56"></app-avatar>
+        <app-avatar [src]="partner().avatarUrl" [name]="partner().name" [size]="56"></app-avatar>
         <div class="order-text">
           <span class="servio-caption">Active Order #{{ o.code ?? o.id }}</span>
           <h2 id="order-title">{{ o.sku.name }}</h2>
-          <span class="helper-line">{{ o.helper.name }} @if (o.helper.id) { · <ion-icon name="star" aria-hidden="true"></ion-icon> {{ o.helper.rating | number: '1.1-1' }} ({{ o.helper.reviewCount }}) }</span>
+          <span class="helper-line">{{ partner().name }} @if (partner().rating) { · <ion-icon name="star" aria-hidden="true"></ion-icon> {{ partner().rating | number: '1.1-1' }} ({{ partner().reviewCount }}) }</span>
         </div>
         <span class="status-chip" [class]="'status-chip ' + statusChip().tone">
           <ion-icon [name]="statusChip().icon" aria-hidden="true"></ion-icon>{{ statusChip().label }}
