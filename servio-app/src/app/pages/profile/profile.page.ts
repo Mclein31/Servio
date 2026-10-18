@@ -136,7 +136,7 @@ export class ProfilePage {
       if(this.mock())throw new Error('Connect to SERVIO to remove a service.');
       const result=await this.community.api.request<{skuIds:string[]}>('DELETE',`/me/services/${encodeURIComponent(id)}`);
       this.auth.pro.update(p=>p?{...p,skuIds:result.skuIds}:p);
-      await this.community.refresh(false);
+      void this.community.directory().catch(error => this.community.error.set(error instanceof Error ? error.message : 'Could not refresh the service directory.'));
     }catch(error){const toast=await this.toasts.create({message:error instanceof Error?error.message:'Could not remove service.',duration:3000,position:'top'});await toast.present();}
     finally{this.removingService.set('');}
   }

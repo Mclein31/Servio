@@ -25,6 +25,16 @@ const ORDER_STEP_INDEX: Record<OrderStatus, number> = {
   CANCELLED: 0,
 };
 
+export function isActiveOrderStatus(status: OrderStatus): boolean {
+  return ['PENDING_ACCEPTANCE', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(status);
+}
+
+export function selectActiveBooking<T extends Pick<BookingDto, 'id' | 'status'>>(bookings: T[], currentBookingId: string): T | undefined {
+  const current = bookings.find((booking) => booking.id === currentBookingId);
+  if (current) return isActiveOrderStatus(current.status) ? current : undefined;
+  return bookings.find((booking) => isActiveOrderStatus(booking.status));
+}
+
 const TRUST_FEE_PHP = 50;
 
 function timeLabel(date?: Date): string | undefined {
@@ -103,7 +113,7 @@ export class OrderService {
   });
 
   readonly hasOrder = computed(() => !!this.state().id);
-  readonly isActive = computed(() => this.hasOrder() && !['COMPLETED', 'CANCELLED'].includes(this.state().status));
+  readonly isActive = computed(() => this.hasOrder() && isActiveOrderStatus(this.state().status));
 
   constructor() {
     const room = computed(() => this.api.settings.useMockApi() ? '' : `${this.auth.user()?.id ?? ''}:${this.order().id}`);
@@ -286,9 +296,7 @@ export class OrderService {
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
         status: b.status,
         amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
-      const current = result.bookings.find((b) => b.id === this.state().id && b.status !== 'CANCELLED');
-      const selected = current ?? result.bookings.find((b) => !['COMPLETED','CANCELLED'].includes(b.status))
-        ?? result.bookings.find((b) => b.status === 'COMPLETED');
+      const selected = selectActiveBooking(result.bookings, this.state().id);
       const order = selected ? await this.fromApi(selected) : this.emptyOrder();
       if (revision === this.revision) { this.state.set(order); this.error.set(''); if(selected)void this.hydrateImages(selected,revision); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }

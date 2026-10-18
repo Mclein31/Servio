@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../api/api.service';
+import { ApiFailure } from '../api/api.interceptor';
 import { AuthService } from './auth.service';
 import { OrderService } from './order.service';
 import { LiveService } from './live.service';
@@ -29,6 +30,7 @@ export class ProService {
   readonly saving = signal(false);
   readonly error = signal('');
   private polling = false;
+  private deniedProUserId: string | null = null;
 
   constructor() {
     const room = computed(() => this.api.settings.useMockApi() || this.auth.user()?.role !== 'PRO' ? '' : this.auth.user()?.id ?? '');
@@ -40,6 +42,7 @@ export class ProService {
     });
     effect((cleanup) => {
       const user = this.auth.user(); const mock = this.api.settings.useMockApi();
+      if (user?.role !== 'PRO') this.deniedProUserId = null;
       this.offer.set(null);
       if (mock || user?.role !== 'PRO') return;
       void this.poll();
@@ -48,7 +51,7 @@ export class ProService {
     });
   }
   async poll(): Promise<void> {
-    if (this.polling || this.auth.user()?.role !== 'PRO') return;
+    if (this.polling || this.auth.user()?.role !== 'PRO' || this.deniedProUserId === this.auth.user()?.id) return;
     this.polling = true;
     const userId = this.auth.user()!.id;
     try {
@@ -62,7 +65,10 @@ export class ProService {
       this.serverOffsetMs.set(Date.parse(result.serverNow) - Date.now()); this.offer.set(result.offer); this.error.set('');
       if (result.offer && result.offer.id !== previous && this.router.url === '/pro') await this.router.navigateByUrl('/pro/radar-alert');
       await this.wallet.refresh();
-    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not receive jobs.'); }
+    } catch (error) {
+      if (error instanceof ApiFailure && error.code === 'PRO_REQUIRED') this.deniedProUserId = userId;
+      this.error.set(error instanceof Error ? error.message : 'Could not receive jobs.');
+    }
     finally { this.polling = false; }
   }
   async availability(online: boolean): Promise<void> {
