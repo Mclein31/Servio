@@ -57,6 +57,20 @@
       "when": 1792144568622,
       "tag": "0007_saved_addresses",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792332508083,
+      "tag": "0008_bulletin_acceptance",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792333020539,
+      "tag": "0009_profile_help_payments",
+      "breakpoints": true
     }
   ]
 }

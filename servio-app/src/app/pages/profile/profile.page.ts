@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
 import { AddressService } from '../../core/services/address.service';
 import { OrderService } from '../../core/services/order.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CATEGORIES } from '../../core/data/mock-data';
 import { CommunityService } from '../../core/services/community.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
@@ -50,11 +51,22 @@ export class ProfilePage {
     { value: '14', label: 'Reviews', icon: 'chatbubbles-outline', tint: 'var(--servio-cat-tech)', ink: '#7C3AED' },
   ];
 
-  readonly services = [
+  private readonly sampleServices = [
     { name: 'Academic Tutoring', detail: 'Math, English, test prep', pricePhp: 350, unit: 'hr', icon: 'school-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
     { name: 'General Handyman', detail: 'Assembly, minor fixes', pricePhp: 400, unit: 'hr', icon: 'construct-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
     { name: 'Grocery Pickup', detail: 'Purchases paid separately', pricePhp: 150, unit: 'errand', icon: 'cart-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
   ];
+
+  readonly tradeSaving = signal(false);
+  readonly currentCategory = computed(() => this.community.skus().find((s) => this.auth.pro()?.skuIds?.includes(s.id))?.category);
+  readonly services = computed(() => {
+    if (this.mock()) return this.sampleServices;
+    const ids = this.auth.pro()?.skuIds ?? [];
+    return this.community.skus().filter((s) => ids.includes(s.id)).map((s) => {
+      const category = CATEGORIES.find((c) => c.id === s.category)!;
+      return { name: s.name, detail: s.inclusions.join(', '), pricePhp: s.pricePhp, unit: s.unit, icon: category.icon, tint: category.tint, ink: category.accent };
+    });
+  });
 
   readonly settings = computed<SettingItem[]>(() => {
     const isPro = this.auth.user()?.role === 'PRO';
@@ -63,8 +75,8 @@ export class ProfilePage {
       { label: 'Saved Addresses', caption: 'Pin your home or work on the map', icon: 'location-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/addresses' },
       { label: 'My Requests & Bookings', caption: 'Active and past orders', icon: 'receipt-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/tabs/tracking' },
       { label: 'Saved Helpers', caption: 'Neighbors you trust', icon: 'heart-outline', tint: 'var(--servio-cat-beauty)', ink: '#DB2777', route: '/tabs/directory' },
-      { label: 'Payment Methods (GCash / Card)', caption: 'Escrow-protected payments', icon: 'card-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
-      { label: 'Help & Community Safety', caption: 'Disputes, safety and support', icon: 'shield-checkmark-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
+      { label: 'Payment Methods (GCash / Card)', caption: 'Choose your preferred checkout method', route: '/payment-methods', icon: 'card-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
+      { label: 'Help & Community Safety', caption: 'Disputes, safety and support', route: '/help', icon: 'shield-checkmark-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
     ];
 
     if (isPro) {
@@ -116,8 +128,11 @@ export class ProfilePage {
     return list;
   });
 
+  manageServices(): void {
+    void this.open({ label: 'Change Service Category', caption: '', icon: '', tint: '', ink: '', action: 'trade' });
+  }
   edit(): void { void this.router.navigateByUrl('/profile/edit'); }
-  ionViewWillEnter(): void { void this.auth.refreshProfile(true); void this.addresses.refresh().catch(() => undefined); }
+  ionViewWillEnter(): void { void this.auth.refreshProfile(true); void this.community.catalog().catch(() => undefined); void this.addresses.refresh().catch(() => undefined); }
 
   async openNotifications(): Promise<void> {
     const toast = await this.toasts.create({
@@ -190,16 +205,21 @@ export class ProfilePage {
       return;
     }
     if (item.action === 'trade') {
+      if (this.tradeSaving()) return;
+      try { await this.community.catalog(); } catch {
+        const toast = await this.toasts.create({ message: 'Could not load your services. Try again.', duration: 2500, position: 'top' });
+        await toast.present(); return;
+      }
       const alert = await this.alerts.create({
         header: 'Change Service Category',
         subHeader: 'Select your primary trade',
         message: 'Update which services you provide in the neighborhood directory:',
         inputs: [
-          { name: 'category', type: 'radio', label: 'Repairs & Maintenance', value: 'repairs', checked: true },
-          { name: 'category', type: 'radio', label: 'Academic Tutoring', value: 'tutoring' },
-          { name: 'category', type: 'radio', label: 'Errands & Delivery', value: 'errands' },
-          { name: 'category', type: 'radio', label: 'Beauty & Care', value: 'beauty' },
-          { name: 'category', type: 'radio', label: 'Tech Help & Diagnostics', value: 'tech' },
+          { name: 'category', type: 'radio', label: 'Repairs & Maintenance', value: 'repairs', checked: this.currentCategory() === 'repairs' },
+          { name: 'category', type: 'radio', label: 'Academic Tutoring', value: 'tutoring', checked: this.currentCategory() === 'tutoring' },
+          { name: 'category', type: 'radio', label: 'Errands & Delivery', value: 'errands', checked: this.currentCategory() === 'errands' },
+          { name: 'category', type: 'radio', label: 'Beauty & Care', value: 'beauty', checked: this.currentCategory() === 'beauty' },
+          { name: 'category', type: 'radio', label: 'Tech Help & Diagnostics', value: 'tech', checked: this.currentCategory() === 'tech' },
         ],
         buttons: [
           { text: 'Cancel', role: 'cancel' },
@@ -208,17 +228,20 @@ export class ProfilePage {
             handler: async (selectedCategory) => {
               const category = typeof selectedCategory === 'string'
                 ? selectedCategory
-                : (selectedCategory?.category || selectedCategory?.value || 'repairs');
-              if (!category) return;
+                : (selectedCategory?.category || selectedCategory?.value);
+              if (!category || this.tradeSaving()) return false;
+              this.tradeSaving.set(true);
               try {
                 await this.auth.updateTrade(category);
-                void this.community.refresh();
+                await this.community.refresh();
                 const toast = await this.toasts.create({ message: 'Service category updated successfully.', duration: 2000, position: 'top' });
                 await toast.present();
               } catch (err) {
                 const toast = await this.toasts.create({ message: err instanceof Error ? err.message : 'Could not update category.', duration: 2500, position: 'top' });
                 await toast.present();
-              }
+                return false;
+              } finally { this.tradeSaving.set(false); }
+              return true;
             },
           },
         ],

@@ -10,6 +10,7 @@ import { PaymentMethod } from '../../shared/models/domain.models';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { SlideToConfirmComponent } from '../../shared/components/slide-to-confirm/slide-to-confirm.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
+import { PaymentMethodsService } from '../../core/services/payment-methods.service';
 import { AddressService } from '../../core/services/address.service';
 import { roundCentavos } from '../../shared/utils/money';
 
@@ -34,6 +35,7 @@ export class CheckoutPage {
   private readonly orders = inject(OrderService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly paymentMethods = inject(PaymentMethodsService);
   readonly addresses = inject(AddressService);
   readonly auth = inject(AuthService);
 
@@ -45,9 +47,11 @@ export class CheckoutPage {
   readonly error = signal('');
   private attempt?: { fingerprint: string; key: string };
   private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;
+  readonly bulletinId = this.query.get('bulletin') ?? undefined;
   readonly schedules = ['Immediate / ASAP', 'Today (2:00 PM - 4:00 PM)', 'Tomorrow Morning'];
   readonly schedule = signal(this.schedules[0]);
   readonly payment = signal<PaymentMethod>('GCASH');
+  private paymentInitialized = false;
   readonly address = this.addresses.selected;
 
   readonly isOwnHelper = computed(() => {
@@ -62,10 +66,18 @@ export class CheckoutPage {
   readonly totalPhp = computed(() => roundCentavos((this.sku()?.pricePhp ?? 0) + this.feePhp()));
 
   async ionViewWillEnter(): Promise<void> {
+    this.sku.set(null); this.helper.set(null); this.error.set('');
     try {
-      await Promise.all([this.community.catalog(), this.community.directory(), this.addresses.refresh()]);
+      await Promise.all([this.community.catalog(), this.community.directory(this.query.get('helper') ?? undefined), this.addresses.refresh(), this.paymentMethods.refresh()]);
+      if (!this.paymentInitialized) { this.payment.set(this.paymentMethods.preferred()); this.paymentInitialized = true; }
       const helper = this.community.helpers().find((h) => h.id === this.query.get('helper'));
       if (this.query.has('helper') && !helper) throw new Error('This helper is no longer available. Choose another helper.');
+      if (this.bulletinId) {
+        const { request } = await this.community.api.get<{ request: { authorId: string; skuId: string; acceptedProId: string | null; bookingId: string | null; status: string } }>(`/bulletin/${this.bulletinId}`);
+        if (request.authorId !== this.auth.user()?.id || request.status !== 'ACCEPTED' || request.bookingId || request.acceptedProId !== helper?.id || request.skuId !== this.query.get('sku')) {
+          throw new Error('This request has changed. Reopen the bulletin before confirming.');
+        }
+      }
       this.helper.set(helper ?? null);
       const sku = (helper?.skus ?? this.community.skus()).find((s) => s.id === this.query.get('sku')) ?? (helper?.skus ?? this.community.skus())[0];
       if (!sku) throw new Error('No catalog services are available yet.');
@@ -94,10 +106,10 @@ export class CheckoutPage {
     if (!this.address()) { this.error.set('Choose and confirm your service address first.'); this.slide?.reset(); return; }
     this.saving.set(true); this.error.set('');
     const window = scheduleWindow(this.schedule());
-    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window, this.address()]);
+    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window, this.address(), this.bulletinId]);
     if (this.attempt?.fingerprint !== fingerprint) this.attempt = { fingerprint, key: crypto.randomUUID() };
     try {
-      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window, this.address()!);
+      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window, this.address()!, this.bulletinId);
       await this.router.navigateByUrl('/tabs/tracking', { replaceUrl: true });
       if (this.community.api.settings.useMockApi()) setTimeout(() => {
         if (this.community.api.settings.useMockApi() && this.orders.order().status === 'ACCEPTED') this.orders.setStatus('EN_ROUTE');

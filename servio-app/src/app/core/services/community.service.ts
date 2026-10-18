@@ -38,23 +38,24 @@ export class CommunityService {
     await this.catalogLoading;
   }
   async image(key: string | null): Promise<string> { return key ? this.api.imageUrl(key) : ''; }
-  async directory(): Promise<void> {
+  async directory(id?: string): Promise<void> {
     await this.api.settings.ready;
     if (this.api.settings.useMockApi()) return;
-    const { pros } = await this.api.get<{ pros: ProDto[] }>('/pros');
-    this.liveHelpers.set(await Promise.all(pros.map(async (p): Promise<HelperProfile> => ({
+    const { pros } = await this.api.get<{ pros: ProDto[] }>('/pros', id ? { id } : undefined);
+    const loaded = await Promise.all(pros.map(async (p): Promise<HelperProfile> => ({
       id: p.id, name: p.name, avatarUrl: await this.image(p.avatarKey).catch(() => ''), category: p.headline ?? p.skus[0]?.categoryId ?? '',
       rating: p.rating, reviewCount: p.ratingCount, distanceKm: Math.round((p.distanceKm ?? 0) * 10) / 10,
       hourlyRatePhp: p.fromPriceCentavos / 100, rateUnit: p.skus.find((s) => s.priceCentavos === p.fromPriceCentavos)?.unit, isAvailable: p.isOnline, bio: p.bio ?? '', credentials: p.credentials,
       skus: p.skus.map(skuFromApi), reviews: p.reviews.map((r) => ({ author: r.author ?? 'Neighbor', rating: r.rating, when: postedAgo(r.createdAt), text: r.body ?? '' })),
       jobsDone: p.jobsDone, yearsExperience: p.yearsExperience,
-    }))));
+    })));
+    this.liveHelpers.set(id ? [...this.liveHelpers().filter(h => h.id !== id), ...loaded] : loaded);
   }
   async bulletin(): Promise<void> {
     await this.api.settings.ready;
     if (this.api.settings.useMockApi()) return;
     const { requests } = await this.api.get<{ requests: BulletinDto[] }>('/bulletin');
-    this.liveRequests.set(requests.map((r) => ({ id: r.id, title: r.title, description: r.description, category: r.categoryId, author: r.author,
+    this.liveRequests.set(requests.map((r) => ({ id: r.id, authorId: r.authorId, skuId: r.skuId, acceptedProId: r.acceptedProId, bookingId: r.bookingId, title: r.title, description: r.description, category: r.categoryId, author: r.author,
       postedAgo: postedAgo(r.createdAt), neighborhood: r.neighborhood, distanceKm: r.distanceKm ?? Infinity, pricePhp: r.priceCentavos / 100,
       priceUnit: r.unit === 'visit' ? 'job' : r.unit, status: r.status, lat: r.lat ?? undefined, lng: r.lng ?? undefined })));
   }
@@ -63,6 +64,14 @@ export class CommunityService {
     try { await Promise.all([this.catalog(), this.directory(), this.bulletin()]); }
     catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load nearby services.'); }
     finally { this.loading.set(false); }
+  }
+  async acceptRequest(id: string): Promise<void> {
+    if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');
+    await this.api.post(`/bulletin/${id}/accept`, {});
+  }
+  async releaseRequest(id: string): Promise<void> {
+    if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');
+    await this.api.post(`/bulletin/${id}/release`, {});
   }
   async postRequest(input: { skuId: string; categoryId: string; description: string; neighborhood: string; urgent: boolean }): Promise<void> {
     if (this.api.settings.useMockApi()) return;

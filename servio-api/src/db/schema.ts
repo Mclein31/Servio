@@ -66,12 +66,14 @@ export const users = pgTable(
     fullName: text('full_name'),
     avatarKey: text('avatar_key'),
     role: userRole('role').notNull().default('CUSTOMER'),
+    preferredPaymentMethod: text('preferred_payment_method').$type<'GCASH' | 'CARD'>().notNull().default('GCASH'),
     isActive: boolean('is_active').notNull().default(true),
     isDemo: boolean('is_demo').notNull().default(false),
     createdAt: created(),
     updatedAt: updated(),
   },
   (t) => [
+    check('users_payment_method_chk', sql`${t.preferredPaymentMethod} IN ('GCASH','CARD')`),
     uniqueIndex('users_email_lower_uq').on(sql`lower(${t.email})`),
     check('users_phone_ph_chk', sql`${t.phoneNumber} IS NULL OR ${t.phoneNumber} ~ '^\\+639[0-9]{9}$'`),
   ],
@@ -365,6 +367,9 @@ export const bulletinRequests = pgTable(
     lat: doublePrecision('lat'),
     lng: doublePrecision('lng'),
     status: requestStatus('status').notNull().default('OPEN'),
+    acceptedProId: uuid('accepted_pro_id').references(() => users.id),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    bookingId: uuid('booking_id').references(() => bookings.id),
     createdAt: created(),
   },
   (t) => [
@@ -469,3 +474,21 @@ export const uploads = pgTable('uploads', {
   contentLength: integer('content_length').notNull(),
   createdAt: created(),
 }, (t) => [index('uploads_owner_idx').on(t.ownerId), check('uploads_length_chk', sql`${t.contentLength} > 0 AND ${t.contentLength} <= 10485760`)]);
+
+/** Account-scoped help reports; only staff can review other people's reports. */
+export const supportRequests = pgTable('support_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  clientKey: uuid('client_key').notNull(),
+  bookingId: uuid('booking_id').references(() => bookings.id),
+  category: text('category').notNull(),
+  message: text('message').notNull(),
+  status: text('status').$type<'OPEN' | 'REVIEWING' | 'RESOLVED'>().notNull().default('OPEN'),
+  createdAt: created(), updatedAt: updated(),
+}, (t) => [
+  uniqueIndex('support_requests_retry_uq').on(t.userId,t.clientKey),
+  index('support_requests_owner_created_idx').on(t.userId,t.createdAt),
+  check('support_requests_message_chk',sql`char_length(${t.message}) BETWEEN 10 AND 2000`),
+  check('support_requests_category_chk',sql`${t.category} IN ('BOOKING','PAYMENT','SAFETY','ACCOUNT','OTHER')`),
+  check('support_requests_status_chk',sql`${t.status} IN ('OPEN','REVIEWING','RESOLVED')`),
+]);

@@ -303,3 +303,8 @@
     transform: translateY(-3px) rotate(-45deg);
   }
 }
+
+.request[role='button'] { cursor: pointer; }
+.request[role='button']:focus-visible { outline: 3px solid var(--servio-brand-orange); outline-offset: 3px; }
+.reservation-note { color: var(--servio-text-muted); font-size: 12px; }
+.request-details { padding-top: 24px; }

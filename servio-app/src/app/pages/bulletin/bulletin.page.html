@@ -51,7 +51,8 @@
   <!-- Feed -->
   <div class="servio-section feed">
     @for (r of requests(); track r.id) {
-      <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'">
+      <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'" role="button" tabindex="0"
+        [attr.aria-label]="'View request: ' + r.title" (click)="openRequest(r)" (keydown.enter)="openRequest(r, $event)" (keydown.space)="openRequest(r, $event)">
         <span class="cat" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
           <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
         </span>
@@ -60,6 +61,7 @@
             <h3>{{ r.title }}</h3>
             <app-status-badge [status]="r.status"></app-status-badge>
           </div>
+          @if (r.acceptedProId && !r.bookingId) { <p class="reservation-note">Awaiting customer confirmation</p> }
           <p class="desc">{{ r.description }}</p>
           <span class="meta">{{ r.author }} · {{ r.postedAgo }} • {{ r.neighborhood }}</span>
           <div class="row bottom">
@@ -89,3 +91,50 @@
     </ng-template>
   </ion-modal>
 </ion-content>
+
+<ion-modal #requestDetails [isOpen]="!!selectedRequest()" class="servio-sheet" (didDismiss)="closeRequest()" [canDismiss]="canDismissRequest">
+  <ng-template>
+    @if (selectedRequest(); as r) {
+      <ion-header class="ion-no-border">
+        <ion-toolbar class="servio-detail-bar">
+          <h2 class="servio-tab-title">Request details</h2>
+          <button slot="end" type="button" class="text-btn" [disabled]="saving()" (click)="closeRequest()">Close</button>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="servio-page">
+        <div class="servio-section request-details">
+          <app-status-badge [status]="r.status"></app-status-badge>
+          <h2>{{ r.title }}</h2>
+          <p>{{ r.description }}</p>
+          <p>{{ r.author }} · {{ r.neighborhood }}</p>
+          <strong class="price">{{ r.pricePhp | php }}{{ r.priceUnit === 'hr' ? '/hr' : '' }}</strong>
+          @if (actionError()) { <p role="alert">{{ actionError() }}</p> }
+          @if (r.bookingId) {
+            <p>The customer confirmed this booking. Open the job to view its current status.</p>
+          } @else if (r.acceptedProId) {
+            <p>A Pro accepted this request. The customer must confirm the service address and authorize checkout before work starts.</p>
+            @if (isAcceptedPro(r)) { <p>You are the accepting Pro. This is awaiting customer confirmation; no active job has been created yet.</p> }
+          } @else if (isOwner(r)) {
+            <p>This is your request. An approved Pro who offers this service can accept it here.</p>
+          } @else if (auth.user()?.role !== 'PRO') {
+            <p>Switch to your approved Servio Pro account in Profile to accept requests.</p>
+          } @else {
+            <p>Accept at the fixed catalog price. The customer will then confirm their address and authorize checkout. Start work only after the booking is confirmed.</p>
+          }
+        </div>
+      </ion-content>
+      <ion-footer class="ion-no-border">
+        <div class="servio-action-bar">
+          @if (r.bookingId && (isOwner(r) || isAcceptedPro(r))) {
+            <button type="button" class="pill-btn block" [disabled]="saving()" (click)="continueRequest(r)">Open booking</button>
+          } @else if (r.acceptedProId && !r.bookingId && (isOwner(r) || isAcceptedPro(r))) {
+            @if (isOwner(r)) { <button type="button" class="pill-btn block" [disabled]="saving()" (click)="continueRequest(r)">Confirm &amp; book Pro</button> }
+            <button type="button" class="pill-btn-outline block" [disabled]="saving()" (click)="releaseRequest(r)">Release request</button>
+          } @else if (!isOwner(r) && auth.user()?.role === 'PRO' && (r.status === 'OPEN' || r.status === 'URGENT')) {
+            <button type="button" class="pill-btn block" [disabled]="saving()" (click)="acceptRequest(r)">{{ saving() ? 'Accepting…' : 'Accept request' }}</button>
+          }
+        </div>
+      </ion-footer>
+    }
+  </ng-template>
+</ion-modal>

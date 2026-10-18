@@ -1,5 +1,11 @@
 <ion-app>
   <ion-router-outlet [attr.inert]="launching() ? '' : null" [attr.aria-hidden]="launching() ? 'true' : null"></ion-router-outlet>
+  @if (!launching() && !pageReady()) {
+    <div class="servio-startup-wait" role="status">
+      <span class="servio-preload-loader" aria-hidden="true"></span>
+      <p>Connecting to SERVIO…</p>
+    </div>
+  }
   @if (launching()) {
     <div class="servio-preload" role="status" aria-label="Loading SERVIO">
       <img src="assets/logo/servio_app_icon_orange.png" width="88" height="88" alt="" />

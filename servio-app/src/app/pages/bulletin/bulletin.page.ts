@@ -1,12 +1,15 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ActionSheetController, IonContent, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/angular';
+import { ActionSheetController, IonContent, IonFooter, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/angular';
 import * as L from 'leaflet';
 import { servioTileLayer } from '../../shared/utils/map-tiles';
 import { TUGUEGARAO_CENTER } from '../../core/data/launch-city';
 import { CATEGORIES } from '../../core/data/mock-data';
+import { AuthService } from '../../core/services/auth.service';
+import { OrderService } from '../../core/services/order.service';
+import { BulletinRequest } from '../../shared/models/domain.models';
 import { CommunityService } from '../../core/services/community.service';
 import { SheetsService } from '../../core/services/sheets.service';
 import { SearchFilterComponent } from '../../shared/components/search-filter/search-filter.component';
@@ -24,19 +27,79 @@ const PIN_COORDS: [number, number][] = [
   selector: 'app-bulletin',
   templateUrl: 'bulletin.page.html',
   styleUrl: 'bulletin.page.scss',
-  imports: [DecimalPipe, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
+  imports: [DecimalPipe, IonFooter, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BulletinPage {
   private readonly sheets = inject(SheetsService);
   private readonly router = inject(Router);
   private readonly actionSheets = inject(ActionSheetController);
+  @ViewChild('requestDetails') requestDetails?: IonModal;
+  readonly canDismissRequest = () => !this.saving();
   @ViewChild('pinMap') pinMapEl?: ElementRef<HTMLDivElement>;
   private pinMap?: L.Map;
 
   readonly isFinite = Number.isFinite;
   readonly community = inject(CommunityService);
-  ionViewWillEnter(): void { void this.community.refresh(); }
+  readonly auth = inject(AuthService);
+  private readonly orders = inject(OrderService);
+  readonly selectedId = signal<string | null>(null);
+  readonly selectedRequest = computed(() => this.community.requests().find((r) => r.id === this.selectedId()) ?? null);
+  readonly saving = signal(false);
+  readonly actionError = signal('');
+  private refreshTimer?: ReturnType<typeof setInterval>;
+  ionViewWillEnter(): void {
+    void this.community.refresh();
+    this.stopRefresh();
+    this.refreshTimer = setInterval(() => void this.community.bulletin().catch(() => undefined), 10000);
+  }
+  ionViewDidLeave(): void { this.stopRefresh(); }
+  private stopRefresh(): void { clearInterval(this.refreshTimer); this.refreshTimer = undefined; }
+  openRequest(request: BulletinRequest, event?: Event): void {
+    event?.preventDefault(); this.actionError.set(''); this.selectedId.set(request.id);
+  }
+  closeRequest(): void { if (!this.saving()) this.selectedId.set(null); }
+  isOwner(request: BulletinRequest): boolean { return request.authorId === this.auth.user()?.id; }
+  isAcceptedPro(request: BulletinRequest): boolean { return request.acceptedProId === this.auth.user()?.id; }
+  async acceptRequest(request: BulletinRequest): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true); this.actionError.set('');
+    try {
+      await this.community.acceptRequest(request.id);
+      // Keep an accepted card visible even when it was opened through the Urgent/Open filter.
+      this.filter.set('ALL');
+      await this.community.bulletin();
+    } catch (error) {
+      this.actionError.set(error instanceof Error ? error.message : 'Could not accept this request.');
+      await this.community.bulletin().catch(() => undefined);
+    } finally { this.saving.set(false); }
+  }
+  async releaseRequest(request: BulletinRequest): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true); this.actionError.set('');
+    try { await this.community.releaseRequest(request.id); await this.community.bulletin(); }
+    catch (error) { this.actionError.set(error instanceof Error ? error.message : 'Could not release this request.'); }
+    finally { this.saving.set(false); }
+  }
+  async continueRequest(request: BulletinRequest): Promise<void> {
+    if (this.saving()) return;
+    this.actionError.set('');
+    if (request.bookingId) {
+      this.saving.set(true);
+      try {
+        await this.orders.load(request.bookingId);
+        this.saving.set(false);
+        await this.requestDetails?.dismiss();
+        this.selectedId.set(null);
+        await this.router.navigate(this.isAcceptedPro(request) ? ['/pro/order', request.bookingId, 'execute'] : ['/tabs/tracking']);
+      } catch (error) { this.actionError.set(error instanceof Error ? error.message : 'Could not open booking.'); }
+      finally { this.saving.set(false); }
+    } else if (this.isOwner(request) && request.acceptedProId && request.skuId) {
+      await this.requestDetails?.dismiss();
+      this.selectedId.set(null);
+      await this.router.navigate(['/checkout'], { queryParams: { bulletin: request.id, helper: request.acceptedProId, sku: request.skuId } });
+    }
+  }
   readonly filters: { id: Filter; label: string }[] = [
     { id: 'ALL', label: 'All' },
     { id: 'OPEN', label: 'Open' },
@@ -51,6 +114,7 @@ export class BulletinPage {
     const f = this.filter();
     const q = this.query().toLowerCase();
     return this.community.requests().filter((r) => {
+      if (r.acceptedProId && !r.bookingId && (this.isOwner(r) || this.isAcceptedPro(r))) return true;
       if (f === 'OPEN' && r.status !== 'OPEN') return false;
       if (f === 'URGENT' && r.status !== 'URGENT') return false;
       if (f === 'NEARBY' && r.distanceKm >= 3) return false;
@@ -61,6 +125,7 @@ export class BulletinPage {
   readonly openCount = computed(() => this.community.requests().filter((r) => (r.status === 'OPEN' || r.status === 'URGENT') && r.distanceKm <= 5).length);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopRefresh());
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((p) => {

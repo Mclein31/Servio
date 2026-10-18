@@ -70,6 +70,10 @@ export interface Order {
 
 export interface BulletinRequest {
   id: string;
+  authorId?: string;
+  skuId?: string;
+  acceptedProId?: string | null;
+  bookingId?: string | null;
   lat?: number;
   lng?: number;
   title: string;

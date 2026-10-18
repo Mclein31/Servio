@@ -19,7 +19,8 @@ me.get('/me', async (c) => {
   const db = c.get('db');
   const [user] = await db.select(profileFields).from(users).where(eq(users.id, c.get('userId'))).limit(1);
   const [pro] = user ? await db.select().from(proProfiles).where(eq(proProfiles.userId, user.id)).limit(1) : [];
-  return c.json({ me: user, pro: pro ?? null });
+  const offered = pro ? await db.select({ skuId: proSkus.skuId }).from(proSkus).where(eq(proSkus.proId, pro.userId)) : [];
+  return c.json({ me: user, pro: pro ? { ...pro, skuIds: offered.map((s) => s.skuId) } : null });
 });
 
 const PatchProfile = v.pipe(v.strictObject({
@@ -118,7 +119,7 @@ me.post('/me/upgrade-pro', validate('json', UpgradeProSchema), async (c) => {
         .onConflictDoNothing();
     }
 
-    return { me: updatedUser!, pro: pro! };
+    return { me: updatedUser!, pro: { ...pro!, skuIds: catSkus.map((s) => s.id) } };
   });
 
   return c.json(result);
@@ -150,11 +151,15 @@ me.post('/me/pro-trade', validate('json', SetProTradeSchema), async (c) => {
   const customHeadline = input.headline;
 
   const result = await db.transaction(async (tx) => {
-    const [current] = await tx.select(profileFields).from(users).where(eq(users.id, userId)).limit(1);
+    const [current] = await tx.select(profileFields).from(users).where(eq(users.id, userId)).for('update');
     if (!current) throw new ApiError(404, 'NOT_FOUND', 'User not found.');
+    if (current.role === 'ADMIN') throw new ApiError(403, 'FORBIDDEN', 'Staff accounts cannot change their trade.');
     const [pro] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, userId)).limit(1);
     if (!pro) throw new ApiError(403, 'PRO_REQUIRED', 'Pro profile required.');
 
+    const catSkus = await tx.select({ id: serviceSkus.id }).from(serviceSkus)
+      .where(and(eq(serviceSkus.categoryId, categoryId), eq(serviceSkus.isActive, true)));
+    if (!catSkus.length) throw new ApiError(422, 'CATEGORY_UNAVAILABLE', 'This category has no available services yet.');
     const headline = customHeadline ?? DEFAULT_TRADE_HEADLINES[categoryId] ?? 'Service Professional';
     const [updatedPro] = await tx.update(proProfiles)
       .set({ headline })
@@ -162,16 +167,13 @@ me.post('/me/pro-trade', validate('json', SetProTradeSchema), async (c) => {
       .returning();
 
     await tx.delete(proSkus).where(eq(proSkus.proId, userId));
-    const catSkus = await tx.select({ id: serviceSkus.id })
-      .from(serviceSkus)
-      .where(and(eq(serviceSkus.categoryId, categoryId), eq(serviceSkus.isActive, true)));
     if (catSkus.length > 0) {
       await tx.insert(proSkus)
         .values(catSkus.map((sku) => ({ proId: userId, skuId: sku.id })))
         .onConflictDoNothing();
     }
 
-    return { me: current, pro: updatedPro! };
+    return { me: current, pro: { ...updatedPro!, skuIds: catSkus.map((s) => s.id) } };
   });
 
   return c.json(result);
@@ -222,4 +224,14 @@ me.post('/me/switch-role', validate('json', SwitchRoleSchema), async (c) => {
   });
 
   return c.json(result);
+});
+
+me.get('/me/payment-methods', async (c) => {
+  const [user] = await c.get('db').select({ preferred: users.preferredPaymentMethod }).from(users).where(eq(users.id,c.get('userId')));
+  return c.json({ preferred: user!.preferred, simulated: true, methods: ['GCASH','CARD'] });
+});
+me.post('/me/payment-methods', validate('json',v.strictObject({ preferred:v.picklist(['GCASH','CARD']) })),async(c)=>{
+  const [user] = await c.get('db').update(users).set({ preferredPaymentMethod:c.req.valid('json').preferred,updatedAt:new Date() })
+    .where(eq(users.id,c.get('userId'))).returning({preferred:users.preferredPaymentMethod});
+  return c.json({ preferred:user!.preferred,simulated:true,methods:['GCASH','CARD'] });
 });

@@ -315,3 +315,18 @@
 - **Decision:** The owner chose a key-free alternative after confirming no Google key was available. Retain Leaflet with standard OpenStreetMap tiles for addresses, tracking and bulletin. Reverse geocode pin selections through authenticated `/locations/reverse` using Nominatim, a singleton rate limiter and bounded cache. Ignore stale responses and allow manual completion of missing details. See `docs/MAPS.md`.
 - **Calls:** The owner explicitly requested dialing the other participant's saved number. Active assigned booking participants can request their peer's number through `/bookings/:id/contact` and open the device dialer. This supersedes the earlier masked-only direction for this flow. Public discovery never includes these numbers. Missing numbers show “Call not available. User did not add his number”. These are carrier calls, not proxy masking or VoIP.
 - **Icons:** UI controls use registered Ionicons; artwork and QR graphics remain illustrations.
+
+## ADR-032: Bulletin acceptance reserves a Pro before customer checkout
+
+- **Date:** 2026-10-18
+- **Status:** Accepted (owner requested accepting Bulletin cards as a service provider)
+- **Decision:** A fixed-SKU Bulletin is not an authorized booking. An active approved Pro offering its exact active SKU may reserve another customer's OPEN/URGENT post. Store accepting Pro/time and later booking link; serialize acceptance, release and checkout on the Bulletin row. The author then explicitly selects their own service address/schedule/payment at checkout. Revalidate the author, accepted Pro, SKU and unlinked reservation before authorizing the existing mock escrow and linking a booking in the same transaction. Include the request in checkout idempotency. Pro acceptance itself cannot charge a customer or create an active job.
+- **UX:** Bulletin cards open request details. Accepted requests show Awaiting customer confirmation; the owner can Confirm & book Pro, either participant can release an unbooked reservation, and confirmed participants can open the booking. Await modal dismissal before navigation. Poll while Bulletin is visible, retain pending participant reservations beyond the feed's newest-100 limit, and resolve checkout's Pro by exact ID. Synchronize linked request status on job progress/completion/cancellation.
+- **Limits:** The existing self-service Pro upgrade grants APPROVED status; this flow enforces that stored status but does not add independent identity vetting. No real payment processor is enabled.
+
+## ADR-033: Account payment preference and saved support reports
+
+- **Date:** 2026-10-18
+- **Status:** Accepted (owner requested completing both Profile options)
+- **Decision:** Persist an owner-scoped GCASH/CARD preference and preselect it at checkout once per checkout screen. Do not collect wallet/card credentials or represent simulated payments as live charges. Help provides FAQs, safety guidance and owner-scoped problem reports with validated content, retry-key deduplication and optional participant-validated booking association. Only ADMIN accounts can list all reports or update review status through staff endpoints. No email delivery, response-time promise or staff dashboard is introduced.
+- **Category:** Return offered SKU IDs in account/profile trade responses; render actual catalog services and initialize the category dialog from those IDs rather than hardcoded Repairs. The production Worker must be deployed alongside client changes to avoid missing-route errors.
