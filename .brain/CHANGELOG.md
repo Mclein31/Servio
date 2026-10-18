@@ -329,3 +329,9 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 ## 2026-10-18 — Branded launch preload
 
 - Added a SERVIO preload from the initial HTML through Angular startup. It remains for at least 1.4 seconds and until initial routing completes, shielding onboarding and other entry pages from interaction until ready. Existing entry guards still choose onboarding, login or home; reduced-motion preferences disable the loading animation.
+
+## 2026-10-18 — Provider card booking recovery
+
+- Directory cards now expose Book Now and navigate directly to checkout; tapping the card still opens service selection in the profile.
+- Helper profiles reuse the displayed directory record instead of requiring a second request. Missing-record fetch failures stay visible with Retry/Close instead of silently dismissing; booking requires a helper and selected SKU.
+- Verified browser offline Directory → checkout, 65 app tests, lint, TypeScript, production build and zero dependency audit findings. Live booking was not verified: local port 8787 currently belongs to AdvanCare's Wrangler process and returns Route not found for SERVIO endpoints. Do not terminate that unrelated backend to resolve the port conflict.

@@ -13,7 +13,15 @@ import { PhpPipe } from '../../pipes/php.pipe';
   imports: [IonContent, IonFooter, IonIcon, DecimalPipe, AvatarComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (helper(); as h) {
+    @if (error()) {
+      <ion-content class="sheet">
+        <div class="wrap" role="alert">
+          <p>{{ error() }}</p>
+          <button type="button" class="pill-btn" (click)="ngOnInit()">Retry</button>
+          <button type="button" class="pill-btn-outline" (click)="close()">Close</button>
+        </div>
+      </ion-content>
+    } @else if (helper(); as h) {
       <ion-content class="sheet">
         <div class="wrap">
           <header class="head">
@@ -96,8 +104,8 @@ import { PhpPipe } from '../../pipes/php.pipe';
             </button>
             <p class="self-note">You cannot book your own service.</p>
           } @else {
-            <button type="button" class="pill-btn block" (click)="bookService()">
-              Book Service · <span class="price">{{ (chosen() ?? h.skus[0]).pricePhp | php: 'whole' }}</span>
+            <button type="button" class="pill-btn block" [disabled]="!chosen()" (click)="bookService()">
+              Book Service · <span class="price">{{ chosen()?.pricePhp | php: 'whole' }}</span>
             </button>
           }
         </div>
@@ -116,6 +124,7 @@ export class HelperProfileModalComponent implements OnInit {
 
   readonly helper = signal<HelperProfile | null>(null);
   readonly chosen = signal<ServiceSku | null>(null);
+  readonly error = signal('');
   readonly isSelf = computed(() => {
     const u = this.auth.user();
     const h = this.helper();
@@ -125,19 +134,31 @@ export class HelperProfileModalComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    this.error.set('');
     try {
-      await this.community.directory();
-      const h = this.community.helpers().find((x) => x.id === this.helperId);
-      if (!h) { await this.modals.dismiss(); return; }
-      this.helper.set(h); this.chosen.set(h.skus[0]);
-    } catch { await this.modals.dismiss(); }
+      let h = this.community.helpers().find((x) => x.id === this.helperId);
+      if (!h) {
+        await this.community.directory();
+        h = this.community.helpers().find((x) => x.id === this.helperId);
+      }
+      if (!h) throw new Error('This helper is no longer available. Choose another helper.');
+      this.helper.set(h);
+      this.chosen.set(h.skus[0] ?? null);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not load this helper. Please try again.');
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.modals.dismiss();
   }
 
   async bookService(): Promise<void> {
     if (this.isSelf()) return;
     const h = this.helper();
-    const sku = this.chosen() ?? h?.skus[0];
+    const sku = this.chosen();
+    if (!h || !sku) return;
     await this.modals.dismiss();
-    this.router.navigate(['/checkout'], { queryParams: { helper: h?.id, sku: sku?.id } });
+    await this.router.navigate(['/checkout'], { queryParams: { helper: h.id, sku: sku.id } });
   }
 }
