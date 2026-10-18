@@ -26,7 +26,7 @@
     @if (helpers().length) {
       <div class="grid">
         @for (h of helpers(); track h.id) {
-          <app-helper-card [helper]="h" (selected)="open($event)" (book)="open($event)"></app-helper-card>
+          <app-helper-card [helper]="h" actionMode="book" (selected)="open($event)" (book)="book($event)"></app-helper-card>
         }
       </div>
     } @else {

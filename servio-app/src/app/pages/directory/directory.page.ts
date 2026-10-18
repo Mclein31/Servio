@@ -58,6 +58,10 @@ export class DirectoryPage {
     this.sheets.openHelperProfile(id);
   }
 
+  book(id: string): void {
+    void this.router.navigate(['/checkout'], { queryParams: { helper: id } });
+  }
+
   async openFilterSheet(): Promise<void> {
     const sheet = await this.actionSheets.create({
       header: 'Filter by Category',
