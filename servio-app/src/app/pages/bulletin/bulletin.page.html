@@ -5,6 +5,7 @@
 </ion-header>
 
 <ion-content class="servio-page">
+  <app-discovery-location></app-discovery-location>
   @if (community.error()) { <p class="servio-section" role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
   <div class="servio-section intro">
     <p class="servio-subtitle">Live requests from your neighborhood.</p>
@@ -125,6 +126,10 @@
       </ion-content>
       <ion-footer class="ion-no-border">
         <div class="servio-action-bar">
+          @if(isOwner(r) && !r.bookingId && (r.status === 'OPEN' || r.status === 'URGENT' || r.status === 'ACCEPTED')) {
+            <button type="button" class="pill-btn-outline block" [disabled]="saving()" (click)="cancelRequest(r)">Cancel my request</button>
+          }
+          @if(r.status === 'CANCELLED'){<p>This request was cancelled and is no longer available.</p>}
           @if (r.bookingId && (isOwner(r) || isAcceptedPro(r))) {
             <button type="button" class="pill-btn block" [disabled]="saving()" (click)="continueRequest(r)">Open booking</button>
           } @else if (r.acceptedProId && !r.bookingId && (isOwner(r) || isAcceptedPro(r))) {

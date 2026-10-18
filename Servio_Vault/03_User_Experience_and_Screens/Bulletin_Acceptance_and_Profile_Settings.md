@@ -21,3 +21,9 @@ Request details must finish dismissing before navigation so the dialog cannot co
 ## Verification
 
 186 database-backed/backend tests and 77 client tests pass. API-backed browser checks exercised card acceptance, customer checkout into Tracking, category saving with real service display, payment preference saving, and report submission. Production migrations and Worker deployment completed; authenticated production smoke checks covered category persistence, preference persistence, support submission/listing and request acceptance/release using temporary test records removed after verification. No production booking/hold was created during smoke checks. Physical phones must rebuild/install the updated client.
+
+## Owner controls and measured distances — 2026-10-18
+
+Discovery offers **Use my location**. Already-granted permission can refresh GPS in the background, but GPS and photos never block initial browsing. Measured distances use a recent device fix and recent provider position, labeled as approximate straight-line distances. Missing/stale data shows unavailable rather than a fabricated number; an own-provider card shows Your profile. The city map center is not presented as the user's location.
+
+Bulletin now includes **My requests**. The author can cancel an unbooked open/urgent or reserved post; other users no longer see it. A confirmed booking must be cancelled using its booking controls and existing money rules. Cancellation preserves the record under My requests. **My Services → Remove** withdraws a single SKU listing; existing jobs remain accessible and any unbooked reservation for the withdrawn service reopens. **Manage** can assign available catalog services again.

@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { DiscoveryLocationService } from './discovery-location.service';
 import { ApiService } from '../api/api.service';
 import { AddonDto, BulletinDto, CatalogDto, ProDto, SkuDto } from '../api/customer.models';
 import { ADDON_CATALOG, BULLETIN_REQUESTS, BULLETIN_SKUS, HELPERS } from '../data/mock-data';
@@ -14,19 +15,21 @@ export function postedAgo(iso: string): string {
 @Injectable({ providedIn: 'root' })
 export class CommunityService {
   readonly api = inject(ApiService);
+  readonly location = inject(DiscoveryLocationService);
   private readonly liveHelpers = signal<HelperProfile[]>([]);
   private readonly liveSkus = signal<ServiceSku[]>([]);
   private readonly liveAddons = signal<AddonSku[]>([]);
   private readonly liveRequests = signal<BulletinRequest[]>([]);
   private readonly fee = signal(50);
   readonly cancellationFees = signal<CatalogDto['cancellationFees'] | null>(null);
-  readonly helpers = computed(() => this.api.settings.useMockApi() ? HELPERS : this.liveHelpers());
+  readonly helpers = computed(() => this.api.settings.useMockApi() ? HELPERS : this.liveHelpers().map(h=>this.location.point() ? h : {...h,distanceKm:Infinity}));
   readonly skus = computed(() => this.api.settings.useMockApi() ? BULLETIN_SKUS : this.liveSkus());
   readonly addons = computed(() => this.api.settings.useMockApi() ? ADDON_CATALOG : this.liveAddons());
-  readonly requests = computed(() => this.api.settings.useMockApi() ? BULLETIN_REQUESTS : this.liveRequests());
+  readonly requests = computed(() => this.api.settings.useMockApi() ? BULLETIN_REQUESTS : this.liveRequests().map(r=>this.location.point() ? r : {...r,distanceKm:Infinity}));
   readonly trustFeePhp = computed(() => this.api.settings.useMockApi() ? 50 : this.fee());
   readonly loading = signal(false);
   readonly error = signal('');
+  private directoryRevision=0;
   private catalogLoading?: Promise<void>;
 
   async catalog(): Promise<void> {
@@ -41,29 +44,43 @@ export class CommunityService {
   async directory(id?: string): Promise<void> {
     await this.api.settings.ready;
     if (this.api.settings.useMockApi()) return;
-    const { pros } = await this.api.get<{ pros: ProDto[] }>('/pros', id ? { id } : undefined);
-    const loaded = await Promise.all(pros.map(async (p): Promise<HelperProfile> => ({
-      id: p.id, name: p.name, avatarUrl: await this.image(p.avatarKey).catch(() => ''), category: p.headline ?? p.skus[0]?.categoryId ?? '',
-      rating: p.rating, reviewCount: p.ratingCount, distanceKm: Math.round((p.distanceKm ?? 0) * 10) / 10,
+    const revision=++this.directoryRevision;
+    const { pros } = await this.api.get<{ pros: ProDto[] }>('/pros', {...this.location.query(),...(id ? {id} : {})});
+    if(revision!==this.directoryRevision)return;
+    const loaded = pros.map((p): HelperProfile => ({
+      id: p.id, name: p.name, avatarUrl: this.liveHelpers().find(h=>h.id===p.id)?.avatarUrl ?? '', category: p.headline ?? p.skus[0]?.categoryId ?? '',
+      rating: p.rating, reviewCount: p.ratingCount, distanceKm: p.distanceKm == null ? Infinity : Math.round(p.distanceKm * 10) / 10,
       hourlyRatePhp: p.fromPriceCentavos / 100, rateUnit: p.skus.find((s) => s.priceCentavos === p.fromPriceCentavos)?.unit, isAvailable: p.isOnline, bio: p.bio ?? '', credentials: p.credentials,
       skus: p.skus.map(skuFromApi), reviews: p.reviews.map((r) => ({ author: r.author ?? 'Neighbor', rating: r.rating, when: postedAgo(r.createdAt), text: r.body ?? '' })),
       jobsDone: p.jobsDone, yearsExperience: p.yearsExperience,
-    })));
+    }));
     this.liveHelpers.set(id ? [...this.liveHelpers().filter(h => h.id !== id), ...loaded] : loaded);
+    // Cards are usable immediately; signed avatar requests must not block the directory.
+    void Promise.all(pros.filter(p=>p.avatarKey).map(async(p)=>{
+      const avatarUrl=await this.image(p.avatarKey).catch(()=>'');
+      if(revision===this.directoryRevision)this.liveHelpers.update(rows=>rows.map(h=>h.id===p.id?{...h,avatarUrl}:h));
+    }));
   }
   async bulletin(): Promise<void> {
     await this.api.settings.ready;
     if (this.api.settings.useMockApi()) return;
-    const { requests } = await this.api.get<{ requests: BulletinDto[] }>('/bulletin');
+    const { requests } = await this.api.get<{ requests: BulletinDto[] }>('/bulletin',this.location.query());
     this.liveRequests.set(requests.map((r) => ({ id: r.id, authorId: r.authorId, skuId: r.skuId, acceptedProId: r.acceptedProId, bookingId: r.bookingId, title: r.title, description: r.description, category: r.categoryId, author: r.author,
       postedAgo: postedAgo(r.createdAt), neighborhood: r.neighborhood, distanceKm: r.distanceKm ?? Infinity, pricePhp: r.priceCentavos / 100,
       priceUnit: r.unit === 'visit' ? 'job' : r.unit, status: r.status, lat: r.lat ?? undefined, lng: r.lng ?? undefined })));
   }
-  async refresh(): Promise<void> {
+  async refresh(locate = true): Promise<void> {
     this.loading.set(true); this.error.set('');
-    try { await Promise.all([this.catalog(), this.directory(), this.bulletin()]); }
+    try {
+      if(locate && !this.api.settings.useMockApi())void this.location.refreshGranted().then(()=>this.location.point()?this.refresh(false):undefined);
+      await Promise.all([this.catalog(), this.directory(), this.bulletin()]);
+    }
     catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load nearby services.'); }
     finally { this.loading.set(false); }
+  }
+  async cancelRequest(id:string):Promise<void>{
+    if(this.api.settings.useMockApi())throw new Error('Connect to SERVIO to cancel your request.');
+    await this.api.post(`/bulletin/${id}/cancel`,{});await this.bulletin();
   }
   async acceptRequest(id: string): Promise<void> {
     if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');
@@ -73,7 +90,7 @@ export class CommunityService {
     if (this.api.settings.useMockApi()) throw new Error('Request acceptance requires an API connection.');
     await this.api.post(`/bulletin/${id}/release`, {});
   }
-  async postRequest(input: { skuId: string; categoryId: string; description: string; neighborhood: string; urgent: boolean }): Promise<void> {
+  async postRequest(input: { skuId: string; categoryId: string; description: string; neighborhood: string; urgent: boolean; lat?:number; lng?:number }): Promise<void> {
     if (this.api.settings.useMockApi()) return;
     await this.api.post('/bulletin', input); await this.bulletin();
   }

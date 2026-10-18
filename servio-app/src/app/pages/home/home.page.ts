@@ -1,3 +1,4 @@
+import { DiscoveryLocationComponent } from '../../shared/components/discovery-location/discovery-location.component';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ActionSheetController, IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
@@ -19,7 +20,7 @@ const MINI_STEPS = ['Accepted', 'On the Way', 'Arrived', 'Done'];
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, RouterLink, SearchFilterComponent, StatusBadgeComponent, HelperCardComponent, AvatarComponent, PhpPipe],
+  imports: [DiscoveryLocationComponent,IonHeader, IonToolbar, IonContent, IonIcon, RouterLink, SearchFilterComponent, StatusBadgeComponent, HelperCardComponent, AvatarComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {
@@ -38,7 +39,7 @@ export class HomePage {
   }
   readonly firstName = computed(() => this.auth.user()?.fullName?.split(' ')[0] ?? 'neighbor');
   readonly categories = CATEGORIES;
-  readonly bulletin = computed(() => this.community.requests().slice(0, 3));
+  readonly bulletin = computed(() => this.community.requests().filter(r=>r.status!=='CANCELLED').slice(0, 3));
   readonly helpers = this.community.helpers;
   readonly categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
   readonly miniSteps = MINI_STEPS;

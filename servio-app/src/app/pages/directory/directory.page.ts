@@ -1,3 +1,4 @@
+import { DiscoveryLocationComponent } from '../../shared/components/discovery-location/discovery-location.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,7 +13,7 @@ import { SearchFilterComponent } from '../../shared/components/search-filter/sea
   selector: 'app-directory',
   templateUrl: 'directory.page.html',
   styleUrl: 'directory.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, SearchFilterComponent, HelperCardComponent],
+  imports: [DiscoveryLocationComponent,IonHeader, IonToolbar, IonContent, IonIcon, SearchFilterComponent, HelperCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DirectoryPage {

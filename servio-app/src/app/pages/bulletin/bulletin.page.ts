@@ -1,3 +1,4 @@
+import { DiscoveryLocationComponent } from '../../shared/components/discovery-location/discovery-location.component';
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,7 +17,7 @@ import { SearchFilterComponent } from '../../shared/components/search-filter/sea
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { PhpPipe } from '../../shared/pipes/php.pipe';
 
-type Filter = 'ALL' | 'OPEN' | 'URGENT' | 'NEARBY';
+type Filter = 'MINE' | 'ALL' | 'OPEN' | 'URGENT' | 'NEARBY';
 
 /** Illustrative pins around Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur. */
 const PIN_COORDS: [number, number][] = [
@@ -27,7 +28,7 @@ const PIN_COORDS: [number, number][] = [
   selector: 'app-bulletin',
   templateUrl: 'bulletin.page.html',
   styleUrl: 'bulletin.page.scss',
-  imports: [DecimalPipe, IonFooter, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
+  imports: [DiscoveryLocationComponent,DecimalPipe, IonFooter, IonHeader, IonToolbar, IonContent, IonIcon, IonModal, SearchFilterComponent, StatusBadgeComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BulletinPage {
@@ -74,6 +75,13 @@ export class BulletinPage {
       await this.community.bulletin().catch(() => undefined);
     } finally { this.saving.set(false); }
   }
+  async cancelRequest(request:BulletinRequest):Promise<void>{
+    if(this.saving())return;
+    this.saving.set(true);this.actionError.set('');
+    try{await this.community.cancelRequest(request.id);this.filter.set('MINE');}
+    catch(error){this.actionError.set(error instanceof Error?error.message:'Could not cancel request.');}
+    finally{this.saving.set(false);}
+  }
   async releaseRequest(request: BulletinRequest): Promise<void> {
     if (this.saving()) return;
     this.saving.set(true); this.actionError.set('');
@@ -102,6 +110,7 @@ export class BulletinPage {
   }
   readonly filters: { id: Filter; label: string }[] = [
     { id: 'ALL', label: 'All' },
+    { id: 'MINE', label: 'My requests' },
     { id: 'OPEN', label: 'Open' },
     { id: 'URGENT', label: 'Urgent' },
     { id: 'NEARBY', label: 'Nearby (< 3km)' },
@@ -114,6 +123,8 @@ export class BulletinPage {
     const f = this.filter();
     const q = this.query().toLowerCase();
     return this.community.requests().filter((r) => {
+      if(f==='MINE')return this.isOwner(r);
+      if(r.status==='CANCELLED')return false;
       if (r.acceptedProId && !r.bookingId && (this.isOwner(r) || this.isAcceptedPro(r))) return true;
       if (f === 'OPEN' && r.status !== 'OPEN') return false;
       if (f === 'URGENT' && r.status !== 'URGENT') return false;

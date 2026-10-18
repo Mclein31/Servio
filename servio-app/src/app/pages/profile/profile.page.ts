@@ -52,9 +52,9 @@ export class ProfilePage {
   ];
 
   private readonly sampleServices = [
-    { name: 'Academic Tutoring', detail: 'Math, English, test prep', pricePhp: 350, unit: 'hr', icon: 'school-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
-    { name: 'General Handyman', detail: 'Assembly, minor fixes', pricePhp: 400, unit: 'hr', icon: 'construct-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
-    { name: 'Grocery Pickup', detail: 'Purchases paid separately', pricePhp: 150, unit: 'errand', icon: 'cart-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
+    { id:'sample-tutor', name: 'Academic Tutoring', detail: 'Math, English, test prep', pricePhp: 350, unit: 'hr', icon: 'school-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
+    { id:'sample-handyman', name: 'General Handyman', detail: 'Assembly, minor fixes', pricePhp: 400, unit: 'hr', icon: 'construct-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00' },
+    { id:'sample-errands', name: 'Grocery Pickup', detail: 'Purchases paid separately', pricePhp: 150, unit: 'errand', icon: 'cart-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
   ];
 
   readonly tradeSaving = signal(false);
@@ -64,7 +64,7 @@ export class ProfilePage {
     const ids = this.auth.pro()?.skuIds ?? [];
     return this.community.skus().filter((s) => ids.includes(s.id)).map((s) => {
       const category = CATEGORIES.find((c) => c.id === s.category)!;
-      return { name: s.name, detail: s.inclusions.join(', '), pricePhp: s.pricePhp, unit: s.unit, icon: category.icon, tint: category.tint, ink: category.accent };
+      return { id:s.id, name: s.name, detail: s.inclusions.join(', '), pricePhp: s.pricePhp, unit: s.unit, icon: category.icon, tint: category.tint, ink: category.accent };
     });
   });
 
@@ -128,6 +128,18 @@ export class ProfilePage {
     return list;
   });
 
+  readonly removingService = signal('');
+  async removeService(id:string):Promise<void>{
+    if(this.removingService())return;
+    this.removingService.set(id);
+    try{
+      if(this.mock())throw new Error('Connect to SERVIO to remove a service.');
+      const result=await this.community.api.request<{skuIds:string[]}>('DELETE',`/me/services/${encodeURIComponent(id)}`);
+      this.auth.pro.update(p=>p?{...p,skuIds:result.skuIds}:p);
+      await this.community.refresh(false);
+    }catch(error){const toast=await this.toasts.create({message:error instanceof Error?error.message:'Could not remove service.',duration:3000,position:'top'});await toast.present();}
+    finally{this.removingService.set('');}
+  }
   manageServices(): void {
     void this.open({ label: 'Change Service Category', caption: '', icon: '', tint: '', ink: '', action: 'trade' });
   }

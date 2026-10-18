@@ -64,7 +64,7 @@ export class AuthService {
           const result = await this.api.get<{ me: AppUser; pro: AppPro | null }>('/me');
           if (this.sessions.token() !== token) return;
           this.user.set(result.me); this.pro.set(result.pro);
-          await this.loadAvatar(result.me,token);
+          void this.loadAvatar(result.me,token);
         }
         this.loadedToken = token;
       })().finally(() => { if (this.profileLoading?.token === token) this.profileLoading = undefined; });

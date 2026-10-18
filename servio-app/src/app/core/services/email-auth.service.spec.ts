@@ -9,7 +9,7 @@ const newUser: AppUser = { id: 'customer-id', email: 'person@example.test', role
 
 describe('email-code auth', () => {
   const settings = { ready: Promise.resolve(), useMockApi: signal(false) };
-  const api = { settings, post: vi.fn(), get: vi.fn(), patch: vi.fn() };
+  const api = { settings, post: vi.fn(), get: vi.fn(), patch: vi.fn(), imageUrl:vi.fn() };
   const token = signal<string | null>(null);
   const sessions = { token, get: vi.fn(async () => token()), set: vi.fn(async (value: string) => token.set(value)), clear: vi.fn(async () => token.set(null)) };
   beforeEach(() => {
@@ -20,6 +20,13 @@ describe('email-code auth', () => {
   });
   afterEach(() => { TestBed.resetTestingModule(); vi.unstubAllGlobals(); });
 
+  it('makes the authenticated account ready before its avatar is available',async()=>{
+    token.set('session');const auth=TestBed.inject(AuthService);
+    api.get.mockResolvedValue({me:{...newUser,fullName:'Ready User',avatarKey:'avatar'},pro:null});
+    let resolve!:(url:string)=>void;api.imageUrl.mockReturnValue(new Promise<string>(r=>resolve=r));
+    await auth.refreshProfile();expect(auth.user()?.fullName).toBe('Ready User');
+    resolve('signed-avatar');await vi.waitFor(()=>expect(auth.avatarUrl()).toBe('signed-avatar'));
+  });
   it('normalizes email, displays the dev note, verifies via API and saves the returned session', async () => {
     const auth = TestBed.inject(AuthService);
     api.post.mockResolvedValueOnce({ devNote: 'Development: use the API log.' });

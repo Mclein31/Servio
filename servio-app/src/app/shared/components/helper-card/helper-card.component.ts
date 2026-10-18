@@ -22,7 +22,7 @@ import { AuthService } from '../../../core/services/auth.service';
       <span class="category">{{ helper.category }}</span>
       <div class="meta">
         <span class="rating"><ion-icon name="star" aria-hidden="true"></ion-icon>{{ helper.rating | number: '1.1-1' }} <span class="count">({{ helper.reviewCount }})</span></span>
-        <span class="distance"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ helper.distanceKm }} km away</span>
+        <span class="distance"><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ isOwn() ? 'Your profile' : isFinite(helper.distanceKm) ? helper.distanceKm + ' km away' : 'Distance unavailable' }}</span>
       </div>
       <span class="price-tag">₱{{ helper.hourlyRatePhp | number: '1.0-0' }}/{{ helper.rateUnit ?? 'hr' }}</span>
       @if (!compact) {
@@ -108,6 +108,7 @@ import { AuthService } from '../../../core/services/auth.service';
   `,
 })
 export class HelperCardComponent {
+  readonly isFinite = Number.isFinite;
   @Input({ required: true }) helper!: HelperSummary;
   /** 'available' shows the [Available] capsule; 'book' shows the [Book Now] pill. */
   @Input() actionMode: 'available' | 'book' = 'available';

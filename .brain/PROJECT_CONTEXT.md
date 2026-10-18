@@ -64,3 +64,5 @@ SERVIO eliminates this friction by treating services as **standardized catalog i
 ## Latest operational update — 2026-10-18
 
 Bulletin cards now support Pro reservation, followed by explicit customer address/escrow checkout before an active job exists (ADR-032). Category settings persist offered SKU IDs; Profile shows actual Pro services. Help reports and GCASH/CARD payment preference are account-scoped (ADR-033). Payments remain simulated. Production migrations 0008/0009 and Worker deployment completed; native assets are synced but installed phones require rebuilding. Branded preload ends after two seconds with a spinner. Verification: 186 API tests, 77 app tests, local API browser booking flow, and authenticated production endpoint smoke checks. See docs/PRODUCTION.md.
+
+Latest discovery/owner-controls update: ADR-034 covers measured GPS-origin distances with expiry, owner request cancellation/My requests, per-SKU service withdrawal and nonblocking photo/GPS loading. Worker 6d8fca71-c659-4d6c-b871-3d6fa67f39ca is deployed; native production assets synced. 191 API/83 client tests pass. Current work is on booking_bug; main has not been merged with these fixes.

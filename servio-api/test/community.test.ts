@@ -125,10 +125,10 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
 
   it('filters and ranks eligible local results before limiting more than 100 candidates', async () => {
     const origin={ lat:17.62+Math.random()*0.001,lng:121.72+Math.random()*0.001 };
-    await f.db.update(proProfiles).set({ lastLat: origin.lat, lastLng: origin.lng }).where(eq(proProfiles.userId, f.pro.id));
+    await f.db.update(proProfiles).set({ lastLocatedAt:new Date(), lastLat: origin.lat, lastLng: origin.lng }).where(eq(proProfiles.userId, f.pro.id));
     const posted = await (await postBulletin()).json() as { request: { id: string } };
     const distant = await f.db.insert(users).values(Array.from({ length: 101 }, () => ({ email: `${crypto.randomUUID()}@servio.test`, role: 'PRO' as const }))).returning({ id: users.id });
-    await f.db.insert(proProfiles).values(distant.map((p) => ({ userId: p.id, kycStatus: 'APPROVED' as const, lastLat: 18, lastLng: 122 })));
+    await f.db.insert(proProfiles).values(distant.map((p) => ({ userId: p.id, kycStatus: 'APPROVED' as const, lastLocatedAt:new Date(), lastLat: 18, lastLng: 122 })));
     await f.db.insert(proSkus).values(distant.map((p) => ({ proId: p.id, skuId: 'sku-ac-leak' })));
     await f.db.insert(bulletinRequests).values(distant.map(() => ({ authorId: f.customer.id, skuId: 'sku-ac-leak', categoryId: 'repairs', description: 'Distant request', neighborhood: 'Test area', lat: 18, lng: 122 })));
     const local = await (await api('/bulletin?filter=nearby&lat=17.618111&lng=121.718927', { headers: f.headers.customer })).json() as { requests: { id: string }[] };
@@ -139,7 +139,7 @@ describe.runIf(hasDb)('reviews, bulletin, chat and directory (A9)', () => {
 
   it('lists only approved active Pros with catalog rates, distance and no contact details', async () => {
     const origin={ lat:17.62+Math.random()*0.001,lng:121.72+Math.random()*0.001 };
-    await f.db.update(proProfiles).set({ lastLat: origin.lat, lastLng: origin.lng, isOnline: true }).where(eq(proProfiles.userId, f.pro.id));
+    await f.db.update(proProfiles).set({ lastLocatedAt:new Date(), lastLat: origin.lat, lastLng: origin.lng, isOnline: true }).where(eq(proProfiles.userId, f.pro.id));
     await f.db.insert(proSkus).values([{ proId: f.pro.id, skuId: 'sku-elec-inspect' }, { proId: f.pro.id, skuId: 'sku-laptop-diag' }]);
     await f.db.insert(proProfiles).values({ userId: f.other.id, kycStatus: 'PENDING' });
     await f.db.insert(proSkus).values({ proId: f.other.id, skuId: 'sku-ac-leak' });
@@ -247,4 +247,51 @@ describe.runIf(hasDb)('bulletin acceptance races and rollback', () => {
     const [row] = await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));
     expect(Boolean(row!.bookingId)).toBe(booking.status===201);
   });
+});
+
+describe.runIf(hasDb)('measured discovery and owner withdrawal',()=>{
+ let f:Awaited<ReturnType<typeof bookingFixture>>;let id:string;
+ beforeEach(async()=>{f=await bookingFixture();const response=await api('/bulletin',json({categoryId:'repairs',skuId:'sku-ac-leak',description:'Test cancel request',neighborhood:'Ugac Norte',lat:17.618111,lng:121.718927},f.headers.customer));id=((await response.json()) as {request:{id:string}}).request.id;});
+ afterEach(async()=>{await f.close();});
+ it('requires a viewer origin and a recent provider fix for distances',async()=>{
+  await f.db.update(proProfiles).set({lastLat:17.618111,lastLng:121.718927,lastLocatedAt:new Date()}).where(eq(proProfiles.userId,f.pro.id));
+  const list=async(query='')=>(await(await api(`/pros?id=${f.pro.id}${query}`,{headers:f.headers.customer})).json()) as {pros:{distanceKm:number|null}[]};
+  expect((await list()).pros[0]!.distanceKm).toBeNull();expect((await list('&lat=17.618111&lng=121.718927')).pros[0]!.distanceKm).toBe(0);
+  expect((await list('&lat=17.628111&lng=121.718927')).pros[0]!.distanceKm).toBeGreaterThan(1);
+  await f.db.update(proProfiles).set({lastLocatedAt:new Date(Date.now()-3600000)}).where(eq(proProfiles.userId,f.pro.id));
+  expect((await list('&lat=17.618111&lng=121.718927')).pros[0]!.distanceKm).toBeNull();
+ });
+ it('lets only the owner cancel a request and hides it from public feeds',async()=>{
+  expect((await api(`/bulletin/${id}/cancel`,json({},f.headers.pro))).status).toBe(403);
+  expect((await api(`/bulletin/${id}/cancel`,json({},f.headers.customer))).status).toBe(200);
+  expect((await api(`/bulletin/${id}/accept`,json({},f.headers.pro))).status).toBe(409);
+  const others=await(await api('/bulletin',{headers:f.headers.pro})).json() as {requests:{id:string}[]};expect(others.requests.some(r=>r.id===id)).toBe(false);
+  const mine=await(await api('/bulletin',{headers:f.headers.customer})).json() as {requests:{id:string;status:string}[]};expect(mine.requests.find(r=>r.id===id)?.status).toBe('CANCELLED');
+ });
+ it('cancels an unbooked reservation but defers confirmed bookings to booking cancellation',async()=>{
+  await api(`/bulletin/${id}/accept`,json({},f.headers.pro));
+  expect((await api(`/bulletin/${id}/cancel`,json({},f.headers.customer))).status).toBe(200);
+  await f.db.update(bulletinRequests).set({bookingId:f.booking.id,status:'ACCEPTED'}).where(eq(bulletinRequests.id,id));
+  expect((await api(`/bulletin/${id}/cancel`,json({},f.headers.customer))).status).toBe(409);
+ });
+ it('withdraws only owned service listings, releases unbooked reservations and preserves active jobs',async()=>{
+  await api(`/bulletin/${id}/accept`,json({},f.headers.pro));
+  expect((await api('/me/services/sku-ac-leak',{method:'DELETE',headers:f.headers.customer})).status).toBe(403);
+  expect((await api('/me/services/sku-ac-leak',{method:'DELETE',headers:f.headers.pro})).status).toBe(200);
+  expect(await f.db.select().from(proSkus).where(eq(proSkus.proId,f.pro.id))).toHaveLength(0);
+  const [request]=await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));expect(request).toMatchObject({status:'OPEN',acceptedProId:null});
+  expect((await api(`/bookings/${f.booking.id}`,{headers:f.headers.pro})).status).toBe(200);
+ });
+});
+
+describe.runIf(hasDb)('service withdrawal concurrent with acceptance',()=>{
+ let f:Awaited<ReturnType<typeof bookingFixture>>;
+ beforeEach(async()=>{f=await bookingFixture();});afterEach(async()=>{await f.close();});
+ it('never leaves a reservation for a withdrawn service',async()=>{
+  const response=await api('/bulletin',json({categoryId:'repairs',skuId:'sku-ac-leak',description:'Concurrent withdrawal test',neighborhood:'Ugac Norte'},f.headers.customer));
+  const id=((await response.json()) as {request:{id:string}}).request.id;
+  const results=await Promise.all([api(`/bulletin/${id}/accept`,json({},f.headers.pro)),api('/me/services/sku-ac-leak',{method:'DELETE',headers:f.headers.pro})]);
+  expect([200,403]).toContain(results[0]!.status);expect(results[1]!.status).toBe(200);
+  const [row]=await f.db.select().from(bulletinRequests).where(eq(bulletinRequests.id,id));expect(row).toMatchObject({status:'OPEN',acceptedProId:null});
+ });
 });

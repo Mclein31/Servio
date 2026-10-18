@@ -84,7 +84,7 @@ const MAX_DESC = 200;
             <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
             <input type="text" [value]="area()" (input)="area.set($any($event.target).value)" placeholder="Barangay or street" />
           </span>
-          <span class="hint">Exact address is shared only after a helper is booked.</span>
+          <span class="hint">{{ saved ? 'Your selected saved address supplies an approximate area pin. Exact entrance details stay in the booking.' : 'Add a pinned saved address to share an approximate area. No location will be shared for this post.' }}</span>
         </label>
       </form>
     </ion-content>
@@ -111,7 +111,7 @@ export class PostBulletinModalComponent {
   readonly skuId = signal('');
   readonly desc = signal('');
   readonly urgent = signal(false);
-  private readonly saved = inject(AddressService).selected();
+  readonly saved = inject(AddressService).selected();
   readonly area = signal(this.saved ? `${this.saved.barangay}, ${this.saved.city}` : 'Barangay Ugac Norte, Tuguegarao City');
 
   readonly skus = computed(() => this.community.skus().filter((s) => s.category === this.category()));
@@ -130,7 +130,7 @@ export class PostBulletinModalComponent {
   async post(): Promise<void> {
     if (!this.canPost()) return;
     this.saving.set(true); this.error.set('');
-    try { await this.community.postRequest({ skuId: this.sku()!.id, categoryId: this.category(), description: this.desc().trim(), neighborhood: this.area().trim(), urgent: this.urgent() }); }
+    try { await this.community.postRequest({ skuId: this.sku()!.id, categoryId: this.category(), description: this.desc().trim(), neighborhood: this.area().trim(), urgent: this.urgent(), ...(this.saved ? {lat:Number(this.saved.lat.toFixed(3)),lng:Number(this.saved.lng.toFixed(3))} : {}) }); }
     catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not post request.'); return; }
     finally { this.saving.set(false); }
     await this.modals.dismiss({ posted: true });
