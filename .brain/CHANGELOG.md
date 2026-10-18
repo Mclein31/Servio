@@ -325,3 +325,7 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 - Owner selected key-free Leaflet/OpenStreetMap maps. Pin taps/drags/GPS reverse geocode through Nominatim with stale-response protection, caching and global request limits (`docs/MAPS.md`).
 - Tracking/chat/Pro call actions open the peer's number via a participant-only active-booking endpoint; missing numbers show the requested message.
 - Remaining UI glyph/custom success icons replaced with Ionicons. See ADR-031.
+
+## 2026-10-18 — Branded launch preload
+
+- Added a SERVIO preload from the initial HTML through Angular startup. It remains for at least 1.4 seconds and until initial routing completes, shielding onboarding and other entry pages from interaction until ready. Existing entry guards still choose onboarding, login or home; reduced-motion preferences disable the loading animation.

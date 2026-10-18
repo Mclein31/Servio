@@ -1,3 +1,11 @@
 <ion-app>
-  <ion-router-outlet></ion-router-outlet>
+  <ion-router-outlet [attr.inert]="launching() ? '' : null" [attr.aria-hidden]="launching() ? 'true' : null"></ion-router-outlet>
+  @if (launching()) {
+    <div class="servio-preload" role="status" aria-label="Loading SERVIO">
+      <img src="assets/logo/servio_app_icon_orange.png" width="88" height="88" alt="" />
+      <span class="servio-preload-name">SERVIO</span>
+      <span class="servio-preload-tagline">Your neighborhood. Ready to help.</span>
+      <span class="servio-preload-loader" aria-hidden="true"></span>
+    </div>
+  }
 </ion-app>
