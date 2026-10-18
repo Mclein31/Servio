@@ -53,20 +53,34 @@ describe.runIf(hasDb)('owner saved service addresses', () => {
     expect((await patch('not-an-id', { label: 'Other' })).status).toBe(422);
   });
 
-  it('rejects malformed or out-of-area locations and invalid partial edits before any money changes', async () => {
+  it('rejects malformed locations and invalid partial edits before any money changes', async () => {
     for (const input of [
       { ...home, street: '' }, { ...home, label: 'x'.repeat(51) }, { ...home, lat: 91 },
-      { ...home, lat: '17.613' }, { ...home, userId: f.pro.id }, { ...home, city: 'Other City' },
+      { ...home, lat: '17.613' }, { ...home, userId: f.pro.id },
       { ...home, isDefault: 'true' }, { ...home, price: 1 },
     ]) expect((await create(input)).status).toBe(422);
     const address = await saved();
-    for (const input of [{}, { isDefault: false }, { lng: 181 }, { city: 'Other City' }, { userId: f.pro.id }]) expect((await patch(address.id, input)).status).toBe(422);
+    for (const input of [{}, { isDefault: false }, { lng: 181 }, { userId: f.pro.id }]) expect((await patch(address.id, input)).status).toBe(422);
     expect(await list()).toMatchObject([{ id: address.id, ...home, isDefault: true }]);
     const original = await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id));
-    const response = await api('/bookings', json({ skuId: 'sku-ac-leak', address: { street: home.street, barangay: home.barangay, city: 'Other City' }, lat: 0, lng: 0, schedule: 'ASAP', paymentMethod: 'GCASH' }, f.headers.customer));
+    const response = await api('/bookings', json({ skuId: 'sku-ac-leak', address: { street: home.street, barangay: home.barangay, city: home.city }, lat: 91, lng: 0, schedule: 'ASAP', paymentMethod: 'GCASH' }, f.headers.customer));
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ error: { code: 'OUTSIDE_SERVICE_AREA' } });
+    expect(await response.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
     expect(await f.db.select().from(ledgerEntries).where(eq(ledgerEntries.bookingId, f.booking.id))).toEqual(original);
+  });
+
+  it('accepts and preserves locations outside Tuguegarao for addresses and bookings', async () => {
+    const away = { ...home, city: 'Peñablanca' };
+    const address = await saved(away);
+    expect(address.city).toBe('Peñablanca');
+    expect((await patch(address.id, { city: 'Iguig' })).status).toBe(200);
+    expect(await list()).toMatchObject([{ id: address.id, city: 'Iguig' }]);
+    const booking = await api('/bookings', json({
+      skuId: 'sku-ac-leak', address: { street: away.street, barangay: away.barangay, city: away.city },
+      lat: 17.35, lng: 121.8, schedule: 'ASAP', paymentMethod: 'GCASH',
+    }, f.headers.customer));
+    expect(booking.status).toBe(201);
+    expect(await booking.json()).toMatchObject({ booking: { address: { city: 'Peñablanca' }, lat: 17.35, lng: 121.8 } });
   });
 
   it('accepts saving and editing pins beyond the former 10 km radius', async () => {

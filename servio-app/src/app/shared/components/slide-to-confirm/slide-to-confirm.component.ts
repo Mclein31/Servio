@@ -130,7 +130,7 @@ export class SlideToConfirmComponent {
 
   onDown(e: PointerEvent): void {
     if (this.done() || this.disabled) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId);
     this.dragging.set(true);
     this.startX = e.clientX;
     this.startOffset = this.offset();

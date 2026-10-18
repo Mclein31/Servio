@@ -19,7 +19,7 @@ import { servioTileLayer } from '../../shared/utils/map-tiles';
     <ion-content class="servio-page"><div class="wrap">
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
       @if (editing()) {
-        <p>Tap the map or drag the pin to your entrance. Choose your address in Tuguegarao City.</p>
+        <p>Tap the map or drag the pin to your entrance. You can save an address in any city.</p>
         <div #mapHost class="map" role="region" aria-label="Choose service location on map"></div>
         <button class="pill-btn-outline" type="button" (click)="locate()" [disabled]="locating()">{{ locating() ? 'Finding location…' : 'Use my current location' }}</button>
         <p class="pin-status" aria-live="polite">{{ pin() ? 'Pin selected: ' + pin()![0].toFixed(5) + ', ' + pin()![1].toFixed(5) : 'Select a pin before saving.' }}</p>
@@ -68,7 +68,7 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   readonly pin = signal<readonly [number,number] | null>(null);
   private readonly geocoder = inject(ReverseGeocodingService);
   readonly geocoding = signal(false);
-  city = 'Tuguegarao City';
+  city = '';
   private geocodeRevision = 0;
   private lookupTimer?: ReturnType<typeof setTimeout>;
   label = 'Home'; street = ''; barangay = ''; landmark = ''; isDefault = false; wasDefault = false;
@@ -79,7 +79,7 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
   ionViewWillLeave(): void { this.closeEditor(); }
   edit(a?: SavedAddress): void {
     this.closeEditor(); this.error.set(''); this.id = a?.id; this.label = a?.label ?? 'Home'; this.street = a?.street ?? '';
-    this.city = a?.city ?? 'Tuguegarao City'; this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length; this.wasDefault = a?.isDefault ?? false;
+    this.city = a?.city ?? ''; this.barangay = a?.barangay ?? ''; this.landmark = a?.landmark ?? ''; this.isDefault = a?.isDefault ?? !this.addresses.addresses().length; this.wasDefault = a?.isDefault ?? false;
     this.pin.set(a ? [a.lat,a.lng] : null); this.editing.set(true);
   }
   ngAfterViewChecked(): void {
@@ -111,12 +111,8 @@ export class AddressesPage implements AfterViewChecked, OnDestroy {
     try {
       const fields = await this.geocoder.lookup(lat,lng);
       if(revision !== this.geocodeRevision || !this.editing()) return;
-      const city = fields.city && /tuguegarao/i.test(fields.city) ? 'Tuguegarao City' : (fields.city ?? 'Tuguegarao City');
+      const city = fields.city && /tuguegarao/i.test(fields.city) ? 'Tuguegarao City' : fields.city;
       this.street = fields.street; this.barangay = fields.barangay; this.city = city;
-      if (!/tuguegarao/i.test(city)) {
-        this.error.set('Choose a pin inside Tuguegarao City.');
-        return;
-      }
       if(!fields.street || !fields.barangay || !fields.city) this.error.set('Some address details could not be found. Fill in the missing fields before saving.');
     } catch { if(revision === this.geocodeRevision) this.error.set('Could not look up this address. Enter the address details manually or move the pin to try again.'); }
     finally { if(revision === this.geocodeRevision) { this.geocoding.set(false); } }

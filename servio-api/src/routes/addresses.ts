@@ -1,7 +1,6 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';
-import { cityProfile } from '../config/cities';
 import { validateServiceLocation } from '../lib/service-area';
 import { userAddresses, users } from '../db/schema';
 import type { AppEnv } from '../env';
@@ -37,7 +36,7 @@ addresses.get('/me/addresses', async (c) => {
 
 addresses.post('/me/addresses', validate('json', CreateAddress), async (c) => {
   const input = c.req.valid('json');
-  validateServiceLocation(input, c.env.LAUNCH_CITY);
+  validateServiceLocation(input);
   const userId = c.get('userId');
   const address = await c.get('db').transaction(async (tx) => {
     // The owner row exists even for an empty address book: all default changes serialize here.
@@ -45,7 +44,7 @@ addresses.post('/me/addresses', validate('json', CreateAddress), async (c) => {
     const [prior] = await tx.select({ id: userAddresses.id }).from(userAddresses).where(eq(userAddresses.userId, userId)).limit(1);
     const isDefault = !prior || input.isDefault === true;
     if (isDefault) await tx.update(userAddresses).set({ isDefault: false, updatedAt: new Date() }).where(and(eq(userAddresses.userId, userId), eq(userAddresses.isDefault, true)));
-    const [row] = await tx.insert(userAddresses).values({ ...input, city: cityProfile(c.env.LAUNCH_CITY).addressCity, userId, isDefault }).returning(publicFields);
+    const [row] = await tx.insert(userAddresses).values({ ...input, userId, isDefault }).returning(publicFields);
     return row!;
   });
   return c.json({ address }, 201);
@@ -60,10 +59,10 @@ addresses.patch('/me/addresses/:id', validate('param', AddressId), validate('jso
     const owned = and(eq(userAddresses.id, id), eq(userAddresses.userId, userId));
     const [prior] = await tx.select().from(userAddresses).where(owned);
     if (!prior) throw new ApiError(404, 'NOT_FOUND', 'Address not found.');
-    validateServiceLocation({ ...prior, ...input }, c.env.LAUNCH_CITY);
+    validateServiceLocation({ ...prior, ...input });
     if (prior.isDefault && input.isDefault === false) throw new ApiError(422, 'DEFAULT_REQUIRED', 'Choose another address as the default first.');
     if (input.isDefault === true) await tx.update(userAddresses).set({ isDefault: false, updatedAt: new Date() }).where(and(eq(userAddresses.userId, userId), eq(userAddresses.isDefault, true)));
-    const [row] = await tx.update(userAddresses).set({ ...input, city: cityProfile(c.env.LAUNCH_CITY).addressCity, updatedAt: new Date() }).where(owned).returning(publicFields);
+    const [row] = await tx.update(userAddresses).set({ ...input, updatedAt: new Date() }).where(owned).returning(publicFields);
     return row!;
   });
   return c.json({ address });

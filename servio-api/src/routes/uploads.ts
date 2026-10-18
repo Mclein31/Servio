@@ -25,7 +25,11 @@ export const uploads = new Hono<AppEnv>();
 uploads.use('/uploads/*', withDb);
 
 function directUploadMode(env: Bindings): boolean {
-  return env.UPLOADS_MODE === 'worker' || env.UPLOADS_MODE === 'local';
+  const mode = env.UPLOADS_MODE?.trim().toLowerCase();
+  const environment = env.ENVIRONMENT?.trim().toLowerCase();
+  if (mode === 'worker') return true;
+  if (mode === 'local') return environment !== 'production' && environment !== 'prod';
+  return false;
 }
 function s3(env: Bindings) {
   if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !/^servio-/.test(env.R2_BUCKET_NAME)) {

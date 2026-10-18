@@ -72,4 +72,4 @@ The core MVP must strictly implement this state machine:
 - [[Order_Lifecycle_State_Machine]] — State machine details.
 - [[MOC_Servio]] — Back to Master Map of Content.
 
-Owner update (2026-10-18): remove the fixed 10 km limit for address pins, booking validation and provider matching. Valid coordinates and Tuguegarao city selection remain required. Earlier radius references are superseded by ADR-035.
+Owner update (2026-10-19): remove the city lock for saved address pins and bookings; addresses in any city are allowed. Keep valid coordinate bounds. Earlier radius and city-selection requirements are superseded by ADR-035.

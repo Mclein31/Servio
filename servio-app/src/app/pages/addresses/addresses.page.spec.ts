@@ -12,7 +12,8 @@ vi.mock('@capacitor/geolocation',()=>({Geolocation:{getCurrentPosition:vi.fn()}}
 
 describe('address pin confirmation', () => {
   const book={addresses:signal([]),save:vi.fn()}; const back=vi.fn();
-  beforeEach(() => { vi.resetAllMocks(); vi.useFakeTimers(); TestBed.configureTestingModule({providers:[{provide:ReverseGeocodingService,useValue:{lookup:async()=>({street:'',barangay:'',city:''})}},{provide:AddressService,useValue:book},{provide:Location,useValue:{back}},{provide:ActivatedRoute,useValue:{snapshot:{queryParamMap:{get:()=> '1'}}}}]}); });
+  const geocoder={lookup:vi.fn(async()=>({street:'',barangay:'',city:''}))};
+  beforeEach(() => { vi.resetAllMocks(); geocoder.lookup.mockResolvedValue({street:'',barangay:'',city:''}); vi.useFakeTimers(); TestBed.configureTestingModule({providers:[{provide:ReverseGeocodingService,useValue:geocoder},{provide:AddressService,useValue:book},{provide:Location,useValue:{back}},{provide:ActivatedRoute,useValue:{snapshot:{queryParamMap:{get:()=> '1'}}}}]}); });
   afterEach(() => { TestBed.resetTestingModule(); vi.useRealTimers(); });
   it('requires an explicit pin before saving and passes the chosen coordinates', async () => {
     const page=TestBed.runInInjectionContext(() => new AddressesPage()); page.edit(); page.street='Centro 10'; page.barangay='Centro 10';
@@ -35,6 +36,14 @@ describe('address pin confirmation', () => {
     resolve({coords:{latitude:17.61,longitude:121.72},timestamp:Date.now()} as Awaited<ReturnType<typeof Geolocation.getCurrentPosition>>);
     await pending;
     expect(page.pin()).toEqual([17.62,121.73]); expect(page.locating()).toBe(false);
+  });
+  it('accepts a pin whose reverse-geocoded city is outside Tuguegarao', async () => {
+    geocoder.lookup.mockResolvedValue({street:'Main Road',barangay:'Centro',city:'Peñablanca'});
+    const page=TestBed.runInInjectionContext(() => new AddressesPage()); page.edit(); page.selectPin(17.35,121.8);
+    await vi.advanceTimersByTimeAsync(350);
+    expect(page.city).toBe('Peñablanca'); expect(page.error()).toBe('');
+    page.label='Home'; page.street='Main Road'; page.barangay='Centro'; book.save.mockResolvedValue(undefined); await page.save();
+    expect(book.save).toHaveBeenCalledWith(expect.objectContaining({city:'Peñablanca',lat:17.35,lng:121.8}),undefined);
   });
   it('retains the selected pin and address text when server validation fails', async () => {
     const page=TestBed.runInInjectionContext(() => new AddressesPage()); page.edit(); page.street='My entrance'; page.barangay='Centro 10'; page.selectPin(17.61,121.72); await vi.advanceTimersByTimeAsync(350); page.street='My entrance'; page.barangay='Centro 10'; page.city='Tuguegarao City';

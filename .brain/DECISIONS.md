@@ -344,4 +344,4 @@
 
 - **Date:** 2026-10-18
 - **Status:** Accepted (explicit owner request)
-- **Decision:** Remove the 10 km city-center restriction from saved-address and booking validation and the 10 km customer-to-Pro dispatch cutoff. Retain valid coordinate bounds, Tuguegarao city selection, approved/online/SKU-qualified Pro requirements and fresh provider positions. Rank eligible providers by distance without a radius cap. Catalog coverage reports `radiusKm: null`. This supersedes earlier radius policies in ADR-008, dispatch and address decisions. Editing saved places still does not move existing bookings.
+- **Decision:** Remove the 10 km city-center restriction from saved-address and booking validation and the 10 km customer-to-Pro dispatch cutoff. A saved address or booking may use any city; retain only valid coordinate bounds, approved/online/SKU-qualified Pro requirements and fresh provider positions. Rank eligible providers by distance without a radius cap. Catalog coverage reports `radiusKm: null`. This supersedes earlier radius and city-selection policies in ADR-008, dispatch and address decisions. Editing saved places still does not move existing bookings.

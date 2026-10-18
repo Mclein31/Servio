@@ -41,7 +41,7 @@ bookings.use('/bookings/*', withDb, requireUser);
 
 bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   const input = c.req.valid('json');
-  validateServiceLocation({ ...input.address, lat: input.lat, lng: input.lng }, c.env.LAUNCH_CITY);
+  validateServiceLocation({ lat: input.lat, lng: input.lng });
   const customerId = c.get('userId');
   const key = c.req.header('Idempotency-Key');
   if (key !== undefined && !/^[A-Za-z0-9_-]{1,128}$/.test(key)) {
