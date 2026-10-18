@@ -1,6 +1,6 @@
 # SERVIO deployed backend and native app updates
 
-Production API: https://servio-api.servio-ph.workers.dev/api/v1
+Production API: https://servio-api.gellyborgie.workers.dev/api/v1
 
 The API is a Cloudflare Worker backed by the SERVIO Neon production branch through Hyperdrive and the SERVIO R2 bucket. `/health` must report `environment: production` and `database: ok`. A healthy response does not prove every app endpoint is included in the deployed version.
 

@@ -56,7 +56,7 @@ vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = 
 # Hyperdrive `servio-neon` → Neon project `servio`, branch production (direct URL, caching disabled).
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
-id = "71b1fa85b83f4f09839624598307801b"
+id = "ccffcd0ef8644dc595f0bb59eff2bce4"
 
 [[env.production.ratelimits]]
 name = "AUTH_LIMITER"
