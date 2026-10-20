@@ -2,6 +2,31 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.34] — 2026-10-21
+### Added
+- **Notifications inbox (ADR-037):** table `notifications` (migration 0010; 0011 drops the briefly-added `push_tokens`). `GET /notifications`, `POST /notifications/read` (ids / booking+kind / all). Rows are written after commit in `live/notify.ts` from `live/notices.ts` rules (booking created/status/cancel/complete, messages, add-on quote/decision, reviews, dispatch offers and no-Pro refunds, bulletin accept/release/cancel); the actor is never notified. Each insert sends `{type:'notification'}` to the recipient's `user:` room.
+- **Header bell** (`app-notification-bell`) with a red unread dot on Home, Profile and the Pro dashboard; `/notifications` page with mark-all-read, pull to refresh and tap-to-open. Opening a chat marks its message notifications read.
+- **Free system alerts:** `@capacitor/local-notifications` shows new notifications as phone notifications when they arrive over the live socket while the app is backgrounded. No Firebase/APNs or paid Apple account. A fully closed app gets nothing until reopened (the bell then catches up).
+### Removed
+- FCM push (owner declined Firebase and a paid Apple account): `@capacitor/push-notifications`, `lib/push.ts`, device-token endpoints and `push_tokens`.
+### Fixed
+- Demo reset TRUNCATE now includes `support_requests` and `notifications`.
+### Verified
+- API typecheck and 203 tests; production migrations 12/12; Worker `e1fbf224-b63c-47aa-8e1c-94d66165abea`. App lint and 119/120 tests (pre-existing profile-editor failure). Bell/page/local alerts not yet checked on physical phones.
+
+## [0.5.33] — 2026-10-21
+### Fixed (realtime latency audit)
+- **Stale reads / role flip-back:** production had moved to other Cloudflare accounts whose Hyperdrive configs cache SELECTs (~60 s), so `/me` and booking reads returned stale rows (Profile switched back to Pro; updates lagged 20 s+). Production is back on `mcleinonza0531` with Hyperdrive `servio-neon` (`4eab0f26…`, caching disabled); `account_id` is pinned in `wrangler.toml`. Worker version `e4fd6b86-db6e-422e-9651-b82872b9fe50`.
+- **Personal live room (`user:<id>`, `/me/live-ticket`, `/me/live`):** every booking create/status/cancel/message/add-on/offer and bulletin accept/release/cancel notifies both participants; pending-offer Pros get a `dispatch` refetch on booking changes; new ASAP bookings wake eligible online Pros immediately.
+- **Client sockets:** dead-socket detection (25 s silence → reconnect), reconnect on app resume/online, 5 s polling only while the socket is down (30 s otherwise). Chat messages show a toast when that chat is not open.
+- **Dispatch:** an ASAP booking with no eligible Pro yet waits up to 5 minutes (`FIRST_OFFER_WAIT_MS`) instead of refunding instantly.
+- **Performance:** `GET /bookings` batches details (4 queries per page instead of 5 per booking); room broadcasts no longer open a DB connection per event; GPS throttle 750 ms.
+- **Tracking:** production (no road route) glides the marker between real fixes instead of jumping.
+### Verified
+- API typecheck and 197 tests; app lint, typecheck and 114/115 tests (the profile-editor photo-removal spec fails identically on the previous commit). Production health/route smoke checks; Android debug APK built against the new host.
+### Known / not changed
+- Other deployments (`servio-ph`, `gellyborgie` workers.dev) are outside this account and must be deleted by their owners. Direct (specific-Pro) bookings still start ACCEPTED without Pro consent; a Pro with an active job still sees one active booking at a time. No push notifications yet.
+
 ## [0.5.32] — 2026-10-17
 ### Fixed
 - **Tracking Card Layout & Dock**: Replaced hardcoded negative margin hack (`-124px`) with a sticky `.tracking-dock` container and responsive `.tracking-widget` (centered with `max-width: 680px`), eliminating content overlap on Home tab and awkward layouts on tablet screens.

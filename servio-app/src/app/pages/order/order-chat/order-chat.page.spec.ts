@@ -1,3 +1,4 @@
+import { NotificationService } from '../../../core/services/notification.service';
 import {TestBed} from '@angular/core/testing';
 import {signal} from '@angular/core';
 import {Location} from '@angular/common';
@@ -23,6 +24,7 @@ describe('incremental live chat',()=>{
    {provide:AuthService,useValue:{user:signal({id:'customer',role:'CUSTOMER'})}},{provide:TrackingService,useValue:{}},
    {provide:LiveService,useValue:{events,watch}},{provide:Location,useValue:{}},{provide:BookingCallService,useValue:{}},
    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:convertToParamMap({id:'booking'})}}},
+   {provide:NotificationService,useValue:{markBooking:()=>Promise.resolve()}},
   ]});page=TestBed.runInInjectionContext(()=>new OrderChatPage());
  });
  afterEach(()=>{page.ionViewDidLeave();TestBed.resetTestingModule();});

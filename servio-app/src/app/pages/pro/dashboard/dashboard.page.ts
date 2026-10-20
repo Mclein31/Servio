@@ -1,3 +1,4 @@
+import { NotificationBellComponent } from '../../../shared/components/notification-bell/notification-bell.component';
 import { TrackingControlsComponent } from '../../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -11,7 +12,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
 /** Servio Pro home: availability, today's earnings and the dispatch radar. */
 @Component({
   selector: 'app-pro-dashboard',
-  imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonContent, IonIcon, IonToggle, RouterLink, AvatarComponent, PhpPipe],
+  imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonContent, IonIcon, IonToggle, RouterLink, AvatarComponent, PhpPipe, NotificationBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ion-header class="ion-no-border">
@@ -21,6 +22,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
             <img src="assets/logo/servio_app_icon_orange.png" alt="" width="32" height="32" />
             <span class="wordmark">SERVIO</span><span class="pro">PRO</span>
           </div>
+          <app-notification-bell></app-notification-bell>
           <a routerLink="/tabs/profile" class="switch" aria-label="Account and sign out"><ion-icon name="swap-horizontal-outline" aria-hidden="true"></ion-icon></a>
           <app-avatar [src]="pro.auth.avatarUrl()" [name]="pro.auth.user()?.fullName ?? 'Pro'" [size]="40"></app-avatar>
         </div>

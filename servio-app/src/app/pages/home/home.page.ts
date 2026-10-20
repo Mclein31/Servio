@@ -1,6 +1,7 @@
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { ActionSheetController, IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
+import { ActionSheetController, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
 import { CATEGORIES } from '../../core/data/mock-data';
 import { CommunityService } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -19,13 +20,12 @@ const MINI_STEPS = ['Accepted', 'On the Way', 'Arrived', 'Done'];
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, RouterLink, SearchFilterComponent, StatusBadgeComponent, HelperCardComponent, AvatarComponent, PhpPipe],
+  imports: [IonHeader, IonToolbar, IonContent, IonIcon, RouterLink, NotificationBellComponent, SearchFilterComponent, StatusBadgeComponent, HelperCardComponent, AvatarComponent, PhpPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {
   private readonly router = inject(Router);
   private readonly sheets = inject(SheetsService);
-  private readonly toasts = inject(ToastController);
   private readonly actionSheets = inject(ActionSheetController);
   readonly orders = inject(OrderService);
   readonly sim = inject(TrackingService);
@@ -88,14 +88,6 @@ export class HomePage {
     this.router.navigate(['/tabs/directory'], { queryParams: { category: id } });
   }
 
-  async openNotifications(): Promise<void> {
-    const toast = await this.toasts.create({
-      message: 'You have no new notifications.',
-      duration: 2000,
-      position: 'top',
-    });
-    await toast.present();
-  }
 
   async openFilters(): Promise<void> {
     const buttons = CATEGORIES.map((c) => ({

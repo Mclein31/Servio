@@ -4,6 +4,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LiveService } from '../../../core/services/live.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { MessageDto } from '../../../core/api/customer.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { Location } from '@angular/common';
@@ -41,6 +42,7 @@ export class OrderChatPage {
   readonly saving = signal(false);
   readonly error = signal('');
   private readonly live = inject(LiveService);
+  private readonly inbox = inject(NotificationService);
   private subscription?: Subscription;
   private timer?: ReturnType<typeof setInterval>;
   private generation = 0;
@@ -73,12 +75,16 @@ export class OrderChatPage {
     this.leaveLive=this.live.watch(`booking:${id}`);
     this.subscription=this.live.events.subscribe(event=>{
       if(event.resource!==`booking:${id}`)return;
-      if(event.type==='message' && event.message){this.merge([event.message]);return;}
+      if(event.type==='message' && event.message){this.merge([event.message]);void this.inbox.markBooking(id,'MESSAGE').catch(()=>undefined);return;}
       if(['connected','message'].includes(event.type))void this.refresh();
     });
     void this.refresh();
+    void this.inbox.markBooking(id,'MESSAGE').catch(()=>undefined);
     // Live delivery is primary; slower incremental polling recovers missed/disconnected events.
-    this.timer=setInterval(()=>void this.refresh(),30000);
+    let last=Date.now();
+    this.timer=setInterval(()=>{
+      if(!this.live.connected().has(`booking:${id}`) || Date.now()-last>=30000){last=Date.now();void this.refresh();}
+    },5000);
   }
   ionViewDidEnter():void{void this.content?.scrollToBottom(0);}
   ionViewDidLeave(): void { this.stop(); }

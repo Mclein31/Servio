@@ -100,7 +100,8 @@
 - [ ] Dispatch: nearest approved, online Pros within 10 km (enable PostGIS on Neon), 60-second offers, expiry.
 - [ ] Durable Object per order: WebSocket for live GPS, status broadcasts and chat.
 - [ ] App: Pro device streams real GPS (`@capacitor/geolocation`); `TrackingSimService` consumes the live feed instead of the simulator.
-- [ ] Push notifications via FCM (dispatch alerts, add-on requests, arrival) + `@capacitor/push-notifications`.
+- [x] Notifications: in-app inbox, header bell with unread dot and free local alerts (ADR-037).
+- [ ] Remote push (FCM / paid Apple account) — declined for now; revisit before launch.
 
 **Step 5 — Payments & extra sign-in**
 - [ ] PayMongo sandbox: GCash + card, payment intents, webhooks into the ledger; mock provider stays for tests.

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
 import { filter, take } from 'rxjs';
+import { NotificationService } from './core/services/notification.service';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,8 @@ export class AppComponent {
   readonly pageReady = signal(false);
 
   constructor() {
+    // Starts the inbox badge and device push registration for the signed-in account.
+    inject(NotificationService);
     const router = inject(Router);
     const destroyRef = inject(DestroyRef);
     this.pageReady.set(router.navigated);

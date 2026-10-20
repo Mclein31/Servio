@@ -8,10 +8,7 @@
         </div>
         <span class="servio-caption">{{ greeting }}, {{ firstName() }}</span>
       </div>
-      <button type="button" class="bell" (click)="openNotifications()" aria-label="Notifications">
-        <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
-
-      </button>
+      <app-notification-bell></app-notification-bell>
       <a routerLink="/tabs/profile" class="me" aria-label="Your profile">
         <app-avatar [src]="auth.avatarUrl()" [name]="auth.user()?.fullName ?? 'Customer'" [size]="40"></app-avatar>
       </a>

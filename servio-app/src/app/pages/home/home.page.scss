@@ -33,31 +33,6 @@
   color: var(--servio-text-primary);
 }
 
-.bell {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background: #FFFFFF;
-  box-shadow: var(--servio-shadow-card);
-  color: var(--servio-text-primary);
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.badge-dot {
-  position: absolute;
-  top: 10px;
-  right: 11px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--servio-red);
-  border: 2px solid #FFFFFF;
-}
 
 .me {
   display: inline-flex;

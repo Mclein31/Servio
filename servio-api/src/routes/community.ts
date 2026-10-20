@@ -138,7 +138,7 @@ community.post('/bulletin/:id/accept', validate('param', bulletinId), validate('
       .where(and(eq(users.id, proId), eq(users.role, 'PRO'), eq(users.isActive, true),
         eq(proProfiles.kycStatus, 'APPROVED'), eq(proSkus.skuId, row.skuId), eq(serviceSkus.isActive, true)));
     if (!qualified) throw new ApiError(403, 'QUALIFIED_PRO_REQUIRED', 'Switch to an approved Pro account offering this service before accepting.');
-    if (row.status === 'ACCEPTED' && row.acceptedProId === proId && !row.bookingId) return row;
+    if (row.status === 'ACCEPTED' && row.acceptedProId === proId && !row.bookingId) { c.set('liveHints', { replay: true }); return row; }
     if (!['OPEN', 'URGENT'].includes(row.status) || row.acceptedProId || row.bookingId) throw new ApiError(409, 'REQUEST_CLOSED', 'This request has already been accepted or closed.');
     const [changed] = await tx.update(bulletinRequests).set({ status: 'ACCEPTED', acceptedProId: proId, acceptedAt: await serverNow(tx) })
       .where(eq(bulletinRequests.id, row.id)).returning();
@@ -153,6 +153,7 @@ community.post('/bulletin/:id/release', validate('param', bulletinId), validate(
     if (!row) throw new ApiError(404, 'NOT_FOUND', 'Request not found.');
     if (row.authorId !== c.get('userId') && row.acceptedProId !== c.get('userId')) throw new ApiError(403, 'PARTICIPANT_REQUIRED', 'Only the customer or accepting Pro can release this request.');
     if (row.bookingId || row.status !== 'ACCEPTED') throw new ApiError(409, 'REQUEST_CLOSED', 'This request is no longer awaiting confirmation.');
+    c.set('liveHints', { previousProId: row.acceptedProId });
     const [changed] = await tx.update(bulletinRequests).set({ status: row.urgent ? 'URGENT' : 'OPEN', acceptedProId: null, acceptedAt: null })
       .where(eq(bulletinRequests.id, row.id)).returning();
     return changed!;
@@ -166,7 +167,8 @@ community.post('/bulletin/:id/cancel',validate('param',bulletinId),validate('jso
     if(!row)throw new ApiError(404,'NOT_FOUND','Request not found.');
     if(row.authorId!==c.get('userId'))throw new ApiError(403,'REQUEST_OWNER_REQUIRED','Only the author can cancel this request.');
     if(row.bookingId)throw new ApiError(409,'BOOKING_EXISTS','Open the booking to cancel it under the booking cancellation rules.');
-    if(row.status==='CANCELLED')return row;
+    if(row.status==='CANCELLED'){c.set('liveHints',{replay:true});return row;}
+    c.set('liveHints',{previousProId:row.acceptedProId});
     if(!['OPEN','URGENT','ACCEPTED'].includes(row.status))throw new ApiError(409,'REQUEST_CLOSED','This request is already closed.');
     const [changed]=await tx.update(bulletinRequests).set({status:'CANCELLED',acceptedProId:null,acceptedAt:null}).where(eq(bulletinRequests.id,row.id)).returning();return changed!;
   });return c.json({request});

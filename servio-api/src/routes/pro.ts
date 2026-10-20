@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import * as v from 'valibot';
 import type { AppEnv } from '../env';
 import { bookings, bookingEvents, dispatchOffers, messages, proProfiles, users } from '../db/schema';
-import { advanceDispatch, dispatchTick } from '../dispatch/demo-dispatch';
+import { advanceDispatch, dispatchTick, emptyDispatch } from '../dispatch/demo-dispatch';
 import { serverNow } from '../lib/bookings';
 import { ApiError } from '../lib/errors';
 import { validate } from '../lib/validation';
@@ -43,7 +43,7 @@ pro.post('/pro/location', validate('json',v.strictObject({
 /** Explicit maintenance/write heartbeat while the Pro workspace is open. */
 pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
   const [actor] = await c.get('db').select({ isDemo: users.isDemo }).from(users).where(eq(users.id, c.get('userId')));
-  await dispatchTick(c.get('db'), c.env.LAUNCH_CITY, actor!.isDemo);
+  c.set('liveHints', { dispatch: await dispatchTick(c.get('db'), c.env.LAUNCH_CITY, actor!.isDemo) });
   const now = await serverNow(c.get('db'));
   const rows = await c.get('db').select({ offer: dispatchOffers,
     booking: { id: bookings.id, code: bookings.code, skuName: bookings.skuName, priceCentavos: bookings.priceCentavos, trustFeeCentavos: bookings.trustFeeCentavos,
@@ -57,6 +57,7 @@ pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
 
 pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.string(), v.uuid()), action: v.picklist(['accept','decline']) })), validate('json', v.strictObject({})), async (c) => {
   const { id, action } = c.req.valid('param'); const proId = c.get('userId');
+  const dispatch = emptyDispatch(); c.set('liveHints', { dispatch });
   const result = await c.get('db').transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`dispatch-pro:${proId}`},0))`);
     const [lookup] = await tx.select().from(dispatchOffers).where(and(eq(dispatchOffers.id, id), eq(dispatchOffers.proId, proId)));
@@ -65,7 +66,7 @@ pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.
     const [offer] = await tx.select().from(dispatchOffers).where(eq(dispatchOffers.id, id)).for('update');
     const now = await serverNow(tx);
     if (booking!.status !== 'PENDING_ACCEPTANCE' || offer!.response !== 'PENDING') throw new ApiError(409, 'OFFER_CLOSED', 'This offer is no longer available.');
-    if (offer!.expiresAt <= now) { await advanceDispatch(tx, booking!, c.env.LAUNCH_CITY); return null; }
+    if (offer!.expiresAt <= now) { await advanceDispatch(tx, booking!, c.env.LAUNCH_CITY, dispatch); return null; }
     if (action === 'accept') {
       if (booking!.customerId === proId) throw new ApiError(403, 'SELF_BOOKING_NOT_ALLOWED', 'You cannot accept your own booking.');
       const [profile] = await tx.select().from(proProfiles).where(eq(proProfiles.userId, proId));
@@ -76,7 +77,7 @@ pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.
       await tx.insert(messages).values({ bookingId: booking!.id, body: 'Your Pro accepted the booking.', createdAt: now });
     } else {
       await tx.update(dispatchOffers).set({ response: 'DECLINED', respondedAt: now }).where(eq(dispatchOffers.id, id));
-      await advanceDispatch(tx, booking!, c.env.LAUNCH_CITY);
+      await advanceDispatch(tx, booking!, c.env.LAUNCH_CITY, dispatch);
     }
     return { bookingId: booking!.id };
   });

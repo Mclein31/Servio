@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DiscoveryLocationService } from './discovery-location.service';
 import { ApiService } from '../api/api.service';
+import { LiveService } from './live.service';
 import { AddonDto, BulletinDto, CatalogDto, ProDto, SkuDto } from '../api/customer.models';
 import { ADDON_CATALOG, BULLETIN_REQUESTS, BULLETIN_SKUS, HELPERS } from '../data/mock-data';
 import { AddonSku, BulletinRequest, HelperProfile, ServiceSku } from '../../shared/models/domain.models';
@@ -35,6 +36,10 @@ export class CommunityService {
   private bulletinLoaded = false;
   private origin(): string { return JSON.stringify(this.location.query()); }
   constructor() {
+    // Accept/release/cancel on the user's own requests arrive in their personal room (watched by OrderService).
+    inject(LiveService).events.subscribe((event) => {
+      if (event.type === 'bulletin' && this.bulletinLoaded) void this.bulletin().catch(() => undefined);
+    });
     let previous = this.origin();
     effect(() => {
       const current = this.origin();

@@ -20,7 +20,7 @@ export async function readLiveTicket(secret:string|undefined,token:string|undefi
   if (!payload || !sig || rest.length || !timingSafeEqualString(sig,await signature(secret,payload))) throw invalid();
   try {
     const ticket=JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))) as LiveTicket;
-    if (!/^(booking|pro):[0-9a-f-]{36}$/.test(ticket.resource) || !/^[0-9a-f-]{36}$/.test(ticket.userId) || !/^[0-9a-f]{64}$/.test(ticket.sessionHash) || !/^[0-9a-f-]{36}$/.test(ticket.nonce) || !Number.isSafeInteger(ticket.exp) || ticket.exp<=Date.now() || ticket.exp>Date.now()+61000) throw invalid();
+    if (!/^(booking|pro|user):[0-9a-f-]{36}$/.test(ticket.resource) || !/^[0-9a-f-]{36}$/.test(ticket.userId) || !/^[0-9a-f]{64}$/.test(ticket.sessionHash) || !/^[0-9a-f-]{36}$/.test(ticket.nonce) || !Number.isSafeInteger(ticket.exp) || ticket.exp<=Date.now() || ticket.exp>Date.now()+61000) throw invalid();
     return ticket;
   } catch { throw invalid(); }
 }

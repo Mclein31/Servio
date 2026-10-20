@@ -1,4 +1,4 @@
-import { and, asc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { Executor } from '../db/client';
 import { addonQuotes, bookingEvents, bookings as bookingTable, users, proProfiles, reviews } from '../db/schema';
 import { ApiError } from './errors';
@@ -32,3 +32,28 @@ export async function bookingDetails(db: Executor, row: typeof bookingTable.$inf
   return { ...publicBooking(row, addons), events, addons, customer, pro: pro ? { ...pro, rating: Number(pro.rating) } : null, reviewed: !!review, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
 }
 
+
+/** Same shape as bookingDetails for a page of bookings, in four queries instead of five per booking. */
+export async function bookingDetailsMany(db: Executor, rows: (typeof bookingTable.$inferSelect)[], userId?: string, secret?: string) {
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const peopleIds = [...new Set(rows.flatMap((r) => [r.customerId, ...(r.proId ? [r.proId] : [])]))];
+  const [events, addons, people, pros, reviewed] = await Promise.all([
+    db.select().from(bookingEvents).where(inArray(bookingEvents.bookingId, ids)).orderBy(asc(bookingEvents.createdAt), asc(bookingEvents.id)),
+    db.select().from(addonQuotes).where(inArray(addonQuotes.bookingId, ids)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id)),
+    db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey }).from(users).where(inArray(users.id, peopleIds)),
+    db.select({ id: proProfiles.userId, rating: proProfiles.ratingAvg, ratingCount: proProfiles.ratingCount }).from(proProfiles).where(inArray(proProfiles.userId, peopleIds)),
+    db.select({ bookingId: reviews.bookingId, authorId: reviews.authorId }).from(reviews).where(inArray(reviews.bookingId, ids)),
+  ]);
+  const person = new Map(people.map((p) => [p.id, p]));
+  const pro = new Map(pros.map((p) => [p.id, p]));
+  return Promise.all(rows.map(async (row) => {
+    const own = addons.filter((a) => a.bookingId === row.id);
+    const proPerson = row.proId ? person.get(row.proId) : undefined;
+    const proStats = row.proId ? pro.get(row.proId) : undefined;
+    return { ...publicBooking(row, own), events: events.filter((e) => e.bookingId === row.id), addons: own, customer: person.get(row.customerId),
+      pro: proPerson && proStats ? { ...proPerson, rating: Number(proStats.rating), ratingCount: proStats.ratingCount } : null,
+      reviewed: reviewed.some((r) => r.bookingId === row.id && r.authorId === row.customerId),
+      ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
+  }));
+}

@@ -12,6 +12,8 @@ import { ApiError } from '../lib/errors';
 export const simulatedGpsAllowed=(environment:string,isDemo:boolean)=>isDemo && !['production','prod'].includes(environment.trim().toLowerCase());
 const Gps=v.strictObject({ type:v.literal('gps'),lat:v.pipe(v.number(),v.minValue(-90),v.maxValue(90)),lng:v.pipe(v.number(),v.minValue(-180),v.maxValue(180)),
   accuracy:v.pipe(v.number(),v.minValue(0),v.maxValue(10000)),heading:v.optional(v.nullable(v.pipe(v.number(),v.minValue(0),v.maxValue(360)))),simulated:v.optional(v.boolean()),ts:v.pipe(v.number(),v.integer()) });
+/** Phones send about once per second; network jitter must not drop every other fix. */
+export const GPS_MIN_INTERVAL_MS=750;
 type Attachment=LiveTicket & { validUntil:number };
 export type GpsFix=v.InferOutput<typeof Gps> & { receivedAt:number };
 
@@ -59,6 +61,7 @@ export class OrderRoom extends DurableObject<Bindings> {
       .where(and(eq(sessions.tokenHash,ticket.sessionHash),eq(sessions.userId,ticket.userId),isNull(sessions.revokedAt),gt(sessions.expiresAt,new Date()),eq(users.isActive,true))).limit(1);
     if(!session) throw new ApiError(401,'UNAUTHENTICATED','Sign in again.');
     if(ticket.resource.startsWith('booking:')) return participantBooking(db,ticket.resource.slice(8),ticket.userId);
+    if(ticket.resource===`user:${ticket.userId}`) return null;
     if(ticket.resource!==`pro:${ticket.userId}` || session.role!=='PRO') throw new ApiError(403,'FORBIDDEN','Pro required.');
     return null;
   }
@@ -81,7 +84,7 @@ export class OrderRoom extends DurableObject<Bindings> {
       if(!booking || booking.proId!==actor.userId || booking.status!=='EN_ROUTE') throw new ApiError(403,'GPS_FORBIDDEN','Only the assigned en-route Pro may share location.');
       if(parsed.output.simulated && !simulatedGpsAllowed(this.env.ENVIRONMENT,booking.isDemo)) throw new ApiError(403,'GPS_FORBIDDEN','Simulated GPS is limited to demo bookings outside production.');
       const last=await this.ctx.storage.get<GpsFix>('gps');
-      if(last && (Date.now()-last.receivedAt<1000 || parsed.output.ts<=last.ts)) throw new ApiError(429,'GPS_THROTTLED','Wait for the next location fix.');
+      if(last && (Date.now()-last.receivedAt<GPS_MIN_INTERVAL_MS || parsed.output.ts<=last.ts)) throw new ApiError(429,'GPS_THROTTLED','Wait for the next location fix.');
       const now=await serverNow(connection.db);
       // Global per-Pro conditional update also bounds writes across queued booking rooms.
       await connection.db.update(proProfiles).set({ lastLat:parsed.output.lat,lastLng:parsed.output.lng,lastLocatedAt:now })
@@ -92,19 +95,19 @@ export class OrderRoom extends DurableObject<Bindings> {
     } catch(error) { ws.send(JSON.stringify({ type:'error',code:error instanceof ApiError?error.code:'GPS_INVALID' })); }
     finally { if(connection) await connection.close(); }
   }
+  /**
+   * Sockets are authorized when they connect and expire within five minutes (validUntil), so a
+   * broadcast needs no database round trip per listener; it only drops expired attachments.
+   */
   private async broadcast(event:unknown) {
-    const sockets=this.ctx.getWebSockets(); if(!sockets.length) return;
-    const connection=await connectDb(this.env); if(!connection) return;
-    try {
-      for(const ws of sockets) {
-        const actor=ws.deserializeAttachment() as Attachment;
-        try {
-          if(!actor || actor.validUntil<=Date.now()) { ws.close(4001,'Reconnect'); continue; }
-          await this.authorize(connection.db,actor);
-          ws.send(JSON.stringify(event));
-        } catch { ws.close(4001,'Reconnect'); }
-      }
-    } finally { await connection.close(); }
+    const frame=JSON.stringify(event);
+    for(const ws of this.ctx.getWebSockets()) {
+      const actor=ws.deserializeAttachment() as Attachment;
+      try {
+        if(!actor || actor.validUntil<=Date.now()) { ws.close(4001,'Reconnect'); continue; }
+        ws.send(frame);
+      } catch { /* A closing socket is cleaned up by webSocketClose. */ }
+    }
   }
   webSocketClose(ws:WebSocket,code:number,reason:string) { this.frames.remove(ws);ws.close(code,reason); }
   webSocketError(ws:WebSocket) { this.frames.remove(ws);ws.close(1011,'Reconnect'); }

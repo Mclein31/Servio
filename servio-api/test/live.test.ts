@@ -96,6 +96,29 @@ describe.runIf(hasDb)('OrderRoom sockets in Miniflare',()=>{
     const bad=await f.db.execute(sql`SELECT txn_id FROM ledger_entries GROUP BY txn_id HAVING SUM(amount_centavos)<>0 OR count(*)<2`); expect(bad.rowCount).toBe(0);
   });
 
+  async function personal(headers:Record<string,string>) {
+    const response=await api('/me/live-ticket',json({},headers)); expect(response.status).toBe(200);
+    const { token }=await response.json() as { token:string };
+    const result=await api(`/me/live?token=${encodeURIComponent(token)}`,{ headers:{ Upgrade:'websocket' } }); expect(result.status).toBe(101);
+    const ws=result.webSocket!; sockets.push(ws); const next=reader(ws); ws.accept(); await next('connected'); return { ws,next,token };
+  }
+
+  it('notifies each participant personal room about booking changes, but no one else',async()=>{
+    const customer=await personal(f.headers.customer); const pro=await personal(f.headers.pro); const other=await personal(f.headers.other);
+    expect((await api(`/bookings/${f.booking.id}/messages`,json({ body:'On my way' },f.headers.pro))).status).toBe(201);
+    expect(await customer.next('booking')).toMatchObject({ bookingId:f.booking.id,change:'message',message:{ body:'On my way' } });
+    expect(await pro.next('booking')).toMatchObject({ bookingId:f.booking.id,change:'message' });
+    expect((await api(`/bookings/${f.booking.id}/status`,json({ to:'CANCELLED',reason:'Changed plans' },f.headers.customer))).status).toBe(200);
+    expect(await pro.next('booking')).toMatchObject({ bookingId:f.booking.id,change:'status' });
+    await expect(other.next('booking')).rejects.toThrow();
+  });
+
+  it('rejects personal-room tickets for another resource',async()=>{
+    const ticketToken=await ticket(f.headers.customer);
+    expect((await api(`/me/live?token=${encodeURIComponent(ticketToken)}`,{ headers:{ Upgrade:'websocket' } })).status).toBe(401);
+    expect((await api('/me/live-ticket',json({}))).status).toBe(401);
+  });
+
   it('authenticates the Pro dispatch room and deduplicates repeated offers',async()=>{
     expect((await api('/pro/live-ticket',json({},f.headers.customer))).status).toBe(403);
     const response=await api('/pro/live-ticket',json({},f.headers.pro)); expect(response.status).toBe(200);

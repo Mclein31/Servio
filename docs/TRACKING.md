@@ -1,6 +1,6 @@
 # Tracking sources
 
-The customer and Pro connect to the same authenticated booking room. REST writes remain the source of truth; room events refresh booking/chat/add-on data immediately, with 30-second REST polling as recovery. Socket URLs contain a one-use, 60-second ticket, never the bearer session. Connections renew before their five-minute limit.
+The customer and Pro connect to the same authenticated booking room. REST writes remain the source of truth; room events refresh booking/chat/add-on data immediately, with REST polling as recovery (30 s, or 5 s while the socket is down). Each user also holds a personal `user:<id>` room for changes to any of their bookings and bulletins. A socket silent for 25 s, or any socket when the app returns to the foreground, is replaced. Without a production road route the marker glides between real fixes. Socket URLs contain a one-use, 60-second ticket, never the bearer session. Connections renew before their five-minute limit.
 
 Real location uses the Capacitor Geolocation plugin with precise-location permission. An online foreground Pro keeps the dispatch location fresh; while travelling, fixes also stream to each assigned EN_ROUTE booking. Refreshing location never changes the availability flag. Selecting or accepting a queued booking does not close the current travel booking’s stream. Native watches stop when no longer online/travelling or when the app backgrounds; keep both demo phones awake and the Pro app in front.
 

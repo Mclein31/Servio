@@ -345,3 +345,18 @@
 - **Date:** 2026-10-18
 - **Status:** Accepted (explicit owner request)
 - **Decision:** Remove the 10 km city-center restriction from saved-address and booking validation and the 10 km customer-to-Pro dispatch cutoff. A saved address or booking may use any city; retain only valid coordinate bounds, approved/online/SKU-qualified Pro requirements and fresh provider positions. Rank eligible providers by distance without a radius cap. Catalog coverage reports `radiusKm: null`. This supersedes earlier radius and city-selection policies in ADR-008, dispatch and address decisions. Editing saved places still does not move existing bookings.
+
+
+## ADR-036: Single production account, uncached Hyperdrive and personal live rooms
+
+- **Date:** 2026-10-21
+- **Status:** Accepted (owner requested fixing the realtime latency audit on the `mcleinonza0531` account)
+- **Decision:** Production runs only on Cloudflare account `da540d88…` (`account_id` pinned in wrangler.toml) with Hyperdrive `servio-neon` caching disabled; recreate Hyperdrive only with `--caching-disabled`. Each signed-in user holds a personal `user:<id>` room receiving booking/bulletin invalidations for every booking they participate in; booking rooms keep GPS/chat/status and `pro:` rooms keep dispatch. Rooms authorize sockets at connect (5-minute expiry) and broadcast without per-event database checks. Clients treat 25 s of socket silence as dead, reconnect on resume, and poll every 5 s only while disconnected (30 s recovery otherwise). An unoffered ASAP booking waits up to 5 minutes for an eligible Pro before the full mock refund.
+- **Limits:** No push notifications; direct bookings still skip Pro consent (product decision pending).
+
+## ADR-037: Server inbox, header bell and free local alerts (no push service)
+
+- **Date:** 2026-10-21
+- **Status:** Accepted (owner requested a bell with an unread dot and rejected Firebase/paid Apple accounts)
+- **Decision:** The `notifications` table is the record. Notices are derived after commit from the same events as live rooms (ADR-036) by pure rules in `live/notices.ts`, never notifying the acting user. The client shows a header bell with a red dot and an inbox page. New notifications received over the live socket while the app is backgrounded are shown with `@capacitor/local-notifications` (free on Android and iOS, works with a Personal Team).
+- **Limits:** No remote push: when the OS has closed the app, nothing is shown until it is reopened. Remote push would need FCM (free Firebase project) and, for iOS, a paid Apple Developer membership.

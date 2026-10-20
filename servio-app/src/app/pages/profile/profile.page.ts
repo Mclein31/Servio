@@ -1,3 +1,4 @@
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, IonContent, IonHeader, IonIcon, IonToolbar, ToastController } from '@ionic/angular';
@@ -23,7 +24,7 @@ interface SettingItem {
   selector: 'app-profile',
   templateUrl: 'profile.page.html',
   styleUrl: 'profile.page.scss',
-  imports: [IonHeader, IonToolbar, IonContent, IonIcon, AvatarComponent, PhpPipe],
+  imports: [IonHeader, IonToolbar, IonContent, IonIcon, AvatarComponent, PhpPipe, NotificationBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfilePage {
@@ -146,14 +147,6 @@ export class ProfilePage {
   edit(): void { void this.router.navigateByUrl('/profile/edit'); }
   ionViewWillEnter(): void { void this.auth.refreshProfile(true); void this.community.catalog().catch(() => undefined); void this.addresses.refresh().catch(() => undefined); }
 
-  async openNotifications(): Promise<void> {
-    const toast = await this.toasts.create({
-      message: 'You have no new notifications.',
-      duration: 2000,
-      position: 'top',
-    });
-    await toast.present();
-  }
 
   async open(item: SettingItem): Promise<void> {
     if (item.action === 'customer') {

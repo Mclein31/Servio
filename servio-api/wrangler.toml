@@ -3,6 +3,8 @@
 # Deployed: `wrangler secret put <NAME> --env production` for every secret in .env.example.
 name = "servio-api"
 main = "src/index.ts"
+# Pinned so a cached login for another Cloudflare account can never receive deploys.
+account_id = "da540d8875bbbfb72853c034607292a6"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -53,10 +55,12 @@ workers_dev = true
 preview_urls = false
 vars = { ENVIRONMENT = "production", LAUNCH_CITY = "tuguegarao", UPLOADS_MODE = "worker", ALLOWED_ORIGINS = "capacitor://localhost,http://localhost,https://localhost", R2_BUCKET_NAME = "servio-uploads" }
 
-# Hyperdrive `servio-neon` → Neon project `servio`, branch production (direct URL, caching disabled).
+# Hyperdrive `servio-neon` → Neon project `servio`, branch production (direct URL).
+# Caching MUST stay disabled: cached SELECTs return stale bookings/roles for up to 60 s.
+# Recreate only with `wrangler hyperdrive create servio-neon --connection-string=... --caching-disabled`.
 [[env.production.hyperdrive]]
 binding = "HYPERDRIVE"
-id = "ccffcd0ef8644dc595f0bb59eff2bce4"
+id = "4eab0f2670a64b40a6252e442965bd5e"
 
 [[env.production.ratelimits]]
 name = "AUTH_LIMITER"

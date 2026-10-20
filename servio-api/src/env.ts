@@ -45,6 +45,18 @@ export interface Variables {
   db: Database;
   /** Set by `requireUser` from the server-side session. */
   userId: string;
+  /** Facts a handler knows that its response omits; read by live/notify.ts after commit. */
+  liveHints?: LiveHints;
 }
+
+export interface LiveHints {
+  /** Bulletin Pro before a release/cancel cleared it. */
+  previousProId?: string | null;
+  /** The request was already in the requested state; nothing new to announce. */
+  replay?: boolean;
+  /** Dispatch changes made by a heartbeat/decline: offers created and bookings refunded for lack of a Pro. */
+  dispatch?: DispatchResult;
+}
+export interface DispatchResult { offered: { offerId: string; bookingId: string; proId: string }[]; cancelled: string[] }
 
 export type AppEnv = { Bindings: Bindings; Variables: Variables };

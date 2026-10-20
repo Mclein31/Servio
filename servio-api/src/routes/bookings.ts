@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import { cityProfile, CANCELLATION_FEES, estimateTravelMinutes } from '../config/cities';
 import { bulletinRequests, addonSkus, addonQuotes, bookingStatus, bookingEvents, bookings as bookingTable, ledgerEntries, proProfiles, proSkus, serviceSkus, users, messages } from '../db/schema';
 import type { AppEnv } from '../env';
-import { bookingDetails, participantBooking, serverNow } from '../lib/bookings';
+import { bookingDetails, bookingDetailsMany, participantBooking, serverNow } from '../lib/bookings';
 import { registerBookingSocial } from './booking-social';
 import { completionPin } from '../lib/completion-pin';
 import { sha256Hex, timingSafeEqualString } from '../lib/crypto';
@@ -62,6 +62,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
       const [existing] = await tx.select().from(bookingTable).where(and(eq(bookingTable.customerId, customerId), eq(bookingTable.idempotencyKey, key)));
       if (existing) {
         if (existing.requestHash !== requestHash) throw new ApiError(409, 'IDEMPOTENCY_CONFLICT', 'This key was already used for a different booking.');
+        c.set('liveHints', { replay: true });
         return existing;
       }
     }
@@ -158,7 +159,7 @@ bookings.get('/bookings', validate('query', ListBookings), async (c) => {
   )).orderBy(desc(bookingTable.createdAt), desc(bookingTable.id)).limit(limit + 1);
   const page = rows.slice(0, limit);
   const last = page[page.length - 1];
-  return c.json({ bookings: await Promise.all(page.map((row) => bookingDetails(c.get('db'), row, c.get('userId'), c.env.PIN_SECRET))),
+  return c.json({ bookings: await bookingDetailsMany(c.get('db'), page, c.get('userId'), c.env.PIN_SECRET),
     nextCursor: rows.length > limit && last ? btoa(JSON.stringify({ id: last.id })) : null });
 });
 

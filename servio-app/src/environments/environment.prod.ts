@@ -1,7 +1,7 @@
 const configuredApiUrl = (globalThis as typeof globalThis & { SERVIO_API_URL?: string }).SERVIO_API_URL?.trim();
 const resolvedApiUrl = configuredApiUrl && /^https?:\/\/[^\s]+\/api\/v1\/?$/.test(configuredApiUrl)
   ? configuredApiUrl.replace(/\/+$/, '')
-  : 'https://servio-api.gellyborgie.workers.dev/api/v1';
+  : 'https://servio-api.mcleinonza0531.workers.dev/api/v1';
 
 export const environment = {
   production: true,

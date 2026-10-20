@@ -492,3 +492,23 @@ export const supportRequests = pgTable('support_requests', {
   check('support_requests_category_chk',sql`${t.category} IN ('BOOKING','PAYMENT','SAFETY','ACCOUNT','OTHER')`),
   check('support_requests_status_chk',sql`${t.status} IN ('OPEN','REVIEWING','RESOLVED')`),
 ]);
+
+/** In-app inbox. Rows are written after the triggering REST write commits (live/notify.ts). */
+export const NOTIFICATION_KINDS = ['BOOKING', 'MESSAGE', 'ADDON', 'OFFER', 'BULLETIN', 'REVIEW'] as const;
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  kind: text('kind').$type<(typeof NOTIFICATION_KINDS)[number]>().notNull(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  /** App route opened when the notification is tapped, e.g. /tabs/tracking or /order/<id>/chat. */
+  route: text('route'),
+  bookingId: uuid('booking_id').references(() => bookings.id),
+  readAt: timestamp('read_at', { withTimezone: true }),
+  createdAt: created(),
+}, (t) => [
+  index('notifications_owner_created_idx').on(t.userId, t.createdAt, t.id),
+  index('notifications_owner_unread_idx').on(t.userId).where(sql`${t.readAt} IS NULL`),
+  check('notifications_kind_chk', sql`${t.kind} IN ('BOOKING','MESSAGE','ADDON','OFFER','BULLETIN','REVIEW')`),
+  check('notifications_route_chk', sql`${t.route} IS NULL OR ${t.route} ~ '^/[A-Za-z0-9/_-]{0,200}$'`),
+]);

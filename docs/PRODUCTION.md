@@ -1,10 +1,18 @@
 # SERVIO deployed backend and native app updates
 
-Production API: https://servio-api.gellyborgie.workers.dev/api/v1
+Production API: https://servio-api.mcleinonza0531.workers.dev/api/v1
 
 The API is a Cloudflare Worker backed by the SERVIO Neon production branch through Hyperdrive and the SERVIO R2 bucket. `/health` must report `environment: production` and `database: ok`. A healthy response does not prove every app endpoint is included in the deployed version.
 
-## Current update — October 18, 2026
+## Current update — October 21, 2026
+
+Worker version: `e4fd6b86-db6e-422e-9651-b82872b9fe50` on account `mcleinonza0531` (pinned `account_id`). Hyperdrive `servio-neon` `4eab0f2670a64b40a6252e442965bd5e` with **caching disabled** — cached reads made bookings and roles stale for up to 60 s. Never recreate it without `--caching-disabled`. No migrations; database already at 10/10. Older `servio-ph` / `gellyborgie` workers.dev deployments are not production and should be deleted by their account owners.
+
+### Notifications
+
+In-app inbox and header bell only; no push service or extra secrets. Migrations 0010 (`notifications`) and 0011 (drop `push_tokens`) are applied (12/12); Worker `e1fbf224-b63c-47aa-8e1c-94d66165abea`. Phones show local system notifications for updates received while the app is open or recently backgrounded.
+
+## Previous update — October 18, 2026
 
 Worker version: `6d8fca71-c659-4d6c-b871-3d6fa67f39ca`.
 

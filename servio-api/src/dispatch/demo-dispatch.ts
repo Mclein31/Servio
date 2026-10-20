@@ -5,11 +5,16 @@ import { cityProfile } from '../config/cities';
 import { serverNow } from '../lib/bookings';
 import { ApiError } from '../lib/errors';
 import { mockPayments } from '../payments/mock';
+import type { DispatchResult } from '../env';
+
+export const emptyDispatch = (): DispatchResult => ({ offered: [], cancelled: [] });
 
 export const OFFER_SECONDS = 60;
+/** An ASAP booking waits this long for a first eligible Pro (e.g. one reopening the app) before refunding. */
+export const FIRST_OFFER_WAIT_MS = 5 * 60_000;
 
 /** Caller holds the booking lock. One offer at a time, up to five distinct eligible Pros. */
-export async function advanceDispatch(tx: Transaction, booking: typeof bookings.$inferSelect, city?: string) {
+export async function advanceDispatch(tx: Transaction, booking: typeof bookings.$inferSelect, city?: string, outcome: DispatchResult = emptyDispatch()) {
   if (booking.status !== 'PENDING_ACCEPTANCE' || booking.escrow !== 'HOLD_AUTHORIZED') return;
   const now = await serverNow(tx);
   const pending = await tx.select().from(dispatchOffers).where(and(eq(dispatchOffers.bookingId, booking.id), eq(dispatchOffers.response, 'PENDING'))).for('update');
@@ -33,9 +38,11 @@ export async function advanceDispatch(tx: Transaction, booking: typeof bookings.
   `) : { rows: [] };
   const next = result.rows[0];
   if (next) {
-    await tx.insert(dispatchOffers).values({ bookingId: booking.id, proId: next.id, distanceM: next.distanceM, createdAt: now, expiresAt: new Date(now.getTime() + OFFER_SECONDS * 1000) });
+    const [offer] = await tx.insert(dispatchOffers).values({ bookingId: booking.id, proId: next.id, distanceM: next.distanceM, createdAt: now, expiresAt: new Date(now.getTime() + OFFER_SECONDS * 1000) }).returning({ id: dispatchOffers.id });
+    outcome.offered.push({ offerId: offer!.id, bookingId: booking.id, proId: next.id });
     return;
   }
+  if (!attempted.length && now.getTime() - booking.createdAt.getTime() < FIRST_OFFER_WAIT_MS) return;
   const balance = await tx.execute<{ amount: string }>(sql`SELECT COALESCE(SUM(amount_centavos),0)::text AS amount FROM ledger_entries WHERE account=${`escrow:${booking.id}`}`);
   const held = Number(balance.rows[0]!.amount);
   if (!Number.isSafeInteger(held) || held <= 0 || held > 2_147_483_647) throw new ApiError(409, 'ESCROW_INVALID', 'The escrow requires support review.');
@@ -48,12 +55,15 @@ export async function advanceDispatch(tx: Transaction, booking: typeof bookings.
   await tx.update(bookings).set({ status: 'CANCELLED', escrow: 'REFUNDED' }).where(eq(bookings.id, booking.id));
   await tx.insert(bookingEvents).values({ bookingId: booking.id, status: 'CANCELLED', note: 'NO_PRO_AVAILABLE; full mock escrow refund.', createdAt: now });
   await tx.insert(messages).values({ bookingId: booking.id, body: 'No available Pro. Your mock escrow hold was refunded in full.', createdAt: now });
+  outcome.cancelled.push(booking.id);
 }
 
 /** Foreground demo heartbeat; B2 adds event delivery. No background/launch dispatch claim. */
-export async function dispatchTick(db: Database, city?: string, isDemo?: boolean) {
+export async function dispatchTick(db: Database, city?: string, isDemo?: boolean): Promise<DispatchResult> {
+  const result = emptyDispatch();
   await db.transaction(async (tx) => {
     const pending = await tx.select().from(bookings).where(and(eq(bookings.status, 'PENDING_ACCEPTANCE'), eq(bookings.escrow, 'HOLD_AUTHORIZED'), isDemo === undefined ? undefined : eq(bookings.isDemo, isDemo))).orderBy(asc(bookings.createdAt)).limit(100).for('update', { skipLocked: true });
-    for (const booking of pending) await advanceDispatch(tx, booking, city);
+    for (const booking of pending) await advanceDispatch(tx, booking, city, result);
   });
+  return result;
 }

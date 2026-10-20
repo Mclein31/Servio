@@ -1,5 +1,7 @@
 import { environment } from '../../../environments/environment';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { ToastController } from '@ionic/angular';
 import { AddonQuote, AddonSku, Order, OrderStatus, PaymentMethod, ServiceSku } from '../../shared/models/domain.models';
 import { buildMilestones, HelperSummary, StepMilestone } from '../../shared/models/ui.models';
 import { roundCentavos, splitPayout } from '../../shared/utils/money';
@@ -66,6 +68,8 @@ export class OrderService {
   readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly community = inject(CommunityService);
+  private readonly router = inject(Router);
+  private readonly toasts = inject(ToastController);
   readonly loading = signal(false);
   readonly error = signal('');
   private readonly mockHistory = signal<OrderHistoryItem[]>(
@@ -129,6 +133,23 @@ export class OrderService {
       });
       cleanup(() => { subscription.unsubscribe(); stop(); });
     });
+    // Personal room: new bookings, cancellations and messages on any of the user's bookings, not only the one on screen.
+    const personal = computed(() => this.api.settings.useMockApi() ? '' : this.auth.user()?.id ?? '');
+    effect((cleanup) => {
+      const userId = personal();
+      if (!/^[0-9a-f-]{36}$/.test(userId)) return;
+      const stop = this.live.watch(`user:${userId}`);
+      const subscription = this.live.events.subscribe((event) => {
+        if (event.resource !== `user:${userId}`) return;
+        if (event.type === 'connected') { void this.refresh(); return; }
+        if (event.type !== 'booking' || !event.bookingId) return;
+        if (event.message) { void this.announceMessage(event.bookingId, event.message.senderId); return; }
+        if (event.bookingId === this.state().id) void this.load(event.bookingId).catch(() => undefined);
+        void this.refresh();
+        if (this.auth.user()?.role === 'PRO') void this.wallet.refresh();
+      });
+      cleanup(() => { subscription.unsubscribe(); stop(); });
+    });
     effect(() => { if (this.api.settings.useMockApi() && this.stateMode()) saveDemoState('order', this.state()); });
     effect((cleanup) => {
       const user = this.auth.user();
@@ -146,7 +167,12 @@ export class OrderService {
         try { await this.refresh(); } finally { this.polling = false; }
       };
       void refresh();
-      const timer = setInterval(() => void refresh(), 30000);
+      // Live events are primary. Poll every 30 s as recovery, or every 5 s while the personal socket is down.
+      let last = Date.now();
+      const timer = setInterval(() => {
+        const live = this.live.connected().has(`user:${user.id}`);
+        if (!live || Date.now() - last >= 30000) { last = Date.now(); void refresh(); }
+      }, 5000);
       cleanup(() => clearInterval(timer));
     });
   }
@@ -358,6 +384,14 @@ export class OrderService {
     if (this.api.settings.useMockApi()) { this.setTip(tipPhp); return; }
     await this.api.post(`/bookings/${this.state().id}/review`, { rating, compliments, ...(body.trim() ? { body: body.trim() } : {}), tipCentavos: Math.round(tipPhp * 100) });
     await this.load(this.state().id);
+  }
+
+  /** Chat has no push notifications yet; surface messages that arrive while that chat is not open. */
+  private async announceMessage(bookingId: string, senderId: string | null): Promise<void> {
+    if (!senderId || senderId === this.auth.user()?.id || this.router.url.startsWith(`/order/${bookingId}/chat`)) return;
+    const toast = await this.toasts.create({ message: 'New message on your booking.', duration: 3000, position: 'top',
+      buttons: [{ text: 'Open', handler: () => { void this.router.navigateByUrl(`/order/${bookingId}/chat`); } }] });
+    await toast.present();
   }
 
   private async fromApi(b: BookingDto): Promise<Order> {

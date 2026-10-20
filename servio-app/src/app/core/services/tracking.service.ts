@@ -50,6 +50,10 @@ export class TrackingService implements OnDestroy {
   private prev:Fix={ distance:this.startDistance,at:0 };
   private readonly latest=signal<Fix>({ distance:this.startDistance,at:0 });
   private readonly rawPoint=signal<Point|null>(null);
+  /** Without road geometry (production) the marker glides between real fixes instead of jumping. */
+  private rawFrom:Point|null=null;
+  private rawAt=0;
+  private rawSpan=FIX_INTERVAL_MS;
   private readonly receivedAt=signal(0);
   private readonly clock=signal(Date.now());
   private timer:ReturnType<typeof setInterval>|null=null;
@@ -109,7 +113,7 @@ export class TrackingService implements OnDestroy {
           return;
         }
         this.contextKey=key;
-        this.generation++; this.routeAttempt=''; this.roadGeometry=false; this.hasFix.set(false); this.rawPoint.set(null);
+        this.generation++; this.routeAttempt=''; this.roadGeometry=false; this.hasFix.set(false); this.rawPoint.set(null); this.rawFrom=null; this.rawAt=0;
         this.track.set(new RouteTrack(TUGUEGARAO_ROUTE,'geo'));
         if(this.mode()==='sim' && status==='EN_ROUTE') { this.park(this.startDistance); this.start(); }
         else this.park(['ARRIVED','IN_PROGRESS','COMPLETED'].includes(status)?this.route.total:this.startDistance);
@@ -173,7 +177,13 @@ export class TrackingService implements OnDestroy {
   }
   sample(distance:number):RouteSample & { smoothBearing:number } {
     const sample=this.route.sample(distance);
-    return { ...sample,...(this.mode()==='live' && (!this.routeReady() || this.context().status!=='EN_ROUTE') && this.rawPoint()?{ point:this.rawPoint()! }:{}),smoothBearing:this.route.smoothedBearing(distance,30) };
+    return { ...sample,...(this.mode()==='live' && (!this.routeReady() || this.context().status!=='EN_ROUTE') && this.rawPoint()?{ point:this.smoothedRaw(performance.now()) }:{}),smoothBearing:this.route.smoothedBearing(distance,30) };
+  }
+  private smoothedRaw(now:number):Point {
+    const to=this.rawPoint()!; const from=this.rawFrom;
+    if(!from) return to;
+    const t=Math.min(1,Math.max(0,(now-this.rawAt)/this.rawSpan));
+    return [from[0]+(to[0]-from[0])*t,from[1]+(to[1]-from[1])*t];
   }
   replay():void {
     if(this.orders.api.settings.useMockApi()) this.orders.setStatus('EN_ROUTE');
@@ -182,7 +192,11 @@ export class TrackingService implements OnDestroy {
   }
   private ingest(fix:LiveFix):void {
     if(this.context().status!=='EN_ROUTE') return;
-    this.hasFix.set(true); this.receivedAt.set(fix.receivedAt-this.live.serverOffsetMs()); this.rawPoint.set([fix.lat,fix.lng]);
+    this.hasFix.set(true); this.receivedAt.set(fix.receivedAt-this.live.serverOffsetMs());
+    const at=performance.now();
+    this.rawFrom=this.rawPoint() ? this.smoothedRaw(at) : null;
+    this.rawSpan=this.rawAt ? Math.min(3000,Math.max(500,at-this.rawAt)) : FIX_INTERVAL_MS;
+    this.rawAt=at; this.rawPoint.set([fix.lat,fix.lng]);
     if(fix.simulated && environment.demo) {
       if(this.routeAttempt!=='sim') { this.routeAttempt='sim'; this.roadGeometry=true; this.track.set(new RouteTrack(TUGUEGARAO_ROUTE,'geo')); this.park(0); }
       this.routeReady.set(true);

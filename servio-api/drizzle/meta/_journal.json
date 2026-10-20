@@ -71,6 +71,20 @@
       "when": 1792333020539,
       "tag": "0009_profile_help_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792518473459,
+      "tag": "0010_notifications_push",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792519368147,
+      "tag": "0011_drop_push_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -3,9 +3,10 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { AppComponent } from './app.component';
+import { NotificationService } from './core/services/notification.service';
 describe('AppComponent preload timing',()=>{
   const events=new Subject<NavigationEnd>();
-  beforeEach(()=>{vi.useFakeTimers();TestBed.configureTestingModule({providers:[{provide:Router,useValue:{events,navigated:false}}]});});
+  beforeEach(()=>{vi.useFakeTimers();TestBed.configureTestingModule({providers:[{provide:Router,useValue:{events,navigated:false}},{provide:NotificationService,useValue:{}}]});});
   afterEach(()=>{TestBed.resetTestingModule();vi.useRealTimers();});
   it('ends the branded preload at two seconds even if navigation is slow',()=>{
     const app=TestBed.runInInjectionContext(()=>new AppComponent());

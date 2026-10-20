@@ -25,6 +25,8 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     client = (await connectDb(env))!;
     // Shared, append-only test DB retains prior suites' valid holds. Drain that old
     // backlog with compensating refunds before creating the current eligible Pros.
+    // Unoffered bookings wait for a first Pro; age the backlog so the drain refunds it.
+    await client.db.execute(sql`UPDATE bookings SET created_at = now() - interval '1 hour' WHERE is_demo AND status='PENDING_ACCEPTANCE'`);
     for (let pass = 0; pass < 20; pass++) {
       const count = await client.db.execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM bookings WHERE is_demo AND status='PENDING_ACCEPTANCE' AND escrow='HOLD_AUTHORIZED'`);
       if (count.rows[0]!.n === '0') break;
@@ -90,6 +92,20 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     expect(await balance()).toBe('115000'); await balanced();
   });
 
+  it('wakes eligible online Pros as soon as an ASAP booking is created', async () => {
+    const response = await api('/pro/live-ticket', json({}, headers[1])); expect(response.status).toBe(200);
+    const { token } = await response.json() as { token: string };
+    const socket = await api(`/pro/live?token=${encodeURIComponent(token)}`, { headers: { Upgrade: 'websocket' } }); expect(socket.status).toBe(101);
+    const ws = socket.webSocket!; ws.accept();
+    const seen: string[] = []; ws.addEventListener('message', (event) => { if (event.data !== 'pong') seen.push(JSON.parse(String(event.data)).type); });
+    const created = await api('/bookings', json({ skuId: 'sku-ac-leak', address: { street: 'Centro 10', barangay: 'Centro 10', city: 'Tuguegarao City' },
+      lat: 17.613, lng: 121.727, schedule: 'ASAP', paymentMethod: 'GCASH' }, headers[0]));
+    expect(created.status).toBe(201);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(seen).toContain('dispatch');
+    ws.close(1000, 'Test complete');
+  });
+
   it('allows an approved Pro to queue a second accepted job while finishing another', async () => {
     await client.db.insert(bookings).values({ customerId: ids[0]!, proId: ids[1]!, skuId: 'sku-ac-leak', skuName: 'AC repair', priceCentavos: 110000,
       trustFeeCentavos: 5000, address: { street: 'Ugac Norte', barangay: 'Ugac Norte', city: 'Tuguegarao City' }, lat: 17.618111, lng: 121.718927,
@@ -127,6 +143,10 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     await client.db.update(proProfiles).set({ isOnline: false }).where(eq(proProfiles.userId, ids[2]!));
     if (kind === 'unqualified') await client.db.delete(proSkus).where(eq(proSkus.proId, ids[1]!));
     else await client.db.update(proProfiles).set(kind === 'stale' ? { lastLocatedAt: new Date(Date.now() - 121000) } : kind === 'future' ? { lastLocatedAt: new Date(Date.now() + 60000) } : kind === 'offline' ? { isOnline: false } : kind === 'unapproved' ? { kycStatus: 'PENDING' } : { lastLat: 18 }).where(eq(proProfiles.userId, ids[1]!));
+    expect((await poll()).offer).toBeNull();
+    // No eligible Pro yet: the hold stays authorized while the booking waits for one.
+    expect(await offers()).toHaveLength(0); expect(await balance()).toBe('115000');
+    await client.db.update(bookings).set({ createdAt: new Date(Date.now() - 6 * 60_000) }).where(eq(bookings.id, bookingId));
     expect((await poll()).offer).toBeNull();
     expect(await offers()).toHaveLength(0); expect(await balance()).toBe('0'); await balanced();
   });
