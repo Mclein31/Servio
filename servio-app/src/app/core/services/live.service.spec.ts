@@ -36,7 +36,7 @@ describe('live connection lifecycle',()=>{
     expect(api.post).toHaveBeenCalledWith('/me/live-ticket',{});
     expect(Socket.all[0].url).toBe('ws://192.168.1.9:8787/api/v1/me/live?token=short-lived-ticket');
     Socket.all[0].onopen?.(); expect(live.connected().has('user:user-id')).toBe(true);
-    Socket.all[0].close=vi.fn(); // A dead mobile socket never reports its closure.
+    Socket.all[0].close=vi.fn();
     await vi.advanceTimersByTimeAsync(LIVE_STALE_MS+10000);
     expect(Socket.all).toHaveLength(2); expect(live.connected().has('user:user-id')).toBe(false);
   });

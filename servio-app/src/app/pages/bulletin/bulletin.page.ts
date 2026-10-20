@@ -18,7 +18,6 @@ import { PhpPipe } from '../../shared/pipes/php.pipe';
 
 type Filter = 'MINE' | 'ALL' | 'OPEN' | 'URGENT' | 'NEARBY';
 
-/** Illustrative pins around Centro 10, Ugac Norte, Centro 5, Tanza, Caritan Centro and Atulayan Sur. */
 const PIN_COORDS: [number, number][] = [
   [17.6134, 121.7305], [17.618111, 121.718927], [17.608459, 121.726858], [17.626467, 121.735061], [17.625031, 121.721542], [17.634940, 121.720236],
 ];
@@ -66,7 +65,6 @@ export class BulletinPage {
     this.saving.set(true); this.actionError.set('');
     try {
       await this.community.acceptRequest(request.id);
-      // Keep an accepted card visible even when it was opened through the Urgent/Open filter.
       this.filter.set('ALL');
     } catch (error) {
       this.actionError.set(error instanceof Error ? error.message : 'Could not accept this request.');

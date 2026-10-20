@@ -9,7 +9,6 @@ import { WalletService } from '../../../core/services/wallet.service';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
 import { PhpPipe } from '../../../shared/pipes/php.pipe';
 
-/** Servio Pro home: availability, today's earnings and the dispatch radar. */
 @Component({
   selector: 'app-pro-dashboard',
   imports: [TrackingControlsComponent,IonHeader, IonToolbar, IonContent, IonIcon, IonToggle, RouterLink, AvatarComponent, PhpPipe, NotificationBellComponent],

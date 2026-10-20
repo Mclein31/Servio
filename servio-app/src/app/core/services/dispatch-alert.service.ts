@@ -8,11 +8,6 @@ const ASSET_PATH = 'public/assets/audio/radar_alert.mp3';
 const WEB_ASSET_PATH = 'assets/audio/radar_alert.mp3';
 const PULSE_MS = 1500;
 
-/**
- * Dispatch radar alert: looping chime + heavy haptic pulse every 1.5 s until
- * the Pro accepts, declines, or the 60 s window lapses. On the web it falls
- * back to an HTMLAudioElement and navigator.vibrate (logged when unavailable).
- */
 @Injectable({ providedIn: 'root' })
 export class DispatchAlertService {
   private readonly zone = inject(NgZone);
@@ -42,14 +37,13 @@ export class DispatchAlertService {
     if (this.active) return;
     this.active = true;
     await this.initAudio();
-    if (!this.active) return; // stopped while preloading
+    if (!this.active) return;
 
     try {
       if (this.isNative) {
         await NativeAudio.loop({ assetId: ASSET_ID });
       } else if (this.webAudio) {
         this.webAudio.currentTime = 0;
-        // Browsers block autoplay without a user gesture; the visual alert still runs.
         await this.webAudio.play().catch(() => console.log('[DispatchAlert] web audio blocked until user interaction'));
       }
     } catch (err) {
@@ -62,7 +56,6 @@ export class DispatchAlertService {
     });
   }
 
-  /** Idempotent and synchronous in effect: interval and audio are torn down immediately. */
   async stopUrgentRadarAlert(): Promise<void> {
     this.active = false;
     if (this.pulseTimer) clearInterval(this.pulseTimer);

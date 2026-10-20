@@ -1,8 +1,3 @@
-/**
- * Launch catalog (ADR-001). Representative Philippine rates from
- * Servio_Vault/03_User_Experience_and_Screens/Figma_UI_Completion_Handoff.md —
- * prototype assumptions pending catalog validation. Prices in centavos.
- */
 export const CATEGORY_ROWS = [
   { id: 'tutoring', label: 'Tutoring', icon: 'school-outline', sortOrder: 1 },
   { id: 'repairs', label: 'Repairs', icon: 'construct-outline', sortOrder: 2 },

@@ -3,7 +3,6 @@ import { Preferences } from '@capacitor/preferences';
 
 export const AUTH_TOKEN_KEY = 'servioAuthToken';
 
-/** Separate from AuthService so the HTTP interceptor never depends on an API caller. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   readonly token = signal<string | null | undefined>(undefined);

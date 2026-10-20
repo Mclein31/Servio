@@ -2,13 +2,6 @@ import { connect } from 'cloudflare:sockets';
 import type { Bindings } from '../env';
 import { ApiError } from './errors';
 
-/**
- * Minimal SMTP client for transactional email (sign-in codes), sent through a Gmail account
- * with an App Password over implicit TLS (smtp.gmail.com:465). Same approach as AdvanCare.
- *
- * In local development without SMTP settings the message is logged instead of sent, so sign-in
- * can be tested for free. Outside development, missing settings are an error (never logged).
- */
 export interface Mail {
   to: string;
   subject: string;
@@ -39,7 +32,6 @@ export async function sendMail(env: Bindings, mail: Mail, requestId: string): Pr
     await smtpSend(env, from, mail.to, message);
     return 'sent';
   } catch (err) {
-    // SMTP replies can echo addresses; log the first part only.
     console.error(JSON.stringify({ requestId, level: 'error', smtp: (err as Error).message.slice(0, 160) }));
     throw new ApiError(502, 'EMAIL_FAILED', 'We couldn’t send the email. Please try again in a minute.');
   }
@@ -93,7 +85,6 @@ async function smtpSend(env: Bindings, from: string, to: string, message: string
   }
 }
 
-/** Lines starting with "." get an extra "." (RFC 5321 §4.5.2). */
 export function dotStuff(message: string): string {
   return message.replace(/(^|\r\n)\./g, '$1..');
 }
@@ -108,7 +99,6 @@ function b64Utf8(text: string): string {
 const wrap76 = (s: string) => s.replace(/.{1,76}/g, '$&\r\n').trimEnd();
 const encodeHeader = (v: string) => (/^[\x20-\x7e]*$/.test(v) ? v : `=?UTF-8?B?${b64Utf8(v)}?=`);
 
-/** RFC 5322 message: multipart/alternative (text + optional HTML), base64 bodies so UTF-8 (₱) is safe. */
 export function buildMessage(m: { from: string; fromName: string; to: string; subject: string; text: string; html?: string }): string {
   for (const v of [m.from, m.to, m.subject, m.fromName]) {
     if (/[\r\n]/.test(v)) throw new Error('Header injection blocked');

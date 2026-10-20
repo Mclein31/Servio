@@ -7,7 +7,6 @@ import type { AppEnv } from '../env';
 import { randomToken, sha256Hex } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
 
-/** App sessions: opaque bearer tokens, stored as SHA-256, valid 30 days. */
 export const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const TOUCH_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -37,10 +36,6 @@ async function lookup(db: Executor, token: string): Promise<string | null> {
   return row.userId;
 }
 
-/**
- * Requires a valid session. Runs after `withDb`. The user id only ever comes from the
- * server-side session behind the bearer token — never from a header or body field.
- */
 export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
   const token = bearer(c);
   const userId = token ? await lookup(c.get('db'), token) : null;
@@ -49,7 +44,6 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
   await next();
 });
 
-/** Revokes the session behind the request's bearer token, if any. */
 export async function revokeCurrentSession(c: Context<AppEnv>, db: Executor): Promise<void> {
   const token = bearer(c);
   if (!token) return;

@@ -39,7 +39,6 @@ addresses.post('/me/addresses', validate('json', CreateAddress), async (c) => {
   validateServiceLocation(input);
   const userId = c.get('userId');
   const address = await c.get('db').transaction(async (tx) => {
-    // The owner row exists even for an empty address book: all default changes serialize here.
     await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('update');
     const [prior] = await tx.select({ id: userAddresses.id }).from(userAddresses).where(eq(userAddresses.userId, userId)).limit(1);
     const isDefault = !prior || input.isDefault === true;

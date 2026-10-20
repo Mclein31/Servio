@@ -19,11 +19,9 @@ describe.runIf(hasDb)('notification inbox', () => {
     expect(customer.unreadCount).toBe(2);
     expect(customer.notifications.map((n) => n.kind)).toEqual(['BOOKING', 'MESSAGE']);
     expect(customer.notifications[1]).toMatchObject({ route: `/order/${f.booking.id}/chat`, bookingId: f.booking.id });
-    // The fixture's direct booking told the Pro; the Pro's own actions add nothing.
     expect((await inbox(f.headers.pro)).notifications.map((n) => n.title)).toEqual([expect.stringMatching(/^New booking/)]);
     expect((await inbox(f.headers.other)).notifications).toHaveLength(0);
 
-    // Another user cannot mark someone else's rows.
     const ids = customer.notifications.map((n) => n.id);
     expect(await (await api('/notifications/read', json({ ids }, f.headers.other))).json()).toEqual({ unreadCount: 0 });
     expect((await inbox(f.headers.customer)).unreadCount).toBe(2);

@@ -12,7 +12,6 @@
     @if (error()) { <p role="alert">{{ error() }}</p> }
     <p class="lead">Show the issue, pick the standard part. The customer approves every extra charge before you start.</p>
 
-    <!-- Camera capture -->
     <section class="servio-card photo-card">
       @if (photo(); as src) {
         <div class="preview">
@@ -33,7 +32,6 @@
       }
     </section>
 
-    <!-- Part selector -->
     <label class="field">
       <span class="label">Standardized part (approved catalog)</span>
       <ion-select class="select" interface="action-sheet" [value]="partId()" (ionChange)="partId.set($any($event).detail.value)"
@@ -50,7 +48,6 @@
       <textarea rows="3" [value]="note()" (input)="note.set($any($event.target).value)" maxlength="200"></textarea>
     </label>
 
-    <!-- Payout recalculation -->
     <section class="calc" aria-live="polite">
       <div class="line"><span>Customer Escrow Charge</span><strong class="price">{{ split().grossPhp | php: 'signed' }}</strong></div>
       <div class="line pro"><span>Pro Additional Cut (85%)</span><strong class="price">{{ split().proPhp | php: 'signed' }}</strong></div>

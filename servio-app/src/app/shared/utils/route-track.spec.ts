@@ -9,9 +9,9 @@ describe('RouteTrack', () => {
 
   it('samples position and heading by distance along the street', () => {
     expect(track.sample(50).point).toEqual([0, 50]);
-    expect(track.sample(50).bearing).toBeCloseTo(0); // moving up
+    expect(track.sample(50).bearing).toBeCloseTo(0);
     expect(track.sample(150).point).toEqual([50, 0]);
-    expect(track.sample(150).bearing).toBeCloseTo(90); // moving right
+    expect(track.sample(150).bearing).toBeCloseTo(90);
   });
 
   it('splits into travelled and remaining paths that meet at the rider', () => {

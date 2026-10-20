@@ -91,7 +91,6 @@ export class ApiService {
   async upload(blob: Blob, purpose: UploadPurpose): Promise<string> {
     const { blob: uploadBlob, contentType } = await this.normalizeUploadBlob(blob);
     const signed = await this.post<{ key: string; uploadUrl: string }>('/uploads/presign', { purpose, contentType, contentLength: uploadBlob.size });
-    // Browsers set Content-Length for the Blob. Never send the API bearer token to a signed storage URL.
     const response = await fetch(signed.uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: uploadBlob });
     if (!response.ok) throw new Error('The photo could not be uploaded. Please try again.');
     return signed.key;

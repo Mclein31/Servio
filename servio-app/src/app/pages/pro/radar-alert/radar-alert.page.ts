@@ -35,7 +35,6 @@ export class RadarAlertPage implements OnDestroy {
   readonly ringR = RING_R;
   readonly circumference = RING_CIRCUMFERENCE;
   readonly secondsLeft = signal(RADAR_WINDOW_S);
-  /** 0..1 elapsed fraction, updated every animation frame for a smooth ring. */
   readonly elapsed = signal(0);
   readonly expired = signal(false);
   readonly dashOffset = computed(() => this.circumference * this.elapsed());

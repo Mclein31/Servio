@@ -48,7 +48,6 @@ export class HomePage {
     return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
   })();
 
-  /** Mini 4-step bar: index of the current step and smooth fill across the en-route leg. */
   readonly miniProgress = computed(() => {
     const status = this.orders.order().status;
     const leg = Math.min(1, Math.max(0, this.sim.legProgress()));
@@ -87,7 +86,6 @@ export class HomePage {
   openCategory(id: string): void {
     this.router.navigate(['/tabs/directory'], { queryParams: { category: id } });
   }
-
 
   async openFilters(): Promise<void> {
     const buttons = CATEGORIES.map((c) => ({

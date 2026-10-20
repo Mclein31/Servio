@@ -9,7 +9,6 @@ import { roundCentavos } from '../../utils/money';
 type TipChoice = 0 | 50 | 100 | 200 | 'custom';
 const RATING_WORDS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
-/** Post-completion review with optional tip. Routed at /order/:id/review. */
 @Component({
   selector: 'app-rating-tip-modal',
   imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonFooter, IonIcon, AvatarComponent, PhpPipe],

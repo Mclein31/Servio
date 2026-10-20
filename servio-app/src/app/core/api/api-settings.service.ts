@@ -20,7 +20,7 @@ export class ApiSettingsService {
       if (saved && typeof saved === 'object' && 'apiUrl' in saved && 'useMockApi' in saved && typeof saved.apiUrl === 'string' && typeof saved.useMockApi === 'boolean') {
         this.apiUrl.set(this.validUrl(saved.apiUrl)); this.useMockApi.set(saved.useMockApi);
       }
-    } catch { /* Ignore stale development settings and use the build defaults. */ }
+    } catch {}
   }
 
   async configure(settings: ApiSettings): Promise<void> {

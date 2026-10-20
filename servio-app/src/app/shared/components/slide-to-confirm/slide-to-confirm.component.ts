@@ -1,19 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 
-/** Release must exceed 90% of the track to authorize. */
 export const SLIDE_CONFIRM_THRESHOLD = 0.9;
 
-/** True when a release at `progress` (0..1) should trigger authorization. */
 export function slideReleaseConfirms(progress: number): boolean {
   return progress > SLIDE_CONFIRM_THRESHOLD;
 }
 
-/**
- * "Slide to authorize" control. Fires `confirmed` only when the thumb is
- * released beyond 90% of the track; otherwise it springs back. Keyboard users
- * can drive it with the arrow keys / Home / End (role="slider").
- */
 @Component({
   selector: 'app-slide-to-confirm',
   imports: [IonIcon],
@@ -125,7 +118,7 @@ export class SlideToConfirmComponent {
   }
 
   private get max(): number {
-    return this.trackEl.nativeElement.clientWidth - 60; // 48px thumb + 2 × 6px inset
+    return this.trackEl.nativeElement.clientWidth - 60;
   }
 
   onDown(e: PointerEvent): void {

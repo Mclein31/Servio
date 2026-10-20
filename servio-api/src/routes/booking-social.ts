@@ -13,7 +13,6 @@ const id = v.pipe(v.string(), v.uuid());
 const params = v.strictObject({ id });
 const text = (max: number) => v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
 
-/** Uses the parent booking router's session/DB middleware. */
 export function registerBookingSocial(router: Hono<AppEnv>) {
   router.post('/bookings/:id/review', validate('param', params), validate('json', v.strictObject({
     rating: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(5)),
@@ -38,7 +37,6 @@ export function registerBookingSocial(router: Hono<AppEnv>) {
       }
       const [row] = await tx.insert(reviews).values({ bookingId: booking.id, authorId: booking.customerId, subjectId: booking.proId,
         rating: input.rating, compliments: input.compliments, body: input.body, createdAt: await serverNow(tx) }).returning();
-      // Store the integer rating sum to avoid repeated rounding of a running average.
       await tx.update(proProfiles).set({
         ratingSum: sql`${proProfiles.ratingSum} + ${input.rating}`, ratingCount: sql`${proProfiles.ratingCount} + 1`,
         ratingAvg: sql`round((${proProfiles.ratingSum} + ${input.rating})::numeric / (${proProfiles.ratingCount} + 1),2)`,

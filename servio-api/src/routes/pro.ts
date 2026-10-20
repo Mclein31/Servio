@@ -30,7 +30,6 @@ pro.post('/pro/availability', validate('json', v.pipe(v.strictObject({ online: v
   return c.json({ pro: profile });
 });
 
-/** Refreshing a fix must never toggle availability back on after an explicit offline request. */
 pro.post('/pro/location', validate('json',v.strictObject({
   lat:v.pipe(v.number(),v.minValue(-90),v.maxValue(90)),lng:v.pipe(v.number(),v.minValue(-180),v.maxValue(180)),
 })),async(c)=>{
@@ -40,7 +39,6 @@ pro.post('/pro/location', validate('json',v.strictObject({
   return c.json({ updated:true });
 });
 
-/** Explicit maintenance/write heartbeat while the Pro workspace is open. */
 pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
   const [actor] = await c.get('db').select({ isDemo: users.isDemo }).from(users).where(eq(users.id, c.get('userId')));
   c.set('liveHints', { dispatch: await dispatchTick(c.get('db'), c.env.LAUNCH_CITY, actor!.isDemo) });
@@ -51,7 +49,6 @@ pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
   }).from(dispatchOffers).innerJoin(bookings, eq(bookings.id, dispatchOffers.bookingId))
     .where(and(eq(dispatchOffers.proId, c.get('userId')), eq(dispatchOffers.response, 'PENDING'), eq(bookings.status, 'PENDING_ACCEPTANCE'), sql`${dispatchOffers.expiresAt} > ${now}`))
     .orderBy(desc(dispatchOffers.createdAt)).limit(1);
-  // Exact address, customer identity and completion PIN stay private until acceptance.
   return c.json({ offer: rows[0] ? { ...rows[0].offer, booking: rows[0].booking } : null, serverNow: now.toISOString() });
 });
 

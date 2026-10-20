@@ -18,23 +18,9 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-/*
- * SERVIO system of record (Neon Postgres).
- *
- * Conventions
- *  - Money is integer centavos (₱1,100.00 → 110000). Never floats.
- *  - Prices are snapshotted onto bookings/quotes: catalog edits never rewrite history.
- *  - No cascading deletes on money or order data; booking_events and ledger_entries are append-only.
- *  - ADR-001: only fixed catalog SKUs exist. There is deliberately no bid/offer table.
- *  - ADR-002: completion PINs are derived (HMAC of the booking id), never stored.
- */
-
 const created = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 const updated = () => timestamp('updated_at', { withTimezone: true }).notNull().defaultNow();
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
 export const userRole = pgEnum('user_role', ['CUSTOMER', 'PRO', 'ADMIN']);
 export const kycStatus = pgEnum('kyc_status', ['NOT_SUBMITTED', 'PENDING', 'APPROVED', 'REJECTED']);
 export const priceUnit = pgEnum('price_unit', ['job', 'hr', 'errand', 'visit']);
@@ -54,9 +40,6 @@ export const offerResponse = pgEnum('offer_response', ['PENDING', 'ACCEPTED', 'D
 export const requestStatus = pgEnum('request_status', ['OPEN', 'URGENT', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']);
 export const payoutStatus = pgEnum('payout_status', ['REQUESTED', 'PAID', 'FAILED']);
 
-// ---------------------------------------------------------------------------
-// Identity & sessions
-// ---------------------------------------------------------------------------
 export const users = pgTable(
   'users',
   {
@@ -79,7 +62,6 @@ export const users = pgTable(
   ],
 );
 
-/** Owner-managed service destinations. Bookings retain their own address snapshot. */
 export const userAddresses = pgTable('user_addresses', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
@@ -99,7 +81,6 @@ export const userAddresses = pgTable('user_addresses', {
   check('user_addresses_coordinates_chk', sql`${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180`),
 ]);
 
-/** One row per emailed sign-in code. Only the hash is stored. */
 export const loginCodes = pgTable(
   'login_codes',
   {
@@ -115,7 +96,6 @@ export const loginCodes = pgTable(
   (t) => [index('login_codes_email_created_idx').on(t.email, t.createdAt)],
 );
 
-/** Opaque bearer sessions, stored as SHA-256 of the token. */
 export const sessions = pgTable(
   'sessions',
   {
@@ -133,9 +113,6 @@ export const sessions = pgTable(
   (t) => [uniqueIndex('sessions_token_hash_uq').on(t.tokenHash), index('sessions_user_idx').on(t.userId)],
 );
 
-// ---------------------------------------------------------------------------
-// Pros
-// ---------------------------------------------------------------------------
 export const proProfiles = pgTable(
   'pro_profiles',
   {
@@ -159,15 +136,11 @@ export const proProfiles = pgTable(
     createdAt: created(),
     updatedAt: updated(),
   },
-  // Dispatch prefilter: approved, online Pros. Distance is computed in SQL (PostGIS on Neon later).
   (t) => [index('pro_profiles_dispatch_idx').on(t.kycStatus, t.isOnline)],
 );
 
-// ---------------------------------------------------------------------------
-// Catalog (ADR-001: standardized SKUs)
-// ---------------------------------------------------------------------------
 export const categories = pgTable('categories', {
-  id: text('id').primaryKey(), // 'tutoring' | 'repairs' | 'errands' | 'beauty' | 'tech'
+  id: text('id').primaryKey(),
   label: text('label').notNull(),
   icon: text('icon').notNull(),
   sortOrder: smallint('sort_order').notNull().default(0),
@@ -176,7 +149,7 @@ export const categories = pgTable('categories', {
 export const serviceSkus = pgTable(
   'service_skus',
   {
-    id: text('id').primaryKey(), // stable slug, e.g. 'sku-ac-leak'
+    id: text('id').primaryKey(),
     categoryId: text('category_id')
       .notNull()
       .references(() => categories.id),
@@ -192,7 +165,6 @@ export const serviceSkus = pgTable(
   (t) => [check('service_skus_price_chk', sql`${t.priceCentavos} > 0`), index('service_skus_category_idx').on(t.categoryId)],
 );
 
-/** Approved add-on parts / extra labor (ADR-004). */
 export const addonSkus = pgTable(
   'addon_skus',
   {
@@ -206,7 +178,6 @@ export const addonSkus = pgTable(
   (t) => [check('addon_skus_price_chk', sql`${t.priceCentavos} > 0`)],
 );
 
-/** Which catalog SKUs a Pro is qualified to perform. */
 export const proSkus = pgTable(
   'pro_skus',
   {
@@ -220,9 +191,6 @@ export const proSkus = pgTable(
   (t) => [primaryKey({ columns: [t.proId, t.skuId] })],
 );
 
-// ---------------------------------------------------------------------------
-// Bookings & escrow lifecycle (ADR-002)
-// ---------------------------------------------------------------------------
 export interface AddressSnapshot {
   street: string;
   barangay: string;
@@ -236,7 +204,6 @@ export const bookings = pgTable(
   'bookings',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    /** Human-readable order code, e.g. SRV-8821. */
     code: text('code').notNull().default(sql`'SRV-' || nextval('booking_code_seq')::text`),
     isDemo: boolean('is_demo').notNull().default(false),
     idempotencyKey: text('idempotency_key'),
@@ -278,7 +245,6 @@ export const bookings = pgTable(
   ],
 );
 
-/** Append-only status history (drives the stepper timestamps and the audit trail). */
 export const bookingEvents = pgTable(
   'booking_events',
   {
@@ -306,7 +272,6 @@ export const addonQuotes = pgTable(
       .references(() => addonSkus.id),
     addonName: text('addon_name').notNull(),
     priceCentavos: integer('price_centavos').notNull(),
-    /** R2 object key of the evidence photo. */
     photoKey: text('photo_key').notNull(),
     note: text('note').notNull(),
     decision: addonDecision('decision').notNull().default('PENDING'),
@@ -318,12 +283,10 @@ export const addonQuotes = pgTable(
   },
   (t) => [
     index('addon_quotes_booking_idx').on(t.bookingId),
-    // At most one open quote per booking.
     uniqueIndex('addon_quotes_one_pending_uq').on(t.bookingId).where(sql`${t.decision} = 'PENDING'`),
   ],
 );
 
-/** The 60-second radar window offered to one Pro. */
 export const dispatchOffers = pgTable(
   'dispatch_offers',
   {
@@ -343,9 +306,6 @@ export const dispatchOffers = pgTable(
   (t) => [index('dispatch_offers_pro_idx').on(t.proId, t.response), index('dispatch_offers_booking_idx').on(t.bookingId)],
 );
 
-// ---------------------------------------------------------------------------
-// Community bulletin (fixed SKUs only — no open-price listings)
-// ---------------------------------------------------------------------------
 export const bulletinRequests = pgTable(
   'bulletin_requests',
   {
@@ -378,9 +338,6 @@ export const bulletinRequests = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// Messaging & reviews (order-scoped only — no social features, SCOPE.md §3)
-// ---------------------------------------------------------------------------
 export const messages = pgTable(
   'messages',
   {
@@ -388,7 +345,6 @@ export const messages = pgTable(
     bookingId: uuid('booking_id')
       .notNull()
       .references(() => bookings.id),
-    /** Null for system messages. */
     senderId: uuid('sender_id').references(() => users.id),
     body: text('body').notNull(),
     photoKey: text('photo_key'),
@@ -421,14 +377,6 @@ export const reviews = pgTable(
   ],
 );
 
-// ---------------------------------------------------------------------------
-// Money: double-entry ledger + payouts
-// ---------------------------------------------------------------------------
-/**
- * Every money movement is a transaction of ≥2 entries that sum to zero.
- * Accounts: 'customer:<userId>', 'escrow:<bookingId>', 'pro_wallet:<userId>',
- * 'platform_revenue', 'payout_clearing'. Balances are SUM(amount) per account.
- */
 export const ledgerEntries = pgTable(
   'ledger_entries',
   {
@@ -437,7 +385,7 @@ export const ledgerEntries = pgTable(
     account: text('account').notNull(),
     amountCentavos: integer('amount_centavos').notNull(),
     bookingId: uuid('booking_id').references(() => bookings.id),
-    kind: text('kind').notNull(), // ESCROW_HOLD | ADDON_HOLD | ESCROW_RELEASE | TIP | PAYOUT | REFUND
+    kind: text('kind').notNull(),
     memo: text('memo'),
     createdAt: created(),
   },
@@ -464,8 +412,6 @@ export const payouts = pgTable(
   (t) => [check('payouts_min_chk', sql`${t.amountCentavos} >= 50000`)],
 );
 
-
-/** Upload intent and ownership; object bytes are stored in SERVIO's R2 binding. */
 export const uploads = pgTable('uploads', {
   key: text('key').primaryKey(),
   ownerId: uuid('owner_id').notNull().references(() => users.id),
@@ -475,7 +421,6 @@ export const uploads = pgTable('uploads', {
   createdAt: created(),
 }, (t) => [index('uploads_owner_idx').on(t.ownerId), check('uploads_length_chk', sql`${t.contentLength} > 0 AND ${t.contentLength} <= 10485760`)]);
 
-/** Account-scoped help reports; only staff can review other people's reports. */
 export const supportRequests = pgTable('support_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
@@ -493,7 +438,6 @@ export const supportRequests = pgTable('support_requests', {
   check('support_requests_status_chk',sql`${t.status} IN ('OPEN','REVIEWING','RESOLVED')`),
 ]);
 
-/** In-app inbox. Rows are written after the triggering REST write commits (live/notify.ts). */
 export const NOTIFICATION_KINDS = ['BOOKING', 'MESSAGE', 'ADDON', 'OFFER', 'BULLETIN', 'REVIEW'] as const;
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -501,7 +445,6 @@ export const notifications = pgTable('notifications', {
   kind: text('kind').$type<(typeof NOTIFICATION_KINDS)[number]>().notNull(),
   title: text('title').notNull(),
   body: text('body').notNull(),
-  /** App route opened when the notification is tapped, e.g. /tabs/tracking or /order/<id>/chat. */
   route: text('route'),
   bookingId: uuid('booking_id').references(() => bookings.id),
   readAt: timestamp('read_at', { withTimezone: true }),

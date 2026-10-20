@@ -19,7 +19,6 @@ const SEED: WalletSnapshot = { availablePhp: 8640.75, pendingEscrowPhp: 1870, to
 export const MIN_CASHOUT_PHP = 500;
 export const INSTAPAY_FEE_PHP = 15;
 
-/** Servio Pro wallet (Daniel K.). Credits arrive only from verified escrow releases. */
 @Injectable({ providedIn: 'root' })
 export class WalletService {
   readonly api = inject(ApiService);
@@ -90,7 +89,6 @@ export class WalletService {
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load wallet.'); }
   }
 
-  /** Returns an error message, or null on success. */
   async cashout(amountPhp: number, gcashNumber: string): Promise<string | null> {
     if (!this.api.settings.useMockApi()) {
       try { await this.api.post('/wallet/cashout', { amountCentavos: Math.round(amountPhp * 100), gcashNumber: `0${gcashNumber}` }); await this.refresh(); return null; }

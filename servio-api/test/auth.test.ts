@@ -6,7 +6,6 @@ import { loginCodes, users } from '../src/db/schema';
 import { MAX_CODE_ATTEMPTS } from '../src/routes/auth';
 import { api, hasDb, json, testEmail } from './helpers';
 
-/** In development the mailer logs `{ devMail: { text } }` instead of sending; read the code from it. */
 let logged: string[] = [];
 beforeEach(() => {
   logged = [];

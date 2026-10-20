@@ -11,7 +11,6 @@
   box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
 }
 
-/* Explicit size: Leaflet may force position:relative when the page isn't attached yet at init, which would collapse an inset-only box. */
 .map {
   position: absolute;
   inset: 0;
@@ -86,7 +85,6 @@
   cursor: pointer;
 }
 
-/* Leaflet injects marker HTML outside this component's view, so these must pierce encapsulation. */
 :host ::ng-deep {
   .servio-rider {
     background: none;

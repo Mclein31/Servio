@@ -10,10 +10,6 @@ import { validate } from '../lib/validation';
 import { issueSession, revokeCurrentSession } from '../middleware/auth';
 import { withDb } from '../middleware/db';
 
-/**
- * App sign-in: a 6-digit code sent by email (free via Gmail; Semaphore SMS can replace the
- * delivery later without changing the flow). The same email always maps to the same account.
- */
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_CODE_ATTEMPTS = 5;
 export const MAX_CODES_PER_HOUR = 5;
@@ -27,7 +23,6 @@ auth.use('/auth/*', withDb);
 export const generateCode = (): string => String(randomInt(1_000_000)).padStart(6, '0');
 export const codeHash = (email: string, code: string) => sha256Hex(`${email}:${code}`);
 
-/** Explicit development-only capability; never enables account creation or staff login. */
 function demoCode(c: Context<AppEnv>): string | undefined {
   if (['production', 'prod'].includes(c.env.ENVIRONMENT?.trim().toLowerCase())) return;
   return /^\d{6}$/.test(c.env.DEMO_LOGIN_CODE ?? '') ? c.env.DEMO_LOGIN_CODE : undefined;
@@ -61,7 +56,6 @@ auth.post('/auth/request-code', validate('json', v.strictObject({ email: EmailSc
   }
   const code = generateCode();
   const now = new Date();
-  // Only the newest code works.
   await db.update(loginCodes).set({ consumedAt: now }).where(and(eq(loginCodes.email, email), isNull(loginCodes.consumedAt)));
   const [row] = await db
     .insert(loginCodes)
@@ -104,7 +98,6 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
     if (result) return c.json(result);
   }
   const result = await db.transaction(async (tx) => {
-    // Serialize attempts and consumption: a correct request cannot use a stale attempt count.
     const [code] = await tx.select().from(loginCodes)
       .where(and(eq(loginCodes.email, email), isNull(loginCodes.consumedAt)))
       .orderBy(desc(loginCodes.createdAt)).limit(1).for('update');
@@ -115,10 +108,8 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
     }
     if (!timingSafeEqualString(await codeHash(email, entered), code.codeHash)) {
       await tx.update(loginCodes).set({ attempts: code.attempts + 1 }).where(eq(loginCodes.id, code.id));
-      // Return the failure so the attempt increment commits before sending the error response.
       return { error: wrong() };
     }
-    // Recheck expiry at the actual write, including time spent waiting on database locks.
     const [claimed] = await tx
       .update(loginCodes)
       .set({ consumedAt: new Date() })
@@ -143,6 +134,5 @@ auth.post('/auth/verify-code', validate('json', v.strictObject({ email: EmailSch
 
 auth.post('/auth/sign-out', async (c) => {
   await revokeCurrentSession(c, c.get('db'));
-  // 200 + JSON (not 204): the Workers test runner never exits after a bodiless 204.
   return c.json({ signedOut: true });
 });

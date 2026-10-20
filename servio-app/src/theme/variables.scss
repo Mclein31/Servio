@@ -1,20 +1,12 @@
-// SERVIO design tokens
-// Source of truth: SERVIO.fig (iPhone 14 Plus, 428 × 926) and the approved
-// implementation brief. Brand orange #FF5C00 is reserved for brand marks,
-// wells and live-route accents; filled actions use the darker action orange
-// so white labels keep AA contrast.
-
 :root {
   color-scheme: light;
 
-  // Brand
   --servio-brand-orange: #FF5C00;
   --servio-action-orange: #D04A00;
   --servio-action-orange-pressed: #C24400;
-  --servio-orange-text: #B64000; // accessible orange for links and prices
-  --servio-orange-tint: #FFF2E8; // selected chips, icon wells
+  --servio-orange-text: #B64000;
+  --servio-orange-tint: #FFF2E8;
 
-  // Neutrals
   --servio-surface: #F8F9FA;
   --servio-card-bg: #FFFFFF;
   --servio-text-primary: #111827;
@@ -24,7 +16,6 @@
   --servio-border-soft: #F3F4F6;
   --servio-neutral-300: #9CA3AF;
 
-  // Accents
   --servio-green: #10B981;
   --servio-green-strong: #059669;
   --servio-green-text: #087F5B;
@@ -37,14 +28,12 @@
   --servio-blue: #2563EB;
   --servio-blue-surface: #EFF6FF;
 
-  // Category pastels
   --servio-cat-tutoring: #EBF5FF;
   --servio-cat-repairs: #FFF4ED;
   --servio-cat-errands: #EDFAF0;
   --servio-cat-beauty: #FDF0F5;
   --servio-cat-tech: #F3E8FF;
 
-  // Shape
   --servio-radius-card: 20px;
   --servio-radius-hero: 24px;
   --servio-radius-pill: 30px;
@@ -52,15 +41,12 @@
   --servio-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.04);
   --servio-shadow-raised: 0 10px 30px rgba(17, 24, 39, 0.10);
 
-  // Layout
   --servio-gutter: 20px;
   --servio-app-bar-height: 54px;
   --servio-tab-bar-height: 44px;
 
-  // Typography
   --servio-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
-  // Ionic mapping
   --ion-font-family: var(--servio-font);
   --ion-background-color: var(--servio-surface);
   --ion-background-color-rgb: 248, 249, 250;
@@ -109,4 +95,3 @@
     --servio-radius-card: 16px;
   }
 }
-

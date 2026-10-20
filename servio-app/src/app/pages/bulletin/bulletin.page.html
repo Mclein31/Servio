@@ -26,7 +26,6 @@
     </div>
   </div>
 
-  <!-- Map banner -->
   <div class="servio-section">
     <section class="map-banner" aria-labelledby="banner-title">
       <div class="banner-copy">
@@ -48,7 +47,6 @@
     </section>
   </div>
 
-  <!-- Feed -->
   <div class="servio-section feed">
     @for (r of requests(); track r.id) {
       <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'" role="button" tabindex="0"
@@ -76,7 +74,6 @@
   </div>
   <div class="fab-space"></div>
 
-  <!-- 48 × 48 FAB: 20px above the content edge = 84px from the screen bottom over the 64px tab bar. -->
   <button slot="fixed" type="button" class="fab" (click)="compose()" aria-label="Post a new bulletin request">
     <ion-icon name="add" aria-hidden="true"></ion-icon>
   </button>

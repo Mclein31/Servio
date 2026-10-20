@@ -72,7 +72,6 @@ import {
   warningOutline,
 } from 'ionicons/icons';
 
-/** Registers every ionicon used by SERVIO templates (standalone Ionic requires explicit registration). */
 export function registerServioIcons(): void {
   addIcons({
     add,

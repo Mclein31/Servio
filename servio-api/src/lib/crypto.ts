@@ -1,4 +1,3 @@
-/** WebCrypto helpers. Nothing here touches the database. */
 const encoder = new TextEncoder();
 
 export function toBase64Url(bytes: Uint8Array): string {
@@ -7,7 +6,6 @@ export function toBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** URL-safe random token (default 32 bytes = 256 bits). */
 export function randomToken(bytes = 32): string {
   return toBase64Url(crypto.getRandomValues(new Uint8Array(bytes)));
 }
@@ -17,7 +15,6 @@ export async function sha256Hex(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Constant-time comparison of two strings. */
 export function timingSafeEqualString(a: string, b: string): boolean {
   const x = encoder.encode(a);
   const y = encoder.encode(b);
@@ -27,7 +24,6 @@ export function timingSafeEqualString(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Uniform random integer in [0, max) via rejection sampling (no modulo bias). */
 export function randomInt(max: number): number {
   const limit = Math.floor(0x1_0000_0000 / max) * max;
   const buf = new Uint32Array(1);

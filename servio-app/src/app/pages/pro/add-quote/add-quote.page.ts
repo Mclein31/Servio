@@ -37,7 +37,6 @@ export class AddQuotePage {
   readonly note = signal('Exposed drain hose is cracked and causing wall moisture.');
 
   readonly part = computed<AddonSku | null>(() => this.catalog().find((p) => p.id === this.partId()) ?? this.catalog()[0] ?? null);
-  /** 85% / 15% split of the add-on (e.g. ₱350 → ₱297.50 Pro / ₱52.50 platform). */
   readonly split = computed(() => splitPayout(this.part()?.pricePhp ?? 0));
   readonly canSubmit = computed(() => !!this.photo() && !!this.part() && this.note().trim().length >= 10 && !this.saving());
 
@@ -62,7 +61,6 @@ export class AddQuotePage {
       });
       if (shot.dataUrl) this.photo.set(shot.dataUrl);
     } catch (err) {
-      // Cancelled, permission denied, or no camera (desktop browser).
       if (!String(err).toLowerCase().includes('cancel')) {
         const t = await this.toasts.create({ message: 'Camera unavailable here — attach the sample evidence photo instead.', duration: 2200, position: 'top' });
         await t.present();

@@ -10,7 +10,6 @@ export function addressFields(payload: unknown): AddressFields | null {
   return {
     street: [first('house_number'), first('road', 'pedestrian', 'residential', 'path')].filter(Boolean).join(' ') || first('suburb', 'quarter', 'neighbourhood', 'village'),
     barangay: first('suburb', 'quarter', 'neighbourhood', 'village'),
-    // A county/province is not a city. Leave missing fields editable instead of guessing.
     city: first('city', 'town', 'municipality'),
   };
 }
@@ -25,7 +24,6 @@ export function coordinates(url: URL): { lat: number; lng: number } | null {
 type Cached = { value: AddressFields; expires: number };
 const unavailable = () => Response.json({ error: { code: 'GEOCODING_UNAVAILABLE', message: 'Address lookup is unavailable. Please enter your address manually.' } }, { status: 503 });
 
-/** One named instance for the entire app, including every Worker isolate. */
 export class Geocoder {
   private inFlight = false;
   constructor(private readonly state: DurableObjectState, private readonly env: Bindings) {}

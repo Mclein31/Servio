@@ -1,19 +1,8 @@
-/**
- * Uploads the PROD_* values from servio-api/.env as the production Worker's secrets.
- * Local development never reads PROD_* values, so this is the only place they are used.
- *
- *   npm run secrets:production -- --check   (lists filled/missing; uploads nothing)
- *   npm run secrets:production              (uploads all, refuses if any is missing)
- *
- * Values never print; they reach Wrangler on stdin. The database needs no secret:
- * production connects through the `servio-neon` Hyperdrive binding in wrangler.toml.
- */
 import { spawnSync } from 'node:child_process';
 
 try {
   process.loadEnvFile('.env');
 } catch {
-  // No .env: use exported variables.
 }
 
 const SECRETS = [

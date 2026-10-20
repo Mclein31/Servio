@@ -15,7 +15,6 @@ describe.runIf(hasDb)('demo order reset', () => {
   const reset=() => api('/demo/reset-order',json({},customer));
   beforeAll(async () => {
     client=(await connectDb(env))!;
-    // Reserved IDs exercise the runtime boundary without colliding with old test order codes.
     await client.db.insert(users).values([{ id:DEMO.customer,email:'reset-customer@servio.test',isDemo:true },{ id:DEMO.daniel,email:'reset-pro@servio.test',role:'PRO',isDemo:true }]).onConflictDoNothing();
     await client.db.insert(proProfiles).values({ userId:DEMO.daniel,kycStatus:'APPROVED' }).onConflictDoNothing();
     const created=await client.db.insert(bookings).values({ id:DEMO.active,isDemo:true,customerId:DEMO.customer,proId:DEMO.daniel,skuId:'sku-ac-leak',skuName:'AC repair',priceCentavos:110000,trustFeeCentavos:5000,address:{ street:'Ugac Norte',barangay:'Ugac Norte',city:'Tuguegarao City' },lat:17.618111,lng:121.718927,schedule:'ASAP',paymentMethod:'GCASH',status:'EN_ROUTE',escrow:'HOLD_AUTHORIZED' }).onConflictDoNothing().returning();

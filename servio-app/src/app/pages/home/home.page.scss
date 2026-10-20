@@ -33,7 +33,6 @@
   color: var(--servio-text-primary);
 }
 
-
 .me {
   display: inline-flex;
 }
@@ -42,7 +41,6 @@
   margin-top: 8px;
 }
 
-/* Hero */
 .hero {
   position: relative;
   display: flex;
@@ -99,7 +97,6 @@
   object-fit: contain;
 }
 
-/* Categories */
 .category-row {
   display: grid;
   grid-auto-flow: column;
@@ -177,7 +174,6 @@
   overflow: hidden;
 }
 
-/* Bulletin snippet */
 .bulletin-card {
   padding: 16px;
 }
@@ -259,7 +255,6 @@
   }
 }
 
-/* Helpers carousel */
 .helper-carousel {
   display: grid;
   grid-auto-flow: column;
@@ -290,7 +285,6 @@
   pointer-events: none;
 }
 
-/* Sticky tracking widget */
 .tracking-widget {
   pointer-events: auto;
   display: flex;
@@ -397,8 +391,6 @@
   text-overflow: ellipsis;
 }
 
-
-
 .live-dot {
   width: 7px;
   height: 7px;
@@ -485,4 +477,3 @@
 .spacer {
   height: 24px;
 }
-

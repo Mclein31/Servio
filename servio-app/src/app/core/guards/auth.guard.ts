@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-/** Root entry: first run → onboarding; returning signed-out → login; signed-in → home. */
 export const entryGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -10,14 +9,12 @@ export const entryGuard: CanActivateFn = async () => {
   return router.parseUrl((await auth.isAuthenticated()) ? auth.landingPath() : '/auth/login');
 };
 
-/** Protects signed-in areas. */
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   return (await auth.isAuthenticated()) || router.parseUrl('/auth/login');
 };
 
-/** Keeps signed-in users out of the login flow. */
 export const guestGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);

@@ -10,10 +10,8 @@ import type { DispatchResult } from '../env';
 export const emptyDispatch = (): DispatchResult => ({ offered: [], cancelled: [] });
 
 export const OFFER_SECONDS = 60;
-/** An ASAP booking waits this long for a first eligible Pro (e.g. one reopening the app) before refunding. */
 export const FIRST_OFFER_WAIT_MS = 5 * 60_000;
 
-/** Caller holds the booking lock. One offer at a time, up to five distinct eligible Pros. */
 export async function advanceDispatch(tx: Transaction, booking: typeof bookings.$inferSelect, city?: string, outcome: DispatchResult = emptyDispatch()) {
   if (booking.status !== 'PENDING_ACCEPTANCE' || booking.escrow !== 'HOLD_AUTHORIZED') return;
   const now = await serverNow(tx);
@@ -58,7 +56,6 @@ export async function advanceDispatch(tx: Transaction, booking: typeof bookings.
   outcome.cancelled.push(booking.id);
 }
 
-/** Foreground demo heartbeat; B2 adds event delivery. No background/launch dispatch claim. */
 export async function dispatchTick(db: Database, city?: string, isDemo?: boolean): Promise<DispatchResult> {
   const result = emptyDispatch();
   await db.transaction(async (tx) => {

@@ -61,7 +61,6 @@ uploads.post('/uploads/presign', requireUser, validate('json', Presign), async (
   return c.json({ key, uploadUrl, method: 'PUT', headers: { 'Content-Type': input.contentType, 'Content-Length': String(input.contentLength) }, expiresAt: new Date(now.getTime() + UPLOAD_TTL_SECONDS * 1000).toISOString() }, 201);
 });
 
-/** Local demo equivalent of the R2 capability URL. No bearer header is required: the signature grants one key/method/type/length. */
 async function capability(c: import('hono').Context<AppEnv>) {
   if (!directUploadMode(c.env)) throw missing();
   const key = c.req.param('key');
@@ -136,7 +135,6 @@ uploads.get('/uploads/:key{.+}', requireUser, async (c) => {
     allowed = !!pro;
   }
   if (!allowed && row.purpose === 'avatar') {
-    // The same current avatar included in a participant booking may be read by its peer.
     const [peer] = await db.select({ id: users.id }).from(users).innerJoin(bookings,
       or(and(eq(bookings.customerId, users.id), eq(bookings.proId, userId)), and(eq(bookings.proId, users.id), eq(bookings.customerId, userId))))
       .where(and(eq(users.id, row.ownerId), eq(users.avatarKey, key))).limit(1);

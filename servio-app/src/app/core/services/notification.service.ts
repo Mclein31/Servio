@@ -12,11 +12,6 @@ export type NotificationKind = 'BOOKING' | 'MESSAGE' | 'ADDON' | 'OFFER' | 'BULL
 export interface AppNotification { id: string; kind: NotificationKind; title: string; body: string; route: string | null; bookingId: string | null; readAt: string | null; createdAt: string }
 interface InboxDto { notifications: AppNotification[]; unreadCount: number }
 
-/**
- * Server inbox + header badge. On phones, new notifications that arrive over the live socket while the
- * app is in the background are also shown as free local system notifications (no Firebase/APNs). A fully
- * closed app receives nothing until reopened; the inbox then catches up.
- */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly api = inject(ApiService);
@@ -30,14 +25,11 @@ export class NotificationService {
   readonly loading = signal(false);
   readonly error = signal('');
   private revision = 0;
-  /** Notifications already seen by this device session; only newer unread ones become system alerts. */
   private known = new Set<string>();
-  /** False until the first inbox load, which only records what already exists. */
   private primed = false;
   private foreground = true;
   private localReady?: Promise<boolean>;
   private localId = 1;
-  /** Unread notifications that were new in the latest refresh (system-alerted when backgrounded). */
   lastFresh: AppNotification[] = [];
 
   constructor() {
@@ -47,7 +39,6 @@ export class NotificationService {
       untracked(() => { this.revision++; this.items.set([]); this.unreadCount.set(0); this.error.set(''); this.known = new Set(); this.primed = false; });
       if (!/^[0-9a-f-]{36}$/.test(userId)) return;
       untracked(() => { void this.refresh(); void this.prepareLocal(); });
-      // OrderService holds the personal room open; reuse its events instead of a second socket.
       const subscription = this.live.events.subscribe((event) => {
         if (event.resource === `user:${userId}` && ['notification', 'connected'].includes(event.type)) void this.refresh();
       });
@@ -80,7 +71,6 @@ export class NotificationService {
   }
 
   async markAllRead(): Promise<void> { await this.mark({ all: true }); }
-  /** Opening a chat reads its message notifications. */
   async markBooking(bookingId: string, kind?: NotificationKind): Promise<void> {
     if (!this.items().some((n) => !n.readAt && n.bookingId === bookingId && (!kind || n.kind === kind))) return;
     await this.mark({ bookingId, ...(kind ? { kind } : {}) });
@@ -88,7 +78,6 @@ export class NotificationService {
 
   async open(notification: Pick<AppNotification, 'id' | 'route' | 'bookingId'>): Promise<void> {
     if (notification.id) void this.mark({ ids: [notification.id] }).catch(() => undefined);
-    // Booking screens show OrderService's selected booking; select this one before navigating.
     if (notification.bookingId) await this.orders.load(notification.bookingId).catch(() => undefined);
     const route = notification.route && /^\/[A-Za-z0-9/_-]*$/.test(notification.route) ? notification.route : '/tabs/home';
     await this.router.navigateByUrl(route);
@@ -101,14 +90,12 @@ export class NotificationService {
       || (n.bookingId === body['bookingId'] && (!body['kind'] || n.kind === body['kind']));
     const changed = this.items().filter((n) => !n.readAt && matches(n)).length;
     this.items.update((items) => items.map((n) => !n.readAt && matches(n) ? { ...n, readAt: now } : n));
-    // Optimistic badge; the server count below is authoritative (it includes rows beyond the loaded page).
     this.unreadCount.set(body['all'] === true ? 0 : Math.max(0, this.unreadCount() - changed));
     const revision = this.revision;
     const result = await this.api.post<{ unreadCount: number }>('/notifications/read', body);
     if (revision === this.revision) this.unreadCount.set(result.unreadCount);
   }
 
-  /** Asks once for permission to show system notifications; free on Android and iOS (no push service). */
   private prepareLocal(): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) return Promise.resolve(false);
     this.localReady ??= (async () => {

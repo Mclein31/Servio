@@ -13,7 +13,6 @@ const loadOrder = async (route: { paramMap: { get(name: string): string | null }
 export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [entryGuard], children: [] },
 
-  // Intro & auth
   { path: 'onboarding', loadComponent: () => import('./pages/onboarding/onboarding.page').then((m) => m.OnboardingPage) },
   { path: 'auth/login', canActivate: [guestGuard], loadComponent: () => import('./pages/auth/login/login.page').then((m) => m.LoginPage) },
   { path: 'auth/verify-otp', canActivate: [guestGuard], loadComponent: () => import('./pages/auth/verify-otp/verify-otp.page').then((m) => m.VerifyOtpPage) },
@@ -21,7 +20,6 @@ export const routes: Routes = [
   { path: 'auth/profile', canActivate: [authGuard], loadComponent: () => import('./pages/auth/profile-setup/profile-setup.page').then((m) => m.ProfileSetupPage) },
   { path: 'legal/:type', loadComponent: () => import('./pages/legal/legal.page').then((m) => m.LegalPage) },
 
-  // Customer — 5-tab shell
   { path: 'tabs', canActivate: [authGuard], loadChildren: () => import('./tabs/tabs.routes').then((m) => m.TABS_ROUTES) },
   { path: 'home', redirectTo: 'tabs/home' },
   { path: 'directory', redirectTo: 'tabs/directory' },
@@ -33,11 +31,9 @@ export const routes: Routes = [
   { path: 'notifications', canActivate: [authGuard], loadComponent: () => import('./pages/notifications/notifications.page').then(m => m.NotificationsPage) },
   { path: 'help', canActivate: [authGuard], loadComponent: () => import('./pages/help/help.page').then(m => m.HelpPage) },
   { path: 'profile', redirectTo: 'tabs/profile' },
-  // Screen-inventory aliases: these open as modals over their parent tab.
   { path: 'helper/:id', redirectTo: ({ params }) => `/tabs/directory?helper=${params['id']}` },
   { path: 'bulletin/new', redirectTo: '/tabs/bulletin?compose=1' },
 
-  // Customer — booking & order lifecycle
   { path: 'checkout', canActivate: [authGuard], loadComponent: () => import('./pages/checkout/checkout.page').then((m) => m.CheckoutPage) },
   { path: 'order/:id/chat', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/order/order-chat/order-chat.page').then((m) => m.OrderChatPage) },
   { path: 'order/:id/addon-modal', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/addon-approval-modal/addon-approval-modal.component').then((m) => m.AddonApprovalModalComponent) },
@@ -45,7 +41,6 @@ export const routes: Routes = [
   { path: 'order/:id/completion', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/completion-otp-modal/completion-otp-modal.component').then((m) => m.CompletionOtpModalComponent) },
   { path: 'order/:id/review', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/rating-tip-modal/rating-tip-modal.component').then((m) => m.RatingTipModalComponent) },
 
-  // Servio Pro
   { path: 'pro', canActivate: [proGuard], loadComponent: () => import('./pages/pro/dashboard/dashboard.page').then((m) => m.ProDashboardPage) },
   { path: 'pro/radar-alert', canActivate: [proGuard], loadComponent: () => import('./pages/pro/radar-alert/radar-alert.page').then((m) => m.RadarAlertPage) },
   { path: 'pro/radar', redirectTo: 'pro/radar-alert' },

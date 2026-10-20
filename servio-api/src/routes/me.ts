@@ -26,7 +26,6 @@ me.get('/me', async (c) => {
 const PatchProfile = v.pipe(v.strictObject({
   fullName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(2, 'Enter your name.'), v.maxLength(80))),
   avatarKey: v.optional(v.nullable(v.pipe(v.string(),v.regex(UPLOAD_KEY)))),
-  /** Philippine mobile in E.164 (+639XXXXXXXXX). */
   phoneNumber: v.optional(v.nullable(v.pipe(v.string(), v.trim(), v.regex(/^\+639\d{9}$/, 'Use a Philippine mobile number, e.g. +639171234567.')))),
 }), v.check((value)=>Object.keys(value).length>0,'Provide a profile field.'));
 
@@ -108,7 +107,6 @@ me.post('/me/upgrade-pro', validate('json', UpgradeProSchema), async (c) => {
       pro = updatedPro;
     }
 
-    // Assign only SKUs belonging to the chosen category
     await tx.delete(proSkus).where(eq(proSkus.proId, userId));
     const catSkus = await tx.select({ id: serviceSkus.id })
       .from(serviceSkus)

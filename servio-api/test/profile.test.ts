@@ -32,7 +32,6 @@ describe.runIf(hasDb)('real account profile editing',()=>{
   });
 
   it('upgrades a customer to Pro, prevents switching to Customer during active jobs, and switches when clear', async () => {
-    // 1. Customer upgrades to Pro
     const upgradeRes = await api('/me/upgrade-pro', { method: 'POST', headers: { ...f.headers.customer, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
     expect(upgradeRes.status).toBe(200);
     const upgradeJson = await upgradeRes.json() as any;
@@ -40,7 +39,6 @@ describe.runIf(hasDb)('real account profile editing',()=>{
     expect(upgradeJson.pro.kycStatus).toBe('APPROVED');
     expect(upgradeJson.pro.isOnline).toBe(false);
 
-    // 2. Switch back to Customer (no active bookings as pro yet)
     const switchCustRes = await api('/me/switch-role', { method: 'POST', headers: { ...f.headers.customer, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'CUSTOMER' }) });
     expect(switchCustRes.status).toBe(200);
     const switchCustJson = await switchCustRes.json() as any;
@@ -48,13 +46,11 @@ describe.runIf(hasDb)('real account profile editing',()=>{
     expect(switchCustJson.pro.kycStatus).toBe('APPROVED');
     expect(switchCustJson.pro.isOnline).toBe(false);
 
-    // 3. Switch back to Pro
     const switchProRes = await api('/me/switch-role', { method: 'POST', headers: { ...f.headers.customer, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'PRO' }) });
     expect(switchProRes.status).toBe(200);
     const switchProJson = await switchProRes.json() as any;
     expect(switchProJson.me.role).toBe('PRO');
 
-    // 4. Assigned Pro (f.pro) has an active booking (f.booking) - switching to CUSTOMER should be rejected
     const blockedRes = await api('/me/switch-role', { method: 'POST', headers: { ...f.headers.pro, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'CUSTOMER' }) });
     expect(blockedRes.status).toBe(409);
     const blockedJson = await blockedRes.json() as any;

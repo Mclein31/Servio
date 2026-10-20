@@ -8,12 +8,6 @@ import {
 } from '../../shared/models/domain.models';
 import { Category } from '../../shared/models/ui.models';
 
-/*
- * Prototype content. Prices are representative Philippine service rates from
- * Servio_Vault/03_User_Experience_and_Screens/Figma_UI_Completion_Handoff.md —
- * design assumptions pending catalog validation, not live prices.
- */
-
 export const CATEGORIES: Category[] = [
   { id: 'tutoring', label: 'Tutoring', shortLabel: 'Tutoring', caption: 'Academic help for all ages', icon: 'school-outline', tint: 'var(--servio-cat-tutoring)', accent: '#2563EB' },
   { id: 'repairs', label: 'Repairs', shortLabel: 'Repairs', caption: 'Fixes, installs & upkeep', icon: 'construct-outline', tint: 'var(--servio-cat-repairs)', accent: '#D04A00' },
@@ -66,7 +60,6 @@ export const SKUS: Record<string, ServiceSku> = {
   hairTrim: { id: 'sku-hair', name: 'Home Haircut & Styling', category: 'beauty', pricePhp: 450, unit: 'hr', durationLabel: '1 hr', inclusions: ['Wash, cut & blow-dry'] },
 };
 
-/** Standardized catalog for bulletin posting (ADR-001: fixed SKUs only). */
 export const BULLETIN_SKUS: ServiceSku[] = [
   SKUS['mathTutor'], SKUS['scienceTutor'], SKUS['acLeak'], SKUS['sinkLeak'], SKUS['handyman'], SKUS['grocery'], SKUS['hairTrim'], SKUS['laptopDiag'],
 ];
@@ -145,7 +138,6 @@ export const HELPERS: HelperProfile[] = [
   },
 ];
 
-/** Directory category membership (helper id → category ids). */
 export const HELPER_CATEGORIES: Record<string, string[]> = {
   sofia: ['tutoring'],
   daniel: ['repairs', 'tech'],

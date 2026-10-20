@@ -80,7 +80,6 @@ export class OrderChatPage {
     });
     void this.refresh();
     void this.inbox.markBooking(id,'MESSAGE').catch(()=>undefined);
-    // Live delivery is primary; slower incremental polling recovers missed/disconnected events.
     let last=Date.now();
     this.timer=setInterval(()=>{
       if(!this.live.connected().has(`booking:${id}`) || Date.now()-last>=30000){last=Date.now();void this.refresh();}

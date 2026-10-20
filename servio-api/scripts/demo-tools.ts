@@ -1,11 +1,10 @@
-/** Explicit demo DB destruction; backups may also read the SERVIO development DB. */
 import { execFileSync } from 'node:child_process';
 import { mkdir, stat } from 'node:fs/promises';
 import { basename, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
 import { assertDemoDatabase, assertDisposableDemoDatabase } from '../src/demo/guard';
-try { process.loadEnvFile('.env'); } catch { /* Exported environment is supported. */ }
+try { process.loadEnvFile('.env'); } catch {}
 const [action,file] = process.argv.slice(2);
 const raw = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 const url = action === 'backup' ? assertDemoDatabase(raw,process.env.ENVIRONMENT) : assertDisposableDemoDatabase(raw,process.env.ENVIRONMENT);
@@ -34,7 +33,6 @@ try {
     run('pg_dump',['--format=custom','--no-owner','--no-privileges','--file',path]);
     console.log(`Backup: ${path}`);
   } else {
-    // Migrations also support a freshly created empty dedicated demo database.
     const childEnv={ ...process.env,DATABASE_URL:raw!,DATABASE_URL_UNPOOLED:raw! };
     run(process.execPath,[fileURLToPath(new URL('../node_modules/drizzle-kit/bin.cjs',import.meta.url).href),'migrate'],childEnv);
     await client.query('BEGIN');

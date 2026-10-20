@@ -5,10 +5,6 @@ import { REQUEST_ID_HEADER } from './request-id';
 
 const LOCAL_DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/;
 
-/**
- * CORS restricted to ALLOWED_ORIGINS (which includes the Capacitor app origins
- * capacitor://localhost and http://localhost). In development any localhost port is allowed.
- */
 export const corsMiddleware = createMiddleware<AppEnv>((c, next) => {
   const allowed = (c.env.ALLOWED_ORIGINS ?? '')
     .split(',')

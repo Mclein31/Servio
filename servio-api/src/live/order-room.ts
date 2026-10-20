@@ -12,12 +12,10 @@ import { ApiError } from '../lib/errors';
 export const simulatedGpsAllowed=(environment:string,isDemo:boolean)=>isDemo && !['production','prod'].includes(environment.trim().toLowerCase());
 const Gps=v.strictObject({ type:v.literal('gps'),lat:v.pipe(v.number(),v.minValue(-90),v.maxValue(90)),lng:v.pipe(v.number(),v.minValue(-180),v.maxValue(180)),
   accuracy:v.pipe(v.number(),v.minValue(0),v.maxValue(10000)),heading:v.optional(v.nullable(v.pipe(v.number(),v.minValue(0),v.maxValue(360)))),simulated:v.optional(v.boolean()),ts:v.pipe(v.number(),v.integer()) });
-/** Phones send about once per second; network jitter must not drop every other fix. */
 export const GPS_MIN_INTERVAL_MS=750;
 type Attachment=LiveTicket & { validUntil:number };
 export type GpsFix=v.InferOutput<typeof Gps> & { receivedAt:number };
 
-/** Hibernatable sockets keep only identity attachments; Postgres owns status and money. */
 export class OrderRoom extends DurableObject<Bindings> {
   private readonly frames=new LatestFrameQueue<WebSocket,string|ArrayBuffer>((ws,message)=>this.receive(ws,message));
   async fetch(request:Request):Promise<Response> {
@@ -86,7 +84,6 @@ export class OrderRoom extends DurableObject<Bindings> {
       const last=await this.ctx.storage.get<GpsFix>('gps');
       if(last && (Date.now()-last.receivedAt<GPS_MIN_INTERVAL_MS || parsed.output.ts<=last.ts)) throw new ApiError(429,'GPS_THROTTLED','Wait for the next location fix.');
       const now=await serverNow(connection.db);
-      // Global per-Pro conditional update also bounds writes across queued booking rooms.
       await connection.db.update(proProfiles).set({ lastLat:parsed.output.lat,lastLng:parsed.output.lng,lastLocatedAt:now })
         .where(and(eq(proProfiles.userId,actor.userId),sql`(${proProfiles.lastLocatedAt} IS NULL OR ${proProfiles.lastLocatedAt} <= ${new Date(now.getTime()-15000)})`));
       const fix:GpsFix={ ...parsed.output,receivedAt:now.getTime() };
@@ -95,10 +92,6 @@ export class OrderRoom extends DurableObject<Bindings> {
     } catch(error) { ws.send(JSON.stringify({ type:'error',code:error instanceof ApiError?error.code:'GPS_INVALID' })); }
     finally { if(connection) await connection.close(); }
   }
-  /**
-   * Sockets are authorized when they connect and expire within five minutes (validUntil), so a
-   * broadcast needs no database round trip per listener; it only drops expired attachments.
-   */
   private async broadcast(event:unknown) {
     const frame=JSON.stringify(event);
     for(const ws of this.ctx.getWebSockets()) {
@@ -106,7 +99,7 @@ export class OrderRoom extends DurableObject<Bindings> {
       try {
         if(!actor || actor.validUntil<=Date.now()) { ws.close(4001,'Reconnect'); continue; }
         ws.send(frame);
-      } catch { /* A closing socket is cleaned up by webSocketClose. */ }
+      } catch {}
     }
   }
   webSocketClose(ws:WebSocket,code:number,reason:string) { this.frames.remove(ws);ws.close(code,reason); }

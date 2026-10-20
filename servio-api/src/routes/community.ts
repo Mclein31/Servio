@@ -29,7 +29,6 @@ const distanceSql = (latitude: SQLWrapper, longitude: SQLWrapper, from: { lat: n
   ))) END
 `;
 
-
 community.post('/bulletin', validate('json', v.pipe(v.strictObject({
   skuId: text(100), categoryId: text(100), description: text(200), neighborhood: text(150), urgent: v.optional(v.boolean(), false),
   lat: v.optional(lat), lng: v.optional(lng), photoKey: v.optional(v.pipe(v.string(), v.regex(UPLOAD_KEY))),
@@ -124,7 +123,6 @@ community.get('/bulletin/:id', validate('param', bulletinId), async (c) => {
   return c.json({ request: { ...request, bookingId: viewer === request.authorId || viewer === request.acceptedProId ? request.bookingId : null } });
 });
 
-// This reserves a bulletin only. The author must explicitly authorize checkout before a job exists.
 community.post('/bulletin/:id/accept', validate('param', bulletinId), validate('json', v.strictObject({})), async (c) => {
   const proId = c.get('userId');
   const request = await c.get('db').transaction(async (tx) => {

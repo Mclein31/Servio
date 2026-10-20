@@ -5,7 +5,6 @@ export interface StepMilestone {
   label: string;
   isCompleted: boolean;
   isActive: boolean;
-  /** Optional timestamp caption shown under the label (e.g. "10:24 AM"). */
   time?: string;
 }
 
@@ -31,15 +30,12 @@ export interface Category {
   shortLabel: string;
   caption: string;
   icon: string;
-  /** Pastel surface token, e.g. var(--servio-cat-tutoring). */
   tint: string;
-  /** Foreground accent used for the category glyph. */
   accent: string;
 }
 
 export const DEFAULT_STEP_LABELS = ['Posted', 'Accepted', 'On the Way', 'Arrived', 'Done'] as const;
 
-/** Builds stepper milestones where every step before `activeIndex` is completed. */
 export function buildMilestones(
   activeIndex: number,
   labels: readonly string[] = DEFAULT_STEP_LABELS,

@@ -22,7 +22,6 @@
     <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)" (filterClick)="openFilters()"></app-search-filter>
   </div>
 
-  <!-- Hero -->
   <div class="servio-section">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
@@ -37,7 +36,6 @@
     </section>
   </div>
 
-  <!-- Categories -->
   <div class="servio-section">
     <div class="servio-section-head">
       <h2>Community Directory</h2>
@@ -54,7 +52,6 @@
     </div>
   </div>
 
-  <!-- Live bulletin -->
   <div class="servio-section">
     <div class="servio-card bulletin-card">
       <div class="servio-section-head inset">
@@ -86,7 +83,6 @@
     </div>
   </div>
 
-  <!-- Top helpers -->
   <div class="servio-section">
     <div class="servio-section-head">
       <h2>Top Helpers Nearby</h2>
@@ -99,7 +95,6 @@
     </div>
   </div>
 
-  <!-- Active tracking mini-widget -->
   @if (orders.isActive()) {
     <div class="tracking-dock">
       <a class="tracking-widget" routerLink="/tabs/tracking" aria-label="Open live tracking">

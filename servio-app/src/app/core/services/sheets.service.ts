@@ -1,7 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 
-/** Opens the shared customer sheets so every tab presents them identically. */
 @Injectable({ providedIn: 'root' })
 export class SheetsService {
   private readonly modals = inject(ModalController);

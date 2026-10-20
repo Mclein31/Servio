@@ -48,7 +48,6 @@ export class OnboardingPage {
   ];
 
   readonly index = signal(0);
-  /** Slides that have been revealed at least once (Discover reveal plays on first view). */
   readonly seen = signal<Set<number>>(new Set([0]));
 
   get isLast(): boolean {

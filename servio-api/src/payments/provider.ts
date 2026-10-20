@@ -1,4 +1,3 @@
-/** All amounts are integer centavos. Replacements must make each operation idempotent per booking. */
 export interface PaymentOperation {
   bookingId: string;
   customerId: string;

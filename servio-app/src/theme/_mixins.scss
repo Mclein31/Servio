@@ -1,6 +1,3 @@
-// SERVIO SCSS mixins. Import in component styles with:
-//   @use 'theme/mixins' as *;
-
 @mixin servio-card($radius: 20px) {
   background: #FFFFFF;
   border-radius: $radius;

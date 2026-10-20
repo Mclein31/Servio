@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular';
 import { NotificationService } from '../../../core/services/notification.service';
 
-/** Header bell; the red dot shows while the signed-in user has unread notifications. */
 @Component({
   selector: 'app-notification-bell',
   imports: [IonIcon, RouterLink],

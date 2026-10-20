@@ -7,7 +7,6 @@ import app from '../src/index';
 import { codeHash } from '../src/routes/auth';
 import { hasDb, json, testEmail } from './helpers';
 
-// A test fixture capability, not a deployed code.
 const fixed = '246810';
 function request(path: string, body: unknown, bindings = {}) {
   return app.request(`http://servio.test/api/v1/auth/${path}`, json(body, { 'CF-Connecting-IP': `10.99.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}` }), { ...env, DEMO_LOGIN_CODE: fixed, ...bindings });

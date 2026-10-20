@@ -7,7 +7,6 @@ import { AvatarComponent } from '../../components/avatar/avatar.component';
 import { PhpPipe } from '../../pipes/php.pipe';
 import { formatPhp, roundCentavos } from '../../utils/money';
 
-/** Customer approval of a Pro's add-on quote (ADR-004). Routed at /order/:id/addon-modal. */
 @Component({
   selector: 'app-addon-approval-modal',
   imports: [IonContent, IonIcon, AvatarComponent, PhpPipe],
@@ -76,7 +75,6 @@ export class AddonApprovalModalComponent {
     return addons.find((a) => a.decision === 'PENDING') ?? addons[addons.length - 1] ?? null;
   });
 
-  /** Total including this quote, whether pending or already approved. */
   readonly newTotal = computed(() => {
     const q = this.quote();
     if (!q) return this.orders.escrowTotalPhp();
@@ -84,7 +82,6 @@ export class AddonApprovalModalComponent {
   });
 
   constructor() {
-    // Opening the screen directly (deep link / demo) shows the brief's sample quote.
     if (this.orders.api.settings.useMockApi() && !this.orders.order().addons.length) {
       this.orders.pushAddonQuote(ADDON_CATALOG[0], 'assets/design/sample-drain-hose-evidence.png', 'Exposed drain hose is cracked and causing wall moisture.');
     }

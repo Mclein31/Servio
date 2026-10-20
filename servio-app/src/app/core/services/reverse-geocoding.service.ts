@@ -11,7 +11,6 @@ export class ReverseGeocodingService {
     try { return await this.api.get<AddressFields>('/locations/reverse', { lat, lng }); }
     catch(error) {
       if (!(error instanceof HttpErrorResponse) || error.status !== 429) throw error;
-      // The shared free provider admits one fresh lookup at a time.
       await new Promise(resolve => setTimeout(resolve, 1200));
       return this.api.get<AddressFields>('/locations/reverse', { lat, lng });
     }

@@ -4,7 +4,6 @@ import type { AppEnv } from '../env';
 export const REQUEST_ID_HEADER = 'X-Request-Id';
 const SAFE_INCOMING_ID = /^[A-Za-z0-9._-]{8,128}$/;
 
-/** Reuses a well-formed incoming X-Request-Id, otherwise mints one; echoes it and logs the request. */
 export const requestId = createMiddleware<AppEnv>(async (c, next) => {
   const incoming = c.req.header(REQUEST_ID_HEADER);
   const id = incoming && SAFE_INCOMING_ID.test(incoming) ? incoming : crypto.randomUUID();

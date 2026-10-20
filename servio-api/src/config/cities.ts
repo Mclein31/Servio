@@ -1,4 +1,3 @@
-/** Owner-approved prototype policy. Revalidate fees and travel assumptions before launch. */
 export const CANCELLATION_FEES = { enRouteCentavos: 10000, arrivedCentavos: 20000 } as const;
 
 export interface CityProfile {
@@ -15,7 +14,6 @@ export interface CityProfile {
   acceptedTimeoutMinutes: number;
 }
 
-/** Add a city here and select it with LAUNCH_CITY; consumers use the same estimator/policy. */
 export const CITY_PROFILES: Record<string, CityProfile> = {
   tuguegarao: {
     name: 'Tuguegarao City, Cagayan', addressCity: 'Tuguegarao City', center: { lat: 17.613, lng: 121.727 },
@@ -34,7 +32,6 @@ export function cityProfile(city = DEFAULT_CITY): CityProfile {
 
 interface Location { lat: number; lng: number }
 
-/** Pass null when the Pro has no fix younger than freshLocationSeconds. Replaceable by routing later. */
 export function estimateTravelMinutes(from: Location | null, to: Location, profile = cityProfile()): number {
   if (!from) return profile.defaultTravelMinutes;
   return Math.max(profile.minTravelMinutes, Math.min(profile.maxTravelMinutes,

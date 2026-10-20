@@ -12,7 +12,6 @@
     @if (error()) { <p role="alert">{{ error() }}</p> }
     @if (sku(); as sku) {
     @let helper = this.helper();
-    <!-- Booking summary -->
     <section class="servio-card panel">
       <h2 class="sku">{{ sku.name }}</h2>
       @if (helper) { <div class="provider">
@@ -29,7 +28,6 @@
       </ul>
     </section>
 
-    <!-- Address -->
     <section class="servio-card panel row-card">
       <span class="ic"><ion-icon name="location" aria-hidden="true"></ion-icon></span>
       <div class="grow">
@@ -42,7 +40,6 @@
       <button type="button" class="text-btn" (click)="changeAddress()">Change</button>
     </section>
 
-    <!-- Schedule -->
     <section>
       <h3>Schedule</h3>
       <div class="chip-row">
@@ -55,7 +52,6 @@
       </div>
     </section>
 
-    <!-- Escrow breakdown -->
     <section class="servio-card panel">
       <h3 class="flush">Escrow breakdown</h3>
       <div class="line"><span>Base Labor · {{ sku.name }}</span><span class="price">{{ sku.pricePhp | php }}</span></div>
@@ -64,13 +60,11 @@
       <div class="line total"><span>Total Escrow Hold</span><span class="price">{{ totalPhp() | php }}</span></div>
     </section>
 
-    <!-- Escrow guarantee -->
     <section class="guarantee">
       <ion-icon name="shield-checkmark" aria-hidden="true"></ion-icon>
       <p>Your <strong class="price">{{ totalPhp() | php }}</strong> will be held securely in escrow. Funds are only transferred after you inspect the finished work and provide your 4-digit code.</p>
     </section>
 
-    <!-- Payment -->
     <section>
       <h3>Pay with</h3>
       <div class="servio-card methods" role="radiogroup" aria-label="Payment method">

@@ -35,7 +35,6 @@ const CreateBooking = v.pipe(v.strictObject({
   : !!input.scheduleStartAt && !!input.scheduleEndAt && Date.parse(input.scheduleEndAt) > Date.parse(input.scheduleStartAt),
 'ASAP must omit a window; scheduled bookings require ordered start/end timestamps.'));
 
-
 export const bookings = new Hono<AppEnv>();
 bookings.use('/bookings/*', withDb, requireUser);
 
@@ -56,7 +55,6 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     throw new ApiError(503, 'CONFIGURATION_ERROR', 'Booking fees are unavailable. Please try later.');
   }
   const booking = await c.get('db').transaction(async (tx) => {
-    // Serialize identical keys before reading or authorizing, including concurrent HTTP retries.
     if (key) {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`booking:${customerId}:${key}`}, 0))`);
       const [existing] = await tx.select().from(bookingTable).where(and(eq(bookingTable.customerId, customerId), eq(bookingTable.idempotencyKey, key)));
@@ -122,7 +120,6 @@ bookings.get('/bookings/:id', validate('param', idSchema), async (c) => {
   return c.json({ booking: await bookingDetails(c.get('db'), row, c.get('userId'), c.env.PIN_SECRET) });
 });
 
-// Contact numbers are available only to the two participants of an accepted, active booking.
 bookings.get('/bookings/:id/contact', validate('param', idSchema), async (c) => {
   const userId = c.get('userId');
   const row = await participantBooking(c.get('db'), c.req.valid('param').id, userId);
@@ -282,7 +279,6 @@ bookings.post('/bookings/:id/addons/:quoteId/decision',
     return c.json({ quote });
   });
 
-
 bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
   validate('json', v.strictObject({ pin: v.pipe(v.string(), v.regex(/^\d{4}$/)) })), async (c) => {
     const result = await c.get('db').transaction(async (tx) => {
@@ -295,7 +291,6 @@ bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
       if (!timingSafeEqualString(expected, c.req.valid('json').pin)) {
         const attempts = row.pinAttempts + 1;
         await tx.update(bookingTable).set({ pinAttempts: attempts }).where(eq(bookingTable.id, row.id));
-        // Return the error so the attempt increment commits before Hono sends it.
         return { error: new ApiError(attempts >= 5 ? 423 : 422, attempts >= 5 ? 'PIN_LOCKED' : 'PIN_INVALID', attempts >= 5 ? 'Too many wrong PINs. Contact support.' : 'That completion PIN does not match.') };
       }
       const detail = await bookingDetails(tx, row);

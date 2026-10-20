@@ -1,6 +1,5 @@
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
-/** An error that is safe to show to the caller. Anything else becomes a generic 500. */
 export class ApiError extends Error {
   constructor(
     readonly status: ContentfulStatusCode,

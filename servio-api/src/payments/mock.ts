@@ -1,6 +1,5 @@
 import type { PaymentOperation, PaymentProvider } from './provider';
 
-/** No funds leave SERVIO. The transactional ledger is the demo's system of record. */
 async function mock(operation: string, input: PaymentOperation) {
   if (!Number.isSafeInteger(input.amountCentavos) || input.amountCentavos <= 0 || input.amountCentavos > 2_147_483_647) {
     throw new Error('Payment amounts must be positive integer centavos within Postgres integer range.');

@@ -39,7 +39,6 @@ export class JobExecutePage {
   readonly error = signal('');
   readonly steps = computed(() => buildMilestones(STEP_INDEX[this.orders.order().status] ?? 0, PRO_STEPS));
 
-  /** Status-advance state machine: ACCEPTED → EN_ROUTE → ARRIVED → IN_PROGRESS → (PIN) COMPLETED. */
   readonly action = computed<StatusAction>(() => {
     const id = this.orders.order().id;
     switch (this.orders.order().status) {

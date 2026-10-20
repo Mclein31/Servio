@@ -1,11 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
 
-// `db:generate` needs no database. `db:migrate` reads servio-api/.env and prefers Neon's
-// direct (unpooled) URL: migrations should not go through the pooler.
 try {
   process.loadEnvFile('.env');
 } catch {
-  // No .env: fall back to variables already exported in the shell.
 }
 
 export default defineConfig({

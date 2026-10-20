@@ -47,11 +47,6 @@ function minutesAgo(min: number): Date {
   return new Date(Date.now() - min * 60_000);
 }
 
-/**
- * Single source of truth for the demo's active booking (#SRV-8821). Both the
- * customer screens and the Servio Pro screens read and drive this order, so
- * the escrow lifecycle (ADR-002) can be walked end to end on one device.
- */
 export interface OrderHistoryItem {
   id: string;
   title: string;
@@ -90,7 +85,6 @@ export class OrderService {
   readonly approvedAddonsPhp = computed(() =>
     roundCentavos(this.state().addons.filter((a) => a.decision === 'APPROVED').reduce((sum, a) => sum + a.sku.pricePhp, 0)),
   );
-  /** Gross service value held for the Pro split (base SKU + approved add-ons). */
   readonly serviceGrossPhp = computed(() => roundCentavos(this.state().sku.pricePhp + this.approvedAddonsPhp()));
   readonly escrowTotalPhp = computed(() => roundCentavos(this.serviceGrossPhp() + this.state().trustFeePhp));
   readonly basePayout = computed(() => splitPayout(this.state().sku.pricePhp));
@@ -133,7 +127,6 @@ export class OrderService {
       });
       cleanup(() => { subscription.unsubscribe(); stop(); });
     });
-    // Personal room: new bookings, cancellations and messages on any of the user's bookings, not only the one on screen.
     const personal = computed(() => this.api.settings.useMockApi() ? '' : this.auth.user()?.id ?? '');
     effect((cleanup) => {
       const userId = personal();
@@ -167,7 +160,6 @@ export class OrderService {
         try { await this.refresh(); } finally { this.polling = false; }
       };
       void refresh();
-      // Live events are primary. Poll every 30 s as recovery, or every 5 s while the personal socket is down.
       let last = Date.now();
       const timer = setInterval(() => {
         const live = this.live.connected().has(`user:${user.id}`);
@@ -177,7 +169,6 @@ export class OrderService {
     });
   }
 
-  /** Checkout: authorize a fresh escrow hold and dispatch. */
   async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress, bulletinId?: string): Promise<void> {
     const user = this.auth.user();
     if (helper && user) {
@@ -217,7 +208,6 @@ export class OrderService {
     });
   }
 
-  /** Pro side — ADR-004: photo evidence + standardized part, awaiting customer approval. */
   pushAddonQuote(sku: AddonSku, photoUrl: string, note: string): AddonQuote {
     if (!this.api.settings.useMockApi()) throw new Error('Upload evidence and request the add-on through the API.');
     const quote: AddonQuote = { id: `addon-${Date.now()}`, sku, photoUrl, note, createdAt: new Date(), decision: 'PENDING' };
@@ -240,10 +230,6 @@ export class OrderService {
     this.state.update((o) => ({ ...o, tipPhp: Math.max(0, roundCentavos(tipPhp)) }));
   }
 
-  /**
-   * Pro enters the customer's PIN. Only a matching PIN moves escrow
-   * HOLD_AUTHORIZED → COMPLETED and credits the Pro wallet (ADR-002).
-   */
   verifyCompletionPin(pin: string): boolean {
     if (!this.api.settings.useMockApi()) return false;
     const o = this.state();
@@ -275,7 +261,6 @@ export class OrderService {
     return true;
   }
 
-  /** Demo helper: restore the mid-route state shown in the approved mockups. */
   readonly canResetDemo = computed(() => environment.demo && (this.api.settings.useMockApi() || this.auth.user()?.isDemo === true));
 
   async resetDemo(): Promise<void> {
@@ -296,7 +281,6 @@ export class OrderService {
     if (!this.api.settings.useMockApi()) return this.emptyOrder();
     const saved = loadDemoState<Order>('order');
     if (!saved) return this.seedOrder();
-    // Migrate cached prototype addresses without losing escrow or lifecycle progress.
     return saved.address.city === DEMO_ADDRESS.city ? saved : { ...saved, address: { ...DEMO_ADDRESS } };
   }
 
@@ -386,7 +370,6 @@ export class OrderService {
     await this.load(this.state().id);
   }
 
-  /** Chat has no push notifications yet; surface messages that arrive while that chat is not open. */
   private async announceMessage(bookingId: string, senderId: string | null): Promise<void> {
     if (!senderId || senderId === this.auth.user()?.id || this.router.url.startsWith(`/order/${bookingId}/chat`)) return;
     const toast = await this.toasts.create({ message: 'New message on your booking.', duration: 3000, position: 'top',

@@ -11,7 +11,6 @@ describe('notification rules', () => {
   it('tells the other participant about a cancellation', () => {
     expect(bookingNotices(b('CANCELLED'), { kind: 'status' }, 'cust').map((n) => n.userId)).toEqual(['pro']);
     expect(bookingNotices(b('CANCELLED'), { kind: 'status' }, 'pro').map((n) => n.userId)).toEqual(['cust']);
-    // Dispatch refunds (no Pro found) have no acting participant.
     expect(bookingNotices(b('CANCELLED', null), { kind: 'status' }, 'other-pro').map((n) => n.userId)).toEqual(['cust']);
   });
   it('routes messages to the recipient chat with a clipped preview', () => {

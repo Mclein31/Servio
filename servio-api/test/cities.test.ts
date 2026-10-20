@@ -9,7 +9,6 @@ describe('Tuguegarao ETA policy', () => {
     expect(estimateTravelMinutes({ lat: 18, lng: 122 }, destination)).toBe(60);
   });
   it('uses haversine distance, road factor 1.3, 20 km/h and rounds up', () => {
-    // Exactly 0.05 degrees of latitude = ~5.56 km; 5.56 * 1.3 / 20 * 60 = 21.68 min.
     expect(estimateTravelMinutes({ lat: 17.663, lng: 121.727 }, { lat: 17.613, lng: 121.727 })).toBe(22);
     expect(cityProfile().noShowGraceMinutes).toBe(30);
     expect(cityProfile().acceptedTimeoutMinutes).toBe(15);

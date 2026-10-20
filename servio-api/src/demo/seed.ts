@@ -6,7 +6,6 @@ import { splitPayout } from '../lib/money';
 import { DEMO, demoId } from './guard';
 import { DEMO_ADDRESS, DEMO_AUTHORS, DEMO_BULLETIN, DEMO_IMAGES, DEMO_LOCATIONS, DEMO_PROS } from './data';
 
-/** Presentation baseline. Existing rows are left alone so seeding never resets an ongoing demo. */
 export async function seedDemo(db: Database, imageLengths: Record<string, number>) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('servio:demo-seed',0))`);
@@ -53,7 +52,6 @@ export async function seedDemo(db: Database, imageLengths: Record<string, number
     ];
     const all = [
       { id: DEMO.active, code: 'SRV-8821', customer: DEMO.customer, pro: DEMO.daniel, sku: 'sku-ac-leak', at: ago(1), tip: 0, status: 'EN_ROUTE' as const },
-      // A queued, scheduled AC job supplies the other ₱935 pending; no fictitious SKU or price.
       { id: demoId(101), code: 'SRV-8819', customer: DEMO_AUTHORS[1]!.id, pro: DEMO.daniel, sku: 'sku-ac-leak', at: today(0.15), tip: 0, status: 'ACCEPTED' as const },
       ...history.map((h) => ({ ...h, status: 'COMPLETED' as const })),
     ];
@@ -71,7 +69,7 @@ export async function seedDemo(db: Database, imageLengths: Record<string, number
     for (const [i,b] of all.entries()) {
       const service = sku(b.sku); const fee = 5000; const total = service.priceCentavos + fee; const completed = b.status === 'COMPLETED';
       const scheduled = b.id === demoId(101);
-      const scheduleStartAt = scheduled ? new Date(midnight + 86400000 + 3600000) : null; // Tomorrow 09:00 Philippine time.
+      const scheduleStartAt = scheduled ? new Date(midnight + 86400000 + 3600000) : null;
       const scheduleEndAt = scheduled ? new Date(midnight + 86400000 + 4 * 3600000) : null;
       const createdAt = b.id === DEMO.active ? ago(11) : new Date(b.at.getTime() - 45 * 60000);
       await tx.insert(bookings).values({ id: b.id, code: b.code, isDemo: true, customerId: b.customer, proId: b.pro, skuId: service.id,
@@ -93,7 +91,6 @@ export async function seedDemo(db: Database, imageLengths: Record<string, number
         await tx.insert(reviews).values({ id: demoId(2000+i), bookingId: b.id, authorId: b.customer, subjectId: b.pro, rating: 5, compliments: ['Polite','Clean Work'], body: 'Clear communication and careful work. Thank you!', createdAt: b.at }).onConflictDoNothing();
       }
     }
-    // Imported prior earnings are explicit balances, never invented service prices.
     ledger('OPENING_BALANCE',ago(30*1440),undefined,[[`pro_wallet:${DEMO.daniel}`,656450],['opening_balance_clearing',-656450]],'Previous earnings');
     ledger('OPENING_BALANCE',today(0.2),undefined,[[`pro_wallet:${DEMO.daniel}`,57375],['opening_balance_clearing',-57375]],'Previous earnings');
     ledger('PAYOUT',ago(4*1440),undefined,[[`pro_wallet:${DEMO.daniel}`,-251500],['payout_clearing',250000],['platform_revenue',1500]],'GCash 0917***4567 · ₱2,500 cashout + ₱15 fee');
@@ -111,7 +108,6 @@ export async function seedDemo(db: Database, imageLengths: Record<string, number
       await tx.insert(bulletinRequests).values({ id: demoId(6000+i), isDemo: true, authorId: DEMO_AUTHORS[i]!.id, categoryId: service.categoryId, skuId: b.skuId,
         description: b.description, urgent: b.status === 'URGENT', status: b.status, neighborhood: `Barangay ${loc.barangay}`, lat: loc.lat, lng: loc.lng, createdAt: ago(b.minutes) }).onConflictDoNothing();
     }
-    // Explicit demo codes must never collide with the next ordinary booking.
     await tx.execute(sql`SELECT setval('booking_code_seq', GREATEST((SELECT last_value FROM booking_code_seq), (SELECT MAX(substring(code FROM 5)::bigint) FROM bookings WHERE code ~ '^SRV-[0-9]+$')), true)`);
     if (!prior) {
       const balances = await tx.execute<{ available: string; today: string }>(sql`SELECT SUM(amount_centavos)::text AS available,

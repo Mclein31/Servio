@@ -92,7 +92,6 @@ describe.runIf(hasDb)('wallet and mock cashout (A8)', () => {
   });
 
   it('uses Philippine midnight for today earnings', async () => {
-    // Use the server's current date boundary, independent of host timezone.
     const result = await f.db.execute<{ boundary: string }>(sql`SELECT (extract(epoch FROM (date_trunc('day', clock_timestamp() AT TIME ZONE INTERVAL '+08:00') AT TIME ZONE INTERVAL '+08:00')) * 1000)::text AS boundary`);
     const boundary = Number(result.rows[0]!.boundary);
     await credit(10000, new Date(boundary - 1000));

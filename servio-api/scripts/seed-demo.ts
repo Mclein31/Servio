@@ -1,4 +1,3 @@
-/** Guarded, idempotent local presentation dataset. Does not reset an ongoing run. */
 import { execFileSync } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +8,7 @@ import { assertDemoDatabase } from '../src/demo/guard';
 import { DEMO_IMAGES } from '../src/demo/data';
 import { seedDemo } from '../src/demo/seed';
 
-try { process.loadEnvFile('.env'); } catch { /* Exported environment is also supported. */ }
+try { process.loadEnvFile('.env'); } catch {}
 const raw = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 const url = assertDemoDatabase(raw,process.env.ENVIRONMENT);
 if (!['localhost','127.0.0.1','[::1]'].includes(url.hostname) || (process.env.UPLOADS_MODE ?? 'local') !== 'local') {
@@ -19,7 +18,6 @@ const bucket = process.env.R2_BUCKET_NAME || 'servio-uploads-dev';
 if (!/^servio-[a-z0-9-]+$/.test(bucket)) throw new Error('Use a dedicated servio-* bucket.');
 const client = new Client({ connectionString: raw, ssl: false });
 try {
-  // Validate the DB connection before touching the local bucket.
   await client.connect();
   await import('./seed');
   const lengths: Record<string,number> = {};

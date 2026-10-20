@@ -15,7 +15,6 @@ export class AppComponent {
   readonly pageReady = signal(false);
 
   constructor() {
-    // Starts the inbox badge and device push registration for the signed-in account.
     inject(NotificationService);
     const router = inject(Router);
     const destroyRef = inject(DestroyRef);

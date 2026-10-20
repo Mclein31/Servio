@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 const PALETTE = ['#FFF2E8', '#EBF5FF', '#EDFAF0', '#FDF0F5', '#F3E8FF'];
 const INK = ['#B64000', '#1D4ED8', '#047857', '#BE185D', '#6D28D9'];
 
-/** Circular avatar with an initials fallback when no photo is available. */
 @Component({
   selector: 'app-avatar',
   changeDetection: ChangeDetectionStrategy.OnPush,

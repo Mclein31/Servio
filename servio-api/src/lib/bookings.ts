@@ -14,7 +14,6 @@ export async function serverNow(db: Executor): Promise<Date> {
   return new Date(Number(result.rows[0]!.nowMs));
 }
 
-/** Authorization is part of the query; an unrelated user cannot probe whether a booking exists. */
 export async function participantBooking(db: Executor, id: string, userId: string, lock = false) {
   const query = db.select().from(bookingTable).where(and(eq(bookingTable.id, id), or(eq(bookingTable.customerId, userId), eq(bookingTable.proId, userId))));
   const [row] = lock ? await query.for('update') : await query;
@@ -32,8 +31,6 @@ export async function bookingDetails(db: Executor, row: typeof bookingTable.$inf
   return { ...publicBooking(row, addons), events, addons, customer, pro: pro ? { ...pro, rating: Number(pro.rating) } : null, reviewed: !!review, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
 }
 
-
-/** Same shape as bookingDetails for a page of bookings, in four queries instead of five per booking. */
 export async function bookingDetailsMany(db: Executor, rows: (typeof bookingTable.$inferSelect)[], userId?: string, secret?: string) {
   if (!rows.length) return [];
   const ids = rows.map((r) => r.id);

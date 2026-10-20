@@ -1,17 +1,7 @@
-/**
- * RouteTrack — distance-based geometry for a rider moving along a polyline.
- *
- * Works in either geographic space ([lat, lng], metres via an equirectangular
- * projection — accurate to well under 1% at neighbourhood scale) or screen
- * space ([x, y], pixels). Everything is addressed by "distance along route",
- * which is what makes delivery-app tracking feel right: the marker follows
- * the streets at a steady speed instead of cutting corners between GPS fixes.
- */
 export type Point = readonly [number, number];
 
 export interface RouteSample {
   point: Point;
-  /** Heading in degrees, 0 = north/up, clockwise. */
   bearing: number;
   segmentIndex: number;
 }
@@ -34,7 +24,6 @@ export class RouteTrack {
     this.total = this.cumulative[this.cumulative.length - 1];
   }
 
-  /** Position and heading at `distance` along the route (clamped). */
   sample(distance: number): RouteSample {
     const d = Math.min(Math.max(distance, 0), this.total);
     const i = this.segmentAt(d);
@@ -49,7 +38,6 @@ export class RouteTrack {
     };
   }
 
-  /** Route vertices split at `distance`: [travelled, remaining]. Both include the split point so they join seamlessly. */
   split(distance: number): [Point[], Point[]] {
     const { point, segmentIndex } = this.sample(distance);
     const travelled = [...this.points.slice(0, segmentIndex + 1), point];
@@ -57,7 +45,6 @@ export class RouteTrack {
     return [travelled, remaining];
   }
 
-  /** Closest point on the remaining polyline, in metres (or pixels in screen mode). */
   project(point: Point, minimumDistance = 0): { distance: number; error: number; point: Point } {
     let best = { distance: Math.min(this.total, Math.max(0, minimumDistance)), error: Infinity, point: this.sample(minimumDistance).point };
     for (let i = 0; i < this.points.length - 1; i++) {
@@ -78,10 +65,6 @@ export class RouteTrack {
     return best;
   }
 
-  /**
-   * 0..1 factor that dips near sharp corners so riders brake into turns and
-   * accelerate out — the subtle cue that makes motion read as a real vehicle.
-   */
   cornerFactor(distance: number, brakeZone: number, minFactor = 0.45): number {
     let factor = 1;
     for (let i = 1; i < this.points.length - 1; i++) {
@@ -96,7 +79,6 @@ export class RouteTrack {
     return factor;
   }
 
-  /** Heading smoothed over a short look-ahead window, so micro-kinks in road geometry don't make the marker twitch. */
   smoothedBearing(distance: number, window: number): number {
     const behind = this.sample(distance - window / 2).point;
     const ahead = this.sample(distance + window / 2).point;

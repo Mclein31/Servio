@@ -6,7 +6,6 @@ import { serverNow } from '../lib/bookings';
 import { ApiError } from '../lib/errors';
 import { DEMO } from './guard';
 
-/** Only the reserved presentation order. Money and status audit rows are never removed. */
 export async function resetDemoOrder(db: Database, userId: string, city?: string) {
   return db.transaction(async (tx) => {
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, DEMO.active)).for('update');

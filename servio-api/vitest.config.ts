@@ -7,11 +7,8 @@ const local = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 try {
   process.loadEnvFile('.env');
 } catch {
-  // No .env: fall back to variables already exported in the shell.
 }
 
-// Tests run inside workerd via Miniflare. Database-backed suites run only against
-// TEST_LOCAL_DATABASE_URL — a migrated, throwaway Postgres on this computer — never Neon.
 const testDb = process.env.TEST_LOCAL_DATABASE_URL;
 if (testDb && !/^postgres(ql)?:\/\/[^@]*@(localhost|127\.0\.0\.1)(:\d+)?\//.test(testDb)) {
   throw new Error('TEST_LOCAL_DATABASE_URL must point at localhost.');
@@ -27,7 +24,6 @@ export default defineConfig({
           ENVIRONMENT: 'development',
           TEST_HAS_DATABASE: testDb ? 'true' : 'false',
           ...(testDb ? { DATABASE_URL: testDb } : {}),
-          // Never send real email from tests.
           SMTP_USER: '',
           SMTP_PASSWORD: '',
           PIN_SECRET: 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=',
@@ -36,16 +32,13 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    // pg require()s these; point the workerd test runner at their CommonJS builds.
     alias: {
       'pg-protocol': local('./node_modules/pg-protocol/dist/index.js'),
       'pg-cloudflare': local('./node_modules/pg-cloudflare/dist/index.js'),
     },
   },
   test: {
-    // Suites share one database; run files one at a time.
     fileParallelism: false,
-    // After client.end(), workerd may reject pg-cloudflare's pending read where it can't be caught.
     onUnhandledError: (error) => (error.message === 'This socket has been closed.' ? false : undefined),
   },
 });

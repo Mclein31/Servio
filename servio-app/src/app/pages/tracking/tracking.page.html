@@ -15,7 +15,6 @@
   @if (canTrackProvider()) {
   <div class="servio-section">
     <section class="active servio-card" aria-labelledby="order-title">
-      <!-- Header card -->
       <div class="order-head">
         <app-avatar [src]="partner().avatarUrl" [name]="partner().name" [size]="56"></app-avatar>
         <div class="order-text">
@@ -28,13 +27,10 @@
         </span>
       </div>
 
-      <!-- Live map -->
       @if (o.status === 'EN_ROUTE' || o.status === 'ARRIVED' || o.status === 'IN_PROGRESS') { <app-tracking-map [height]="280"></app-tracking-map> }
 
-      <!-- Milestones -->
       <app-stepper class="stepper" [steps]="orders.milestones()" [showTimes]="true"></app-stepper>
 
-      <!-- Communication bar -->
       <div class="comm">
         <span class="comm-icon"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></span>
         <p>{{ banner() }}</p>
@@ -48,7 +44,6 @@
         </a>
       </div>
 
-      <!-- Lifecycle actions -->
       @if (orders.pendingAddon(); as addon) {
         <a class="next-step warn" [routerLink]="['/order', o.id, 'addon-modal']">
           <ion-icon name="alert-circle" aria-hidden="true"></ion-icon>
@@ -86,7 +81,6 @@
   </div>
 
   } @else if (auth.user()?.role === 'CUSTOMER') { <p class="servio-section">{{ orders.loading() ? 'Loading bookings…' : 'No active bookings right now. Find a helper to get started.' }}</p> }
-  <!-- Order history -->
   <div class="servio-section">
     <div class="servio-section-head"><h2>Order History</h2></div>
     <ion-accordion-group class="history servio-card" [multiple]="true">

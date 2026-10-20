@@ -14,7 +14,6 @@ import { PaymentMethodsService } from '../../core/services/payment-methods.servi
 import { AddressService } from '../../core/services/address.service';
 import { roundCentavos } from '../../shared/utils/money';
 
-/** Resolve Philippine calendar windows independently of the phone timezone. */
 export function scheduleWindow(label: string, now = new Date()): { scheduleStartAt: string; scheduleEndAt: string } | undefined {
   if (label.startsWith('Immediate')) return undefined;
   const ph = new Date(now.getTime() + 8 * 3600000);

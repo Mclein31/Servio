@@ -9,7 +9,6 @@ export type BookingChange =
 const label = (b: BookingInfo) => b.code ? `#${b.code}` : 'your booking';
 const clip = (text: string, max = 120) => text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
-/** Who is told what about a committed booking change. The actor is never notified of their own action. */
 export function bookingNotices(b: BookingInfo, change: BookingChange, actorId: string | undefined): Notice[] {
   const customer = (n: Omit<Notice, 'userId' | 'bookingId'>): Notice => ({ ...n, userId: b.customerId, bookingId: b.id });
   const pro = (n: Omit<Notice, 'userId' | 'bookingId'>): Notice[] => b.proId ? [{ ...n, userId: b.proId, bookingId: b.id }] : [];

@@ -17,7 +17,6 @@ export const FIX_INTERVAL_MS=1000;
 const ARRIVAL_THRESHOLD_M=4;
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/;
 
-/** Both sources drive the same street-distance interpolation. Only the API advances a live job. */
 @Injectable({ providedIn:'root' })
 export class TrackingService implements OnDestroy {
   private readonly orders=inject(OrderService);
@@ -50,7 +49,6 @@ export class TrackingService implements OnDestroy {
   private prev:Fix={ distance:this.startDistance,at:0 };
   private readonly latest=signal<Fix>({ distance:this.startDistance,at:0 });
   private readonly rawPoint=signal<Point|null>(null);
-  /** Without road geometry (production) the marker glides between real fixes instead of jumping. */
   private rawFrom:Point|null=null;
   private rawAt=0;
   private rawSpan=FIX_INTERVAL_MS;
@@ -106,7 +104,6 @@ export class TrackingService implements OnDestroy {
             this.generation++;
             this.park(atDestination?this.route.total:this.latest().distance);
             if(atDestination && this.mode()==='live' && this.context().coordinates) {
-              // Arrival status does not fabricate a provider GPS fix.
               if(!this.roadGeometry) this.routeReady.set(false);
             }
           }
@@ -207,7 +204,6 @@ export class TrackingService implements OnDestroy {
       this.routeReady.set(false);
     }
     let projected=this.route.project([fix.lat,fix.lng],Math.max(0,this.latest().distance-30));
-    // A demo sender may replay from the start while the receiver still holds its previous last fix.
     if(fix.simulated && environment.demo && projected.error>80) {
       const replay=this.route.project([fix.lat,fix.lng]);
       if(replay.error<=80 && replay.distance<this.latest().distance-30) { this.park(replay.distance); projected=replay; }
@@ -227,7 +223,7 @@ export class TrackingService implements OnDestroy {
       if(generation!==this.generation || this.routeAttempt!==this.context().id || this.mode()!=='live' || !points || points.length<2 || points.some((p)=>!Number.isFinite(p[0]) || !Number.isFinite(p[1]) || Math.abs(p[0])>180 || Math.abs(p[1])>90)) return;
       this.roadGeometry=true; this.track.set(new RouteTrack(points.map((p)=>[p[1],p[0]] as Point),'geo')); this.park(0); this.routeReady.set(true);
       const latest=this.live.gps(); if(latest?.resource===`booking:${this.context().id}`) this.ingest(latest.fix);
-    } catch { /* Keep the actual fix; never invent a street route after a router failure. */ }
+    } catch {}
   }
   private send(fix:Omit<LiveFix,'type'|'receivedAt'>):void {
     if(this.auth.user()?.role!=='PRO' || Date.now()-this.lastSent<1000) return;

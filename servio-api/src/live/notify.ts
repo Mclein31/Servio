@@ -10,14 +10,12 @@ async function send(env:AppEnv['Bindings'],resource:string,event:unknown) {
 }
 const sendAll=(env:AppEnv['Bindings'],resources:Iterable<string>,event:unknown)=>Promise.all([...new Set(resources)].map((resource)=>send(env,resource,event)));
 
-/** Inbox rows (the record), then a live refresh of each recipient's bell. */
 export async function deliverNotices(env:AppEnv['Bindings'],db:Database,notices:Notice[]) {
   if(!notices.length) return;
   const rows=await db.insert(notifications).values(notices).returning();
   await sendAll(env,rows.map((row)=>`user:${row.userId}`),{ type:'notification' });
 }
 
-/** Notifications follow the committed REST response, never a transaction's intermediate state. */
 export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
   await next();
   if(c.req.method!=='POST' || c.res.status<200 || c.res.status>=300) return;
@@ -34,7 +32,6 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
           .from(bookings).where(eq(bookings.id,bookingId)) as BookingInfo[];
         if(!info) return;
         await sendAll(c.env,[info.customerId,...(info.proId?[info.proId]:[])].map((id)=>`user:${id}`),{ type:'booking',bookingId,...event });
-        // A cancelled/changed booking closes its open offer; the Pro's radar must refetch now.
         const offers=await database.select({ proId:dispatchOffers.proId }).from(dispatchOffers).where(and(eq(dispatchOffers.bookingId,bookingId),eq(dispatchOffers.response,'PENDING')));
         await sendAll(c.env,offers.map((o)=>`pro:${o.proId}`),{ type:'dispatch' });
         notices.push(...bookingNotices(info,change,actor));
@@ -58,7 +55,6 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
         const { booking }=await c.res.clone().json() as { booking:{ id:string; status:string; skuId:string; isDemo:boolean } };
         await touched(booking.id,{ kind:'created' },{ change:'created' });
         if(booking.status==='PENDING_ACCEPTANCE') {
-          // Wake every eligible online Pro; their dispatch heartbeat creates the offer within a round trip.
           const database=await db();
           if(database) {
             const pros=await database.select({ id:users.id }).from(users).innerJoin(proProfiles,eq(proProfiles.userId,users.id)).innerJoin(proSkus,eq(proSkus.proId,users.id))
@@ -79,7 +75,6 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
         await touched(body.bookingId,{ kind:'status' },{ change:'status' });
       }
 
-      // Offers created and bookings refunded by this request's dispatch work (heartbeat or decline).
       for(const offer of hints.dispatch?.offered ?? []) {
         await send(c.env,`pro:${offer.proId}`,{ type:'dispatch',eventId:offer.offerId });
         await touched(offer.bookingId,{ kind:'offer',proId:offer.proId },{ change:'status' });
@@ -100,12 +95,10 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
       const database=notices.length ? await db() : undefined;
       if(database) await deliverNotices(c.env,database,notices);
     } catch(error) {
-      // A committed booking/payment never becomes an HTTP failure because a room is unavailable.
       console.error(JSON.stringify({ requestId:c.get('requestId'),code:'LIVE_NOTIFY_FAILED',message:error instanceof Error?error.message:String(error) }));
     } finally { await (connection as Awaited<ReturnType<typeof connectDb>>)?.close(); }
   };
-  // Run after commit without holding the caller's successful REST response open.
   let execution: {waitUntil(promise:Promise<unknown>):void} | undefined;
-  try { execution=c.executionCtx; } catch { /* Direct request tests have no execution context. */ }
+  try { execution=c.executionCtx; } catch {}
   if(execution)execution.waitUntil(notify());else await notify();
 });

@@ -36,7 +36,6 @@ export class CommunityService {
   private bulletinLoaded = false;
   private origin(): string { return JSON.stringify(this.location.query()); }
   constructor() {
-    // Accept/release/cancel on the user's own requests arrive in their personal room (watched by OrderService).
     inject(LiveService).events.subscribe((event) => {
       if (event.type === 'bulletin' && this.bulletinLoaded) void this.bulletin().catch(() => undefined);
     });
@@ -89,7 +88,6 @@ export class CommunityService {
     if (this.directoryOrigin() !== origin) this.liveHelpers.update(rows => rows.map(h => ({ ...h, distanceKm: Infinity })));
     this.directoryOrigin.set(origin);this.directoryLoaded=true;
     this.liveHelpers.set(id ? [...this.liveHelpers().filter(h => h.id !== id), ...loaded] : loaded);
-    // Cards are usable immediately; signed avatar requests must not block the directory.
     void Promise.all(pros.filter(p=>p.avatarKey).map(async(p)=>{
       const avatarUrl=await this.image(p.avatarKey).catch(()=>'');
       if(revision===this.directoryRevision)this.liveHelpers.update(rows=>rows.map(h=>h.id===p.id?{...h,avatarUrl}:h));

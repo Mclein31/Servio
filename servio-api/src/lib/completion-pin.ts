@@ -1,6 +1,5 @@
 import { ApiError } from './errors';
 
-/** The HMAC digest is interpreted as an unsigned integer; take its first four decimal digits. */
 export async function completionPin(secret: string | undefined, bookingId: string): Promise<string> {
   let bytes: Uint8Array;
   try { bytes = Uint8Array.from(atob(secret ?? ''), (c) => c.charCodeAt(0)); }

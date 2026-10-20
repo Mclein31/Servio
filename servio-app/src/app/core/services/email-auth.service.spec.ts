@@ -154,7 +154,6 @@ describe('email-code auth', () => {
     expect(auth.user()?.role).toBe('PRO');
     expect(auth.pro()?.kycStatus).toBe('APPROVED');
 
-    // Test in mock mode
     settings.useMockApi.set(true);
     await auth.upgradeToPro();
     expect(auth.user()?.role).toBe('PRO');

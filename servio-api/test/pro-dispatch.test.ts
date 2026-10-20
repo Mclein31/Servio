@@ -23,9 +23,6 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
   };
   beforeEach(async () => {
     client = (await connectDb(env))!;
-    // Shared, append-only test DB retains prior suites' valid holds. Drain that old
-    // backlog with compensating refunds before creating the current eligible Pros.
-    // Unoffered bookings wait for a first Pro; age the backlog so the drain refunds it.
     await client.db.execute(sql`UPDATE bookings SET created_at = now() - interval '1 hour' WHERE is_demo AND status='PENDING_ACCEPTANCE'`);
     for (let pass = 0; pass < 20; pass++) {
       const count = await client.db.execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM bookings WHERE is_demo AND status='PENDING_ACCEPTANCE' AND escrow='HOLD_AUTHORIZED'`);
@@ -144,7 +141,6 @@ describe.runIf(hasDb)('demo Pro availability and dispatch', () => {
     if (kind === 'unqualified') await client.db.delete(proSkus).where(eq(proSkus.proId, ids[1]!));
     else await client.db.update(proProfiles).set(kind === 'stale' ? { lastLocatedAt: new Date(Date.now() - 121000) } : kind === 'future' ? { lastLocatedAt: new Date(Date.now() + 60000) } : kind === 'offline' ? { isOnline: false } : kind === 'unapproved' ? { kycStatus: 'PENDING' } : { lastLat: 18 }).where(eq(proProfiles.userId, ids[1]!));
     expect((await poll()).offer).toBeNull();
-    // No eligible Pro yet: the hold stays authorized while the booking waits for one.
     expect(await offers()).toHaveLength(0); expect(await balance()).toBe('115000');
     await client.db.update(bookings).set({ createdAt: new Date(Date.now() - 6 * 60_000) }).where(eq(bookings.id, bookingId));
     expect((await poll()).offer).toBeNull();

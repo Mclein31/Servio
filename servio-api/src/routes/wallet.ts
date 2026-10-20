@@ -66,7 +66,6 @@ wallet.post('/wallet/cashout', validate('json', v.strictObject({
   const { amountCentavos, gcashNumber } = c.req.valid('json');
   const proId = c.get('userId');
   const payout = await c.get('db').transaction(async (tx) => {
-    // PostgreSQL holds this per-Pro lock until commit, including the sum/balance check and debit.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`wallet:${proId}`},0))`);
     const balance = await tx.execute<{ amount: string }>(sql`SELECT COALESCE(SUM(amount_centavos),0)::text AS amount FROM ledger_entries WHERE account=${`pro_wallet:${proId}`}`);
     const total = amountCentavos + CASHOUT_FEE_CENTAVOS;
@@ -78,7 +77,6 @@ wallet.post('/wallet/cashout', validate('json', v.strictObject({
       { txnId, account: 'payout_clearing', amountCentavos, kind: 'PAYOUT', memo: `GCash ${destinationMasked}` },
       { txnId, account: 'platform_revenue', amountCentavos: CASHOUT_FEE_CENTAVOS, kind: 'PAYOUT', memo: 'Cashout fee' },
     ]);
-    // Mock payout is settled immediately; no external funds move or destination number is retained.
     const [row] = await tx.insert(payouts).values({ proId, amountCentavos, feeCentavos: CASHOUT_FEE_CENTAVOS, destinationMasked, status: 'REQUESTED' }).returning();
     const [paid] = await tx.update(payouts).set({ status: 'PAID' }).where(eq(payouts.id, row!.id)).returning();
     return paid!;

@@ -85,7 +85,7 @@ describe('live customer data and escrow screens', () => {
   });
 
   it('uses Philippine schedule windows even on a laptop in another timezone', () => {
-    const instant = new Date('2026-10-16T17:00:00Z'); // October 17, 01:00 in the Philippines.
+    const instant = new Date('2026-10-16T17:00:00Z');
     expect(scheduleWindow('Immediate / ASAP', instant)).toBeUndefined();
     expect(scheduleWindow('Today (2:00 PM - 4:00 PM)', instant)).toEqual({ scheduleStartAt: '2026-10-17T06:00:00.000Z', scheduleEndAt: '2026-10-17T08:00:00.000Z' });
     expect(scheduleWindow('Tomorrow Morning', instant)).toEqual({ scheduleStartAt: '2026-10-18T01:00:00.000Z', scheduleEndAt: '2026-10-18T04:00:00.000Z' });

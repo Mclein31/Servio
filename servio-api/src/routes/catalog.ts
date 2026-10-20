@@ -9,7 +9,6 @@ import { withDb } from '../middleware/db';
 export const catalog = new Hono<AppEnv>();
 catalog.use('/catalog', withDb);
 
-/** Public catalog (ADR-001 fixed SKUs). Prices are centavos; clients format as ₱. */
 catalog.get('/catalog', async (c) => {
   const db = c.get('db');
   const [cats, skus, addons] = await Promise.all([

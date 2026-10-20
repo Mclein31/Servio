@@ -9,7 +9,6 @@ export interface LiveFix { type:'gps'; lat:number; lng:number; accuracy:number; 
 export interface LiveEvent { resource:string; type:string; reset?:boolean; fix?:LiveFix; message?:MessageDto; bookingId?:string }
 interface Channel { listeners:number; socket?:WebSocket; retry?:ReturnType<typeof setTimeout>; heartbeat?:ReturnType<typeof setInterval>; renew?:ReturnType<typeof setTimeout>; active:boolean; attempts:number; lastSeen:number; opening?:boolean }
 
-/** Mobile OSes silently kill sockets on lock/background; a socket silent this long is treated as dead. */
 export const LIVE_STALE_MS=25000;
 const PING_MS=10000;
 
@@ -27,7 +26,6 @@ export class LiveService implements OnDestroy {
   readonly gps=signal<{ resource:string; fix:LiveFix }|null>(null);
 
   constructor() {
-    // Returning to the foreground always reconnects: the old socket may look OPEN but be dead.
     if(Capacitor.isNativePlatform()) this.appListener=App.addListener('appStateChange',({ isActive })=>{ if(isActive) this.reconnectAll(); });
     else document.addEventListener('visibilitychange',this.onVisible);
     globalThis.addEventListener?.('online',this.onOnline);
@@ -45,7 +43,6 @@ export class LiveService implements OnDestroy {
     if(ws?.readyState!==WebSocket.OPEN) return false;
     ws.send(JSON.stringify({ type:'gps',...fix })); return true;
   }
-  /** Drops every socket and reconnects now; each new socket's `connected` event makes listeners refetch over REST. */
   reconnectAll():void { for(const [resource,channel] of this.channels) this.restart(resource,channel); }
   private reconnectStale():void { for(const [resource,channel] of this.channels) if(!channel.socket || Date.now()-channel.lastSeen>LIVE_STALE_MS) this.restart(resource,channel); }
   private restart(resource:string,channel:Channel):void {
@@ -81,7 +78,7 @@ export class LiveService implements OnDestroy {
           if(data.type==='gps' && Number.isFinite(data.lat) && Number.isFinite(data.lng) && Number.isFinite(data.receivedAt)) this.gps.set({ resource,fix:{ ...data,type:'gps' } });
           if(data.reset && this.gps()?.resource===resource) this.gps.set(null);
           this.eventsSubject.next({ resource,type:data.type,reset:data.reset,message:data.message,bookingId:data.bookingId });
-        } catch { /* Ignore invalid transport frames; REST remains the source of record. */ }
+        } catch {}
       };
       ws.onerror=()=>ws.close();
       ws.onclose=()=>{ if(channel.socket!==ws) return; this.detach(channel); this.setConnected(resource,false); this.retry(resource,channel); };
@@ -93,11 +90,10 @@ export class LiveService implements OnDestroy {
     clearTimeout(channel.retry);
     channel.retry=setTimeout(()=>void this.open(resource,channel),Math.min(10000,1000*2**channel.attempts++));
   }
-  /** Forget the current socket without waiting for a close event that a dead mobile socket may never deliver. */
   private detach(channel:Channel) {
     this.clearTimers(channel);
     const ws=channel.socket; channel.socket=undefined;
-    if(ws) { ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null; try { ws.close(1000,'Reconnect'); } catch { /* already closed */ } }
+    if(ws) { ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null; try { ws.close(1000,'Reconnect'); } catch {} }
   }
   private setConnected(resource:string,value:boolean) { const next=new Set(this.connected()); if(value) next.add(resource); else next.delete(resource); this.connected.set(next); }
   private clearTimers(channel:Channel) { clearTimeout(channel.retry); clearTimeout(channel.renew); clearInterval(channel.heartbeat); }

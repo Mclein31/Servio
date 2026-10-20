@@ -110,7 +110,6 @@ import { AuthService } from '../../../core/services/auth.service';
 export class HelperCardComponent {
   readonly isFinite = Number.isFinite;
   @Input({ required: true }) helper!: HelperSummary;
-  /** 'available' shows the [Available] capsule; 'book' shows the [Book Now] pill. */
   @Input() actionMode: 'available' | 'book' = 'available';
   @Input() compact = false;
   @Output() selected = new EventEmitter<string>();

@@ -1,6 +1,5 @@
 import { CategoryId, HelperSummary, RequestStatus } from './ui.models';
 
-/** Order lifecycle — see .brain/SCOPE.md §4. */
 export type OrderStatus =
   | 'PENDING_ACCEPTANCE'
   | 'ACCEPTED'
@@ -10,12 +9,10 @@ export type OrderStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
-/** Escrow ledger state — ADR-002. Funds move only on a verified completion PIN. */
 export type EscrowState = 'NONE' | 'HOLD_AUTHORIZED' | 'COMPLETED' | 'REFUNDED';
 
 export type PaymentMethod = 'GCASH' | 'CARD';
 
-/** Standardized, fixed-price catalog item — ADR-001 (no bidding, no custom quotes). */
 export interface ServiceSku {
   id: string;
   name: string;
@@ -26,7 +23,6 @@ export interface ServiceSku {
   inclusions: string[];
 }
 
-/** Approved add-on part / extra labor catalog — ADR-004. */
 export interface AddonSku {
   id: string;
   name: string;

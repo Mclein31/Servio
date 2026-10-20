@@ -13,20 +13,12 @@ import {
 import { easeOutCubic, lerpAngle, prefersReducedMotion } from '../../../shared/utils/motion';
 import { Point, RouteTrack } from '../../../shared/utils/route-track';
 
-/** Street-aligned route from the Figma Track component: (64,174) → (64,90) → (231,90) → (231,174) → (278,174). */
 const ROUTE: Point[] = [[64, 252], [64, 174], [64, 90], [231, 90], [231, 174], [278, 174]];
 const TRIP_KM = 1.2;
 const TRIP_MIN = 12;
 const START_DELAY_MS = 500;
-/** Cruise speed in px/s; corners slow the rider via RouteTrack.cornerFactor. */
 const CRUISE_PX_S = 92;
 
-/**
- * Onboarding "Track" illustration — the same distance-based motion model as the
- * live Tracking map, rendered in SVG: the rider brakes into corners, the heading
- * cone turns smoothly, the travelled path greys out and the ETA counts down
- * (12 min / 1.2 km → Arrived). Plays once per activation and settles.
- */
 @Component({
   selector: 'app-track-visual',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -98,7 +90,6 @@ const CRUISE_PX_S = 92;
   `,
 })
 export class TrackVisualComponent implements OnChanges, OnDestroy {
-  /** True while this slide is on screen. */
   @Input() play = false;
 
   @ViewChild('travelled', { static: true }) travelledEl!: ElementRef<SVGPolylineElement>;
@@ -136,7 +127,7 @@ export class TrackVisualComponent implements OnChanges, OnDestroy {
     this.bearing = this.track.sample(0).bearing;
     this.arrived.set(false);
     this.draw();
-    if (prefersReducedMotion()) return; // static "Ready" state
+    if (prefersReducedMotion()) return;
     this.startAt = performance.now() + START_DELAY_MS;
     this.last = this.startAt;
     this.zone.runOutsideAngular(() => (this.frame = requestAnimationFrame(this.step)));
@@ -149,7 +140,6 @@ export class TrackVisualComponent implements OnChanges, OnDestroy {
   private step = (now: number): void => {
     if (now >= this.startAt) {
       const dt = Math.min(0.05, (now - this.last) / 1000);
-      // Gentle launch over the first second, then cruise with corner braking.
       const launch = easeOutCubic(Math.min(1, (now - this.startAt) / 1000));
       const corner = this.track.cornerFactor(this.distance, 34, 0.32);
       this.distance = Math.min(this.track.total, this.distance + CRUISE_PX_S * launch * corner * dt);
@@ -182,7 +172,6 @@ export class TrackVisualComponent implements OnChanges, OnDestroy {
     this.headingEl.nativeElement.setAttribute('transform', `rotate(${this.bearing.toFixed(1)})`);
     this.bubbleEl.nativeElement.setAttribute('transform', `translate(${point[0].toFixed(1)} ${point[1].toFixed(1)})`);
 
-    // Keep the bubble inside the card near the edges.
     const shift = Math.max(86 - point[0], Math.min(0, 302 - point[0]));
     if (shift !== this.bubbleX()) this.zone.run(() => this.bubbleX.set(shift));
 

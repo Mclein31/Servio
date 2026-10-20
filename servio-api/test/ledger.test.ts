@@ -4,7 +4,6 @@ import { connectDb } from '../src/db/client';
 import { ledgerEntries } from '../src/db/schema';
 import { hasDb } from './helpers';
 
-/** The double-entry and append-only rules live in the database (migration 0001), not just in code. */
 describe.runIf(hasDb)('ledger guards', () => {
   it('rejects an unbalanced transaction at commit', async () => {
     const client = (await connectDb(env))!;

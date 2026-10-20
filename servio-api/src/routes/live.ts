@@ -21,13 +21,11 @@ live.post('/pro/live-ticket',withDb,requireUser,requirePro,async(c)=>{
   const token=await mintLiveTicket(c.env.PIN_SECRET,`pro:${c.get('userId')}`,c.get('userId'),await sha256Hex(c.req.header('Authorization')!.slice(7)));
   return c.json({ token,expiresInSeconds:60 });
 });
-/** Personal room: invalidations for every booking/offer/bulletin the user participates in. */
 live.post('/me/live-ticket',withDb,requireUser,async(c)=>{
   const token=await mintLiveTicket(c.env.PIN_SECRET,`user:${c.get('userId')}`,c.get('userId'),await sha256Hex(c.req.header('Authorization')!.slice(7)));
   return c.json({ token,expiresInSeconds:60 });
 });
 async function upgrade(c:Context<AppEnv>,resource:string|((resource:string)=>boolean)) {
-  // Ticket is the only query capability; bearer tokens never enter socket URLs.
   const ticket=await readLiveTicket(c.env.PIN_SECRET,c.req.query('token'));
   if(typeof resource==='string' ? ticket.resource!==resource : !resource(ticket.resource)) throw new ApiError(401,'LIVE_TICKET_INVALID','Reconnect to live updates.');
   return c.env.ORDER_ROOMS.getByName(ticket.resource).fetch(new Request(`http://order-room/connect?token=${encodeURIComponent(c.req.query('token')!)}`,{ headers:{ Upgrade:c.req.header('Upgrade')??'' } }));

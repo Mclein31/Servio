@@ -15,7 +15,6 @@ inbox.use('/notifications/*', withDb, requireUser);
 const unread = async (db: Executor, userId: string) =>
   (await db.select({ n: count() }).from(notifications).where(and(eq(notifications.userId, userId), isNull(notifications.readAt))))[0]!.n;
 
-/** Newest first; owner-scoped. `before` pages by an earlier notification id. */
 inbox.get('/notifications', validate('query', v.strictObject({
   before: v.optional(v.pipe(v.string(), v.uuid())),
   limit: v.optional(v.pipe(v.string(), v.regex(/^\d{1,2}$/), v.transform(Number), v.minValue(1), v.maxValue(50)), '30'),
@@ -27,7 +26,6 @@ inbox.get('/notifications', validate('query', v.strictObject({
   return c.json({ notifications: rows.slice(0, limit), nextCursor: rows.length > limit ? rows[limit - 1]!.id : null, unreadCount: await unread(db, userId) });
 });
 
-/** Mark specific ids, everything for a booking (optionally one kind), or all as read. */
 inbox.post('/notifications/read', validate('json', v.pipe(v.strictObject({
   ids: v.optional(v.pipe(v.array(v.pipe(v.string(), v.uuid())), v.minLength(1), v.maxLength(100))),
   bookingId: v.optional(v.pipe(v.string(), v.uuid())),

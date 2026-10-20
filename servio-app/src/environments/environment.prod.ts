@@ -6,9 +6,7 @@ const resolvedApiUrl = configuredApiUrl && /^https?:\/\/[^\s]+\/api\/v1\/?$/.tes
 export const environment = {
   production: true,
   demo: false,
-  /** Production Worker (Cloudflare workers.dev). Override via globalThis.SERVIO_API_URL for hotfixes or staging. */
   apiUrl: resolvedApiUrl,
   useMockApi: false,
-  /** Normal interactive map viewing; no tile prefetch or offline downloads. */
   mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 };

@@ -11,11 +11,6 @@ import {
   signal,
 } from '@angular/core';
 
-/**
- * Segmented numeric code entry (6-digit SMS OTP, 4-digit completion PIN).
- * Auto-advances on input, retreats on backspace, accepts paste, and emits
- * `completed` once every cell is filled.
- */
 @Component({
   selector: 'app-code-input',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -126,8 +121,6 @@ export class CodeInputComponent implements OnInit {
 
   onKeydown(i: number, event: KeyboardEvent): void {
     const value = this.cells()[i];
-    // Handle hardware digits on keydown so fast typing never races the focus move.
-    // Soft keyboards report 'Unidentified' here and are handled by onInput instead.
     if (/^\d$/.test(event.key) && !event.metaKey && !event.ctrlKey) {
       event.preventDefault();
       (event.target as HTMLInputElement).value = event.key;

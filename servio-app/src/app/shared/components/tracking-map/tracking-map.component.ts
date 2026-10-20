@@ -20,13 +20,6 @@ import { Point } from '../../utils/route-track';
 
 const FOLLOW_INTERVAL_MS = 2500;
 
-/**
- * Live rider map in the style of delivery apps:
- *  - rider glides along the street geometry every frame (dead-reckoning between GPS fixes)
- *  - a heading cone rotates smoothly toward the direction of travel
- *  - travelled path turns neutral gray, the remaining path stays brand orange
- *  - the camera keeps rider + destination framed until the user pans, then offers "Re-center"
- */
 @Component({
   selector: 'app-tracking-map',
   imports: [IonIcon],
@@ -87,7 +80,6 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     this.map?.remove();
   }
 
-  /** Call from ionViewDidEnter: Ionic caches tab pages, so the container may have been 0×0 when Leaflet measured it. */
   refresh(): void {
     if (!this.map) return;
     this.map.invalidateSize({ pan: false });
@@ -143,7 +135,6 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     this.applyHeading();
 
     map.on('dragstart zoomstart', (e: L.LeafletEvent) => {
-      // Programmatic camera moves fire zoomstart too; only user gestures carry an originalEvent.
       if ((e as L.LeafletMouseEvent).originalEvent || e.type === 'dragstart') this.zone.run(() => this.following.set(false));
     });
 
@@ -202,7 +193,6 @@ export class TrackingMapComponent implements AfterViewInit, OnDestroy {
     if (this.headingEl) this.headingEl.style.transform = `rotate(${this.bearing}deg)`;
   }
 
-  /** Keep rider and destination in view, leaving room for the ETA chip. */
   private frameCamera(animate: boolean): void {
     if (!this.map || !this.rider) return;
     const destination=toLatLng(this.sim.destination);

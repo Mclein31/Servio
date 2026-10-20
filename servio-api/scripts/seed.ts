@@ -1,9 +1,3 @@
-/**
- * Upserts the launch catalog (categories, service SKUs, add-on SKUs). Idempotent: safe to
- * run after every migration. Prices update in place; bookings keep their own snapshots.
- *
- *   npm run db:seed          (uses servio-api/.env DATABASE_URL_UNPOOLED or DATABASE_URL)
- */
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'pg';
@@ -13,7 +7,6 @@ import { addonSkus, categories, serviceSkus } from '../src/db/schema';
 try {
   process.loadEnvFile('.env');
 } catch {
-  // No .env: use exported variables.
 }
 
 const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;

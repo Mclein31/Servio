@@ -1,4 +1,3 @@
-/** Slow GPS processing must drop superseded positions rather than replay an old journey. */
 export class LatestFrameQueue<K,V> {
   private readonly pending=new Map<K,V>();
   private running?:Promise<void>;

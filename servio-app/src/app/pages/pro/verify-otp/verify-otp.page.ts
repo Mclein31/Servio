@@ -53,7 +53,6 @@ export class ProVerifyOtpPage implements AfterViewInit {
     finally { this.saving.set(false); }
   }
 
-  /** Simulated QR scan: a real build would use a barcode-scanner plugin; the token carries the PIN. */
   scan(): void {
     if (!this.orders.api.settings.useMockApi()) return;
     this.scanning.set(true);

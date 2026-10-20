@@ -4,7 +4,6 @@ import { IonContent, IonIcon } from '@ionic/angular';
 import { OrderService } from '../../../core/services/order.service';
 import { PhpPipe } from '../../pipes/php.pipe';
 
-/** Deterministic 21×21 pseudo-QR pattern (illustrative fallback token, not a scannable code). */
 function qrCells(seed: string): boolean[] {
   const size = 21;
   const cells: boolean[] = [];
@@ -25,7 +24,6 @@ function qrCells(seed: string): boolean[] {
   return cells;
 }
 
-/** Customer's single-use 4-digit completion PIN (ADR-002). Routed at /order/:id/completion. */
 @Component({
   selector: 'app-completion-otp-modal',
   imports: [IonContent, IonIcon, RouterLink, PhpPipe],

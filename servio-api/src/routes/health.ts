@@ -5,7 +5,6 @@ import type { AppEnv } from '../env';
 
 export const health = new Hono<AppEnv>();
 
-/** Liveness + database reachability. Never throws: reports "degraded" instead. */
 health.get('/health', async (c) => {
   const started = Date.now();
   let database: 'ok' | 'unconfigured' | 'unreachable' = 'unconfigured';

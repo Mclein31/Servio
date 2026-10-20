@@ -1,13 +1,11 @@
 @use 'theme/mixins' as *;
 
-/* Inter (self-hosted, no network dependency) */
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/inter/700.css';
 @import '@fontsource/inter/800.css';
 
-/* Core CSS required for Ionic components to work properly */
 @import '@ionic/angular/css/core.css';
 @import '@ionic/angular/css/normalize.css';
 @import '@ionic/angular/css/structure.css';
@@ -28,7 +26,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---------- Typography ---------- */
 .servio-tab-title {
   margin: 0;
   font-size: 28px;
@@ -76,7 +73,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Currency: amounts never wrap their centavos onto a second line. */
 .price,
 .price-tag,
 .amount {
@@ -88,7 +84,6 @@ body {
   font-weight: 600;
 }
 
-/* ---------- Layout ---------- */
 .servio-page {
   --background: var(--servio-surface);
 }
@@ -128,7 +123,6 @@ body {
   }
 }
 
-/* Main tab app bar: 64px, sits below the status-bar safe area. */
 .servio-app-bar {
   --background: var(--servio-surface);
   --border-width: 0;
@@ -146,7 +140,6 @@ body {
   --padding-start: 12px;
   --padding-end: 12px;
 
-  /* iOS-mode titles are absolutely positioned across the bar; inset past the 44px back button. */
   ion-title {
     font-size: 20px;
     line-height: 26px;
@@ -187,7 +180,6 @@ body {
   &:active { transform: scale(0.96); }
 }
 
-/* ---------- Surfaces ---------- */
 .servio-card {
   @include servio-card();
 }
@@ -196,7 +188,6 @@ body {
   @include servio-card(24px);
 }
 
-/* ---------- Buttons ---------- */
 .pill-btn {
   @include servio-pill-btn();
 
@@ -234,7 +225,6 @@ body {
   cursor: pointer;
 }
 
-/* ---------- Chips ---------- */
 .chip-row {
   display: flex;
   gap: 8px;
@@ -280,7 +270,6 @@ body {
   &.urgent { color: var(--servio-red-strong); }
 }
 
-/* ---------- Fixed footer action bar ---------- */
 .servio-action-bar {
   padding: 16px var(--servio-gutter) calc(16px + var(--ion-safe-area-bottom, 0px));
   background: #FFFFFF;
@@ -288,7 +277,6 @@ body {
   box-shadow: 0 -8px 24px rgba(17, 24, 39, 0.04);
 }
 
-/* ---------- Sheets & modals ---------- */
 ion-modal.servio-sheet {
   --border-radius: 24px;
   --background: var(--servio-surface);
@@ -298,7 +286,6 @@ ion-modal.servio-fullscreen {
   --background: var(--servio-surface);
 }
 
-/* ---------- Routed bottom-sheet screens (add-on, completion PIN, review) ---------- */
 .sheet-screen {
   display: flex;
   flex-direction: column;
@@ -366,8 +353,6 @@ ion-modal.servio-fullscreen {
   }
 }
 
-/* ---------- Leaflet tweaks ---------- */
-/* ---------- Accessibility ---------- */
 .sr-only {
   position: absolute !important;
   width: 1px;
@@ -395,7 +380,6 @@ ion-modal.servio-fullscreen {
   }
 }
 
-/* ---------- Tablet Responsiveness (640px - 1024px) ---------- */
 @media (min-width: 640px) {
   .servio-section {
     max-width: 720px;

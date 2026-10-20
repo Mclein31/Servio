@@ -3,7 +3,6 @@ import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../env';
 import { ApiError, type ErrorBody } from '../lib/errors';
 
-/** Single error envelope. Internal details are logged with the request ID, never returned. */
 export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
   const requestId = c.get('requestId') ?? 'unknown';
   if (err instanceof ApiError) {

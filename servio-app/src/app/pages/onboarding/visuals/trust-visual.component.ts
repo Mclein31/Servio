@@ -1,11 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 
-/**
- * Onboarding "Trust" illustration: payment lock → emerald escrow shield, then the
- * 4-digit release PIN chips pop in one by one. Driven by the `play` class so it
- * restarts each time the slide becomes active.
- */
 @Component({
   selector: 'app-trust-visual',
   imports: [IonIcon],
