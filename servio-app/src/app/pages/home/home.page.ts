@@ -40,7 +40,6 @@ export class HomePage {
   readonly categories = CATEGORIES;
   readonly bulletin = computed(() => this.community.requests().filter(r=>r.status!=='CANCELLED').slice(0, 3));
   readonly helpers = this.community.helpers;
-  readonly categoryById = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
   readonly miniSteps = MINI_STEPS;
 
   readonly greeting = (() => {

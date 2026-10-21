@@ -51,8 +51,8 @@
   <div class="servio-section feed">
     @for (r of requests(); track r.id) {
       <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'" role="button" tabindex="0"
-        [attr.aria-label]="'View request: ' + r.title" (click)="openRequest(r)" (keydown.enter)="openRequest(r, $event)" (keydown.space)="openRequest(r, $event)">
-        <span class="cat" [style.color]="categoryById[r.category].accent">
+        [attr.aria-label]="'View request: ' + r.title" [style.--accent]="categoryById[r.category].accent" (click)="openRequest(r)" (keydown.enter)="openRequest(r, $event)" (keydown.space)="openRequest(r, $event)">
+        <span class="cat">
           <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
         </span>
         <div class="body">

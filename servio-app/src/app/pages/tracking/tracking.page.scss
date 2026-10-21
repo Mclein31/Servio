@@ -195,36 +195,67 @@
 .history {
   max-width: 680px;
   margin: 0 auto;
-  padding: 4px 0;
+  padding: 0;
   overflow: hidden;
+  background: #FFFFFF;
+
+  ion-accordion {
+    background: transparent;
+
+    & + ion-accordion {
+      border-top: 1px solid var(--servio-border-soft);
+    }
+  }
 
   ion-item {
     --background: transparent;
+    --background-hover: transparent;
+    --background-focused: transparent;
+    --background-activated: var(--servio-border-soft);
+    --min-height: 64px;
     --padding-start: 16px;
-    --inner-padding-end: 12px;
+    --inner-padding-end: 14px;
+  }
+
+  ion-label {
+    margin: 12px 0;
   }
 
   h3 {
-    font-size: 14px;
-    font-weight: 600;
+    margin: 0 0 2px;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 700;
+    color: var(--servio-text-primary);
   }
 
   p {
+    margin: 0;
     font-size: 12px;
+    line-height: 16px;
     color: var(--servio-text-muted);
   }
 }
 
+.done-pill,
+.cancel-pill {
+  margin: 0 8px 0 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .done-pill {
   color: var(--servio-green-strong);
-  font-size: 11px;
-  font-weight: 700;
+  background: color-mix(in srgb, var(--servio-green-strong) 10%, transparent);
 }
 
 .cancel-pill {
   color: var(--servio-red-strong);
-  font-size: 11px;
-  font-weight: 700;
+  background: color-mix(in srgb, var(--servio-red-strong) 10%, transparent);
 }
 
 .price-cancelled {

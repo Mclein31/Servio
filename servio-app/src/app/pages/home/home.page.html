@@ -44,8 +44,8 @@
     </div>
     <div class="category-row">
       @for (c of categories; track c.id) {
-        <button type="button" class="category" (click)="openCategory(c.id)">
-          <span class="well" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
+        <button type="button" class="category" [style.--accent]="c.accent" (click)="openCategory(c.id)">
+          <span class="well"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
           <span class="cat-label">{{ c.label }}</span>
           <span class="cat-caption">{{ c.caption }}</span>
         </button>
@@ -69,9 +69,6 @@
         @for (r of bulletin(); track r.id) {
           <li>
             <a class="bulletin-row" routerLink="/tabs/bulletin">
-              <span class="req-icon" [style.color]="categoryById[r.category]?.accent ?? 'var(--servio-brand-orange)'">
-                <ion-icon [name]="categoryById[r.category]?.icon ?? 'newspaper-outline'" aria-hidden="true"></ion-icon>
-              </span>
               <span class="req-body">
                 <span class="req-title">{{ r.title }}</span>
                 <span class="req-meta"><span class="price">{{ r.pricePhp | php: 'whole' }}{{ r.priceUnit === 'hr' ? '/hr' : '' }}</span> · {{ r.postedAgo }}</span>

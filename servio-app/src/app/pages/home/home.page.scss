@@ -108,6 +108,7 @@
   padding: 4px var(--servio-gutter) 8px;
   margin: 0 calc(var(--servio-gutter) * -1);
   scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--servio-gutter);
 
   &::-webkit-scrollbar {
     display: none;
@@ -124,11 +125,14 @@
 
 .category {
   scroll-snap-align: start;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 14px 12px;
+  gap: 4px;
+  padding: 16px 14px;
   min-height: 126px;
   border: 0;
   border-radius: 20px;
@@ -145,16 +149,22 @@
 }
 
 .well {
+  position: absolute;
+  right: -8px;
+  bottom: -10px;
+  z-index: -1;
   display: grid;
   place-items: center;
-  height: 40px;
-  margin-bottom: 2px;
-  font-size: 23px;
+  color: var(--accent, #FF5C00);
+  font-size: 76px;
+  opacity: 0.1;
+  transform: rotate(-12deg);
+  pointer-events: none;
 }
 
 .cat-label {
-  font-size: 13px;
-  line-height: 17px;
+  font-size: 15px;
+  line-height: 19px;
   font-weight: 700;
   color: var(--servio-text-primary);
   display: -webkit-box;
@@ -175,6 +185,9 @@
 }
 
 .bulletin-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   padding: 16px;
 }
 
@@ -189,12 +202,17 @@
 }
 
 .head-icon {
+  position: absolute;
+  right: -14px;
+  bottom: -18px;
+  z-index: -1;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
   color: var(--servio-action-orange);
-  font-size: 23px;
+  font-size: 120px;
+  opacity: 0.05;
+  transform: rotate(-12deg);
+  pointer-events: none;
 }
 
 .bulletin-list {
@@ -214,15 +232,6 @@
   padding: 12px 0;
   color: inherit;
   text-decoration: none;
-}
-
-.req-icon {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  font-size: 21px;
 }
 
 .req-body {
@@ -262,6 +271,7 @@
   padding: 2px var(--servio-gutter) 8px;
   margin: 0 calc(var(--servio-gutter) * -1);
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--servio-gutter);
 
   &::-webkit-scrollbar {
     display: none;
