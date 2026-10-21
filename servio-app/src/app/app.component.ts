@@ -2,6 +2,8 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
 import { filter, take } from 'rxjs';
 import { NotificationService } from './core/services/notification.service';
@@ -17,6 +19,7 @@ export class AppComponent {
 
   constructor() {
     inject(NotificationService);
+    if (Capacitor.isNativePlatform()) void StatusBar.setStyle({ style: Style.Light }).catch(() => undefined);
     const router = inject(Router);
     const destroyRef = inject(DestroyRef);
     this.pageReady.set(router.navigated);

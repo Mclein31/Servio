@@ -17,7 +17,7 @@ describe('profile editor',()=>{
     expect(editor.name()).toBe('Current Name'); editor.name.set('New Name'); editor.phone.set('09171234567'); await editor.save();
     expect(auth.updateProfile).not.toHaveBeenCalled();
     editor.phone.set('+639181234567'); editor.removePhoto(); await editor.save();
-    expect(auth.updateProfile).toHaveBeenCalledWith('New Name','+639181234567',null);
+    expect(auth.updateProfile).toHaveBeenCalledWith('New Name','+639181234567',null,'');
     expect(router.navigateByUrl).toHaveBeenCalledWith('/tabs/profile',{ replaceUrl:true });
   });
   it('keeps edits visible and stays on the editor when saving fails',async()=>{
