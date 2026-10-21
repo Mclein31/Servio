@@ -42,3 +42,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+class ServioBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        if #available(iOS 26.0, *) {
+            webView?.scrollView.topEdgeEffect.isHidden = true
+        }
+    }
+}
