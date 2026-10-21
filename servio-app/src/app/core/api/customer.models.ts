@@ -20,5 +20,6 @@ export interface BookingDto {
   customer: { id: string; name: string | null; avatarKey: string | null };
   pro: { id: string; name: string | null; avatarKey: string | null; rating: number; ratingCount: number } | null;
   reviewed: boolean;
+  reviewRating?: number | null;
 }
 export interface MessageDto { id: string; senderId: string | null; body: string; photoKey: string | null; createdAt: string }

@@ -2,6 +2,16 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.36] — 2026-10-22
+### Changed
+- **Bulletin hides completed requests:** `GET /bulletin` excludes `COMPLETED` rows (including the author's own); `CommunityService.requests` filters them too, so Bulletin and the Home preview show only unfinished requests.
+- **Rating from Order History:** booking payloads include `reviewRating`; unrated completed customer bookings show a "Rate" pill and a "Rate {Pro}" button (`/order/:id/review`), rated ones show the stars given. Submitting a review refreshes history.
+- **iOS status bar:** app forced to light appearance (`UIUserInterfaceStyle` in both plists, `StatusBar.setStyle(Light)`); `ServioBridgeViewController` (in `AppDelegate.swift`, set in `Main.storyboard`) hides the iOS 26 top scroll-edge effect that drew a gray fade.
+- **Rating on the completion screen:** the rating/tip form is now `app-rating-form` (shared by `/order/:id/review` and the completion sheet). Once escrow is released, the completion sheet shows the form inline; after submitting it returns to Tracking.
+### Fixed
+- **Completed booking dropped while on completion/review screens:** `OrderService.keep(id)` makes `refresh()` keep that booking even after it leaves the active statuses; previously the post-PIN live refresh emptied the order, so customers never saw "Job complete".
+- **Completion PIN sheet swipe:** the sheet now drags down with the finger (dismisses to Tracking past 120 px, otherwise snaps back) and the page no longer rubber-bands.
+
 ## [0.5.35] — 2026-10-21
 ### Changed
 - **Pro dashboard inside the tab bar:** dashboard moved to `/tabs/pro` (`/pro` redirects); in Pro mode the first tab is "Dashboard" instead of Home.

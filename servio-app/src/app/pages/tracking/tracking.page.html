@@ -94,6 +94,8 @@
             </ion-label>
             @if (h.status === 'CANCELLED') {
               <span class="cancel-pill" slot="end">Cancelled</span>
+            } @else if (h.canReview) {
+              <span class="rate-pill" slot="end">Rate</span>
             } @else {
               <span class="done-pill" slot="end">Completed</span>
             }
@@ -104,6 +106,11 @@
               <div class="kv"><span>Status</span><span class="price-cancelled">Cancelled · Refunded</span></div>
             } @else {
               <div class="kv"><span>Total paid (released from escrow)</span><span class="price">{{ h.amountPhp | php }}</span></div>
+              @if (h.rating) {
+                <div class="kv"><span>Your rating</span><span class="stars" [attr.aria-label]="h.rating + ' out of 5 stars'">@for (s of [1, 2, 3, 4, 5]; track s) {<ion-icon [name]="s <= h.rating ? 'star' : 'star-outline'" aria-hidden="true"></ion-icon>}</span></div>
+              } @else if (h.canReview) {
+                <a class="pill-btn block success" [routerLink]="['/order', h.bookingId, 'review']"><ion-icon name="star-outline" aria-hidden="true"></ion-icon> Rate {{ h.helper }}</a>
+              }
             }
             <a class="text-btn" routerLink="/tabs/directory">Book again</a>
           </div>

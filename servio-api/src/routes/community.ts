@@ -50,12 +50,12 @@ community.get('/bulletin', validate('query', v.pipe(v.strictObject({ ...location
   const origin = input.lat !== undefined ? { lat: input.lat, lng: input.lng! } : cityProfile(c.env.LAUNCH_CITY).center;
   const selection = { request: bulletinRequests, title: serviceSkus.name, priceCentavos: serviceSkus.priceCentavos, unit: serviceSkus.unit, author: users.fullName };
   const query = () => c.get('db').select(selection).from(bulletinRequests).innerJoin(serviceSkus, eq(serviceSkus.id, bulletinRequests.skuId)).innerJoin(users, eq(users.id, bulletinRequests.authorId));
-  const rows = await query().where(and(or(ne(bulletinRequests.status,'CANCELLED'),eq(bulletinRequests.authorId,c.get('userId'))),input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
+  const rows = await query().where(and(ne(bulletinRequests.status,'COMPLETED'),or(ne(bulletinRequests.status,'CANCELLED'),eq(bulletinRequests.authorId,c.get('userId'))),input.filter === 'open' ? eq(bulletinRequests.status, 'OPEN') : input.filter === 'urgent' ? eq(bulletinRequests.status, 'URGENT') : undefined,
       input.filter === 'nearby' ? sql`${distanceSql(bulletinRequests.lat, bulletinRequests.lng, origin)} < 3` : undefined))
     .orderBy(desc(bulletinRequests.createdAt), desc(bulletinRequests.id)).limit(100);
   const viewer = c.get('userId');
   const pending = await query().where(and(or(eq(bulletinRequests.authorId, viewer), eq(bulletinRequests.acceptedProId, viewer)),eq(bulletinRequests.status,'ACCEPTED'),isNull(bulletinRequests.bookingId)));
-  const owned = await query().where(eq(bulletinRequests.authorId,viewer)).orderBy(desc(bulletinRequests.createdAt)).limit(100);
+  const owned = await query().where(and(eq(bulletinRequests.authorId,viewer),ne(bulletinRequests.status,'COMPLETED'))).orderBy(desc(bulletinRequests.createdAt)).limit(100);
   const combined = [...new Map([...rows,...pending,...owned].map(row=>[row.request.id,row])).values()];
   const requests = combined.map((r) => ({ ...r.request, bookingId: viewer === r.request.authorId || viewer === r.request.acceptedProId ? r.request.bookingId : null, title: r.title, priceCentavos: r.priceCentavos, unit: r.unit, author: r.author ?? 'Neighbor',
     distanceKm: input.lat !== undefined && r.request.lat != null && r.request.lng != null ? haversineKm(origin, { lat: r.request.lat, lng: r.request.lng }) : null,

@@ -1,4 +1,21 @@
 // completion pin modal
+ion-content::part(scroll) {
+  overscroll-behavior-y: none;
+}
+
+.sheet-panel {
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+  touch-action: pan-y;
+
+  &.moved {
+    animation: none;
+  }
+
+  &.dragging {
+    transition: none;
+  }
+}
+
 .pin-card {
   padding: 2px;
   border-radius: 24px;
@@ -186,6 +203,12 @@
     margin: 0 0 16px;
     color: var(--servio-text-muted);
   }
+}
+
+.thanks {
+  margin: 0 0 16px;
+  text-align: center;
+  color: var(--servio-text-muted);
 }
 
 .check {

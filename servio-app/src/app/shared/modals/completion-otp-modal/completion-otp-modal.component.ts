@@ -1,8 +1,9 @@
 // completion pin modal
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonIcon } from '@ionic/angular';
 import { OrderService } from '../../../core/services/order.service';
+import { RatingFormComponent } from '../../components/rating-form/rating-form.component';
 import { PhpPipe } from '../../pipes/php.pipe';
 
 function qrCells(seed: string): boolean[] {
@@ -27,16 +28,17 @@ function qrCells(seed: string): boolean[] {
 
 @Component({
   selector: 'app-completion-otp-modal',
-  imports: [IonContent, IonIcon, RouterLink, PhpPipe],
+  imports: [IonContent, IonIcon, RouterLink, PhpPipe, RatingFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let o = orders.order();
-    <ion-content>
+    <ion-content [forceOverscroll]="false">
       <div class="sheet-screen">
         <div class="sheet-context">
           <div><strong>Active order #{{ o.code ?? o.id }}</strong><span>{{ o.helper.name }} · {{ o.sku.name }}</span></div>
         </div>
-        <div class="sheet-panel" role="dialog" aria-labelledby="pin-title">
+        <div class="sheet-panel" role="dialog" aria-labelledby="pin-title" [class.moved]="moved()" [class.dragging]="dragging()" [style.transform]="dragY() ? 'translateY(' + dragY() + 'px)' : null"
+          (touchstart)="dragStart($event)" (touchmove)="dragMove($event)" (touchend)="dragEnd()" (touchcancel)="dragEnd()">
           <span class="sheet-handle" aria-hidden="true"></span>
 
           @if (o.escrow === 'COMPLETED') {
@@ -44,8 +46,13 @@ function qrCells(seed: string): boolean[] {
               <span class="check"><ion-icon name="checkmark" aria-hidden="true"></ion-icon></span>
               <h1 class="sheet-title">Job complete</h1>
               <p><span class="price">{{ orders.escrowTotalPhp() | php }}</span> was settled from escrow. {{ o.helper.name }} received <span class="price">{{ orders.proPayoutPhp() | php }}</span>; the remainder covers the platform share and trust fee.</p>
-              <a class="pill-btn block" [routerLink]="['/order', o.id, 'review']">Rate & Tip {{ o.helper.name }}</a>
             </div>
+            @if (o.reviewed) {
+              <p class="thanks">Thanks for rating {{ o.helper.name }}.</p>
+              <a class="pill-btn block" routerLink="/tabs/tracking">Done</a>
+            } @else {
+              <app-rating-form (submitted)="rated()"></app-rating-form>
+            }
           } @else {
             <div class="pin-card">
               <div class="pin-inner">
@@ -109,6 +116,44 @@ export class CompletionOtpModalComponent {
   readonly allChecked = computed(() => this.checked().every(Boolean));
   readonly showQr = signal(false);
   readonly qr = qrCells(this.orders.order().id + this.orders.order().completionPin);
+  readonly dragY = signal(0);
+  readonly dragging = signal(false);
+  readonly moved = signal(false);
+  @ViewChild(IonContent) private content?: IonContent;
+  private startY: number | null = null;
+  private scrollTop = 0;
+
+  async dragStart(event: TouchEvent): Promise<void> {
+    this.startY = event.touches[0]?.clientY ?? null;
+    this.scrollTop = 1;
+    this.scrollTop = (await this.content?.getScrollElement())?.scrollTop ?? 0;
+  }
+
+  dragMove(event: TouchEvent): void {
+    if (this.startY === null || this.scrollTop > 0) return;
+    const dy = (event.touches[0]?.clientY ?? this.startY) - this.startY;
+    if (dy <= 0 && !this.dragging()) return;
+    event.preventDefault();
+    this.dragging.set(true);
+    this.moved.set(true);
+    this.dragY.set(Math.max(0, dy));
+  }
+
+  dragEnd(): void {
+    const dismiss = this.dragY() > 120;
+    this.startY = null;
+    this.dragging.set(false);
+    if (dismiss) { void this.router.navigateByUrl('/tabs/tracking'); return; }
+    this.dragY.set(0);
+  }
+
+  constructor() {
+    inject(DestroyRef).onDestroy(this.orders.keep(this.orders.order().id));
+  }
+
+  rated(): void {
+    void this.router.navigateByUrl('/tabs/tracking', { replaceUrl: true });
+  }
 
   floor(v: number): number {
     return Math.floor(v);

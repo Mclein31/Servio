@@ -27,7 +27,7 @@ export class CommunityService {
   readonly helpers = computed(() => this.api.settings.useMockApi() ? HELPERS : this.liveHelpers().map(h=>this.origin() === this.directoryOrigin() && this.location.point() ? h : {...h,distanceKm:Infinity}));
   readonly skus = computed(() => this.api.settings.useMockApi() ? BULLETIN_SKUS : this.liveSkus());
   readonly addons = computed(() => this.api.settings.useMockApi() ? ADDON_CATALOG : this.liveAddons());
-  readonly requests = computed(() => this.api.settings.useMockApi() ? BULLETIN_REQUESTS : this.liveRequests().map(r=>this.origin() === this.bulletinOrigin() && this.location.point() ? r : {...r,distanceKm:Infinity}));
+  readonly requests = computed(() => (this.api.settings.useMockApi() ? BULLETIN_REQUESTS : this.liveRequests().map(r=>this.origin() === this.bulletinOrigin() && this.location.point() ? r : {...r,distanceKm:Infinity})).filter(r=>r.status!=='COMPLETED'));
   readonly trustFeePhp = computed(() => this.api.settings.useMockApi() ? 50 : this.fee());
   readonly loading = signal(false);
   readonly error = signal('');

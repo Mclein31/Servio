@@ -55,6 +55,9 @@ export interface OrderHistoryItem {
   when: string;
   amountPhp: number;
   status: OrderStatus;
+  bookingId?: string;
+  canReview?: boolean;
+  rating?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -77,6 +80,7 @@ export class OrderService {
   private revision = 0;
   private readonly imageCache=new Map<string,{url:string;until:number}>();
   private polling = false;
+  private kept = '';
   private identity = '';
 
   private readonly stateMode = signal(this.api.settings.useMockApi());
@@ -285,6 +289,11 @@ export class OrderService {
     return saved.address.city === DEMO_ADDRESS.city ? saved : { ...saved, address: { ...DEMO_ADDRESS } };
   }
 
+  keep(id: string): () => void {
+    this.kept = id;
+    return () => { if (this.kept === id) this.kept = ''; };
+  }
+
   async load(id: string): Promise<void> {
     if (this.api.settings.useMockApi()) return;
     const revision = ++this.revision;
@@ -305,9 +314,10 @@ export class OrderService {
       this.travelBookings.set(this.auth.user()?.role === 'PRO' ? result.bookings.filter((b) => b.status === 'EN_ROUTE' && b.proId === this.auth.user()?.id).map((b) => ({ id: b.id, status: b.status, coordinates: [b.lat,b.lng] as const, expectedArrivalAt: b.expectedArrivalAt })) : []);
       this.liveHistory.set(result.bookings.filter((b) => ['COMPLETED', 'CANCELLED'].includes(b.status)).map((b) => ({ id: b.code, title: b.skuName,
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
-        status: b.status,
+        status: b.status, bookingId: b.id, rating: b.reviewRating ?? null,
+        canReview: b.status === 'COMPLETED' && b.customerId === this.auth.user()?.id && !b.reviewed,
         amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
-      const selected = selectActiveBooking(result.bookings, this.state().id);
+      const selected = (this.kept && this.kept === this.state().id ? result.bookings.find((b) => b.id === this.kept) : undefined) ?? selectActiveBooking(result.bookings, this.state().id);
       const order = selected ? await this.fromApi(selected) : this.emptyOrder();
       if (revision === this.revision) { this.state.set(order); this.error.set(''); if(selected)void this.hydrateImages(selected,revision); }
     } catch (error) { if (revision === this.revision) this.error.set(error instanceof Error ? error.message : 'Could not load bookings.'); }
@@ -371,6 +381,7 @@ export class OrderService {
     if (this.api.settings.useMockApi()) { this.setTip(tipPhp); return; }
     await this.api.post(`/bookings/${this.state().id}/review`, { rating, compliments, ...(body.trim() ? { body: body.trim() } : {}), tipCentavos: Math.round(tipPhp * 100) });
     await this.load(this.state().id);
+    void this.refresh();
   }
 
   private async announceMessage(bookingId: string, senderId: string | null): Promise<void> {

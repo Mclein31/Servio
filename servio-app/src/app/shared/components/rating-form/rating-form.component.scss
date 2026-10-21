@@ -1,0 +1,178 @@
+// rating form
+:host {
+  display: block;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+
+  h1 {
+    margin: 6px 0 0;
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    background: none;
+    color: #D1D5DB;
+    font-size: 38px;
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.15s ease;
+
+    &.on {
+      color: var(--servio-amber);
+    }
+
+    &.bump {
+      animation: bump 0.3s ease-out;
+    }
+
+    &:active {
+      transform: scale(0.88);
+    }
+  }
+}
+
+.word {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--servio-text-muted);
+}
+
+h2 {
+  margin: 22px 0 10px;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 600;
+
+  em {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--servio-text-muted);
+  }
+
+  textarea {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1.5px solid var(--servio-border);
+    background: #FFFFFF;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    resize: none;
+    outline: none;
+
+    &:focus {
+      border-color: var(--servio-brand-orange);
+    }
+  }
+}
+
+.custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0 14px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1.5px solid var(--servio-brand-orange);
+  background: #FFFFFF;
+  font-weight: 700;
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    font: inherit;
+    font-size: 16px;
+  }
+}
+
+.tip-note {
+  display: block;
+  margin-top: 8px;
+}
+
+.receipt {
+  margin-top: 20px;
+  padding: 16px;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--servio-text-muted);
+
+  .price {
+    color: var(--servio-text-primary);
+    font-weight: 600;
+  }
+
+  &.tip .price {
+    color: var(--servio-green-text);
+  }
+
+  &.total {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--servio-text-primary);
+
+    .price {
+      font-size: 18px;
+    }
+  }
+}
+
+.divider {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--servio-border);
+}
+
+@keyframes bump {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+.submit {
+  margin-top: 20px;
+}

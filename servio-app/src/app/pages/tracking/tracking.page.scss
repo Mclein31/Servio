@@ -238,6 +238,7 @@
 }
 
 .done-pill,
+.rate-pill,
 .cancel-pill {
   margin: 0 8px 0 12px;
   padding: 4px 10px;
@@ -251,6 +252,18 @@
 .done-pill {
   color: var(--servio-green-strong);
   background: color-mix(in srgb, var(--servio-green-strong) 10%, transparent);
+}
+
+.rate-pill {
+  color: var(--servio-brand-orange);
+  background: color-mix(in srgb, var(--servio-brand-orange) 12%, transparent);
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: #F59E0B;
+  font-size: 15px;
 }
 
 .cancel-pill {

@@ -28,8 +28,8 @@ export async function bookingDetails(db: Executor, row: typeof bookingTable.$inf
   const [customer] = await db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey }).from(users).where(eq(users.id, row.customerId));
   const [pro] = row.proId ? await db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey, rating: proProfiles.ratingAvg, ratingCount: proProfiles.ratingCount })
     .from(users).innerJoin(proProfiles, eq(proProfiles.userId, users.id)).where(eq(users.id, row.proId)) : [];
-  const [review] = await db.select({ id: reviews.id }).from(reviews).where(and(eq(reviews.bookingId, row.id), eq(reviews.authorId, row.customerId)));
-  return { ...publicBooking(row, addons), events, addons, customer, pro: pro ? { ...pro, rating: Number(pro.rating) } : null, reviewed: !!review, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
+  const [review] = await db.select({ id: reviews.id, rating: reviews.rating }).from(reviews).where(and(eq(reviews.bookingId, row.id), eq(reviews.authorId, row.customerId)));
+  return { ...publicBooking(row, addons), events, addons, customer, pro: pro ? { ...pro, rating: Number(pro.rating) } : null, reviewed: !!review, reviewRating: review?.rating ?? null, ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
 }
 
 export async function bookingDetailsMany(db: Executor, rows: (typeof bookingTable.$inferSelect)[], userId?: string, secret?: string) {
@@ -41,7 +41,7 @@ export async function bookingDetailsMany(db: Executor, rows: (typeof bookingTabl
     db.select().from(addonQuotes).where(inArray(addonQuotes.bookingId, ids)).orderBy(asc(addonQuotes.createdAt), asc(addonQuotes.id)),
     db.select({ id: users.id, name: users.fullName, avatarKey: users.avatarKey }).from(users).where(inArray(users.id, peopleIds)),
     db.select({ id: proProfiles.userId, rating: proProfiles.ratingAvg, ratingCount: proProfiles.ratingCount }).from(proProfiles).where(inArray(proProfiles.userId, peopleIds)),
-    db.select({ bookingId: reviews.bookingId, authorId: reviews.authorId }).from(reviews).where(inArray(reviews.bookingId, ids)),
+    db.select({ bookingId: reviews.bookingId, authorId: reviews.authorId, rating: reviews.rating }).from(reviews).where(inArray(reviews.bookingId, ids)),
   ]);
   const person = new Map(people.map((p) => [p.id, p]));
   const pro = new Map(pros.map((p) => [p.id, p]));
@@ -49,9 +49,10 @@ export async function bookingDetailsMany(db: Executor, rows: (typeof bookingTabl
     const own = addons.filter((a) => a.bookingId === row.id);
     const proPerson = row.proId ? person.get(row.proId) : undefined;
     const proStats = row.proId ? pro.get(row.proId) : undefined;
+    const review = reviewed.find((r) => r.bookingId === row.id && r.authorId === row.customerId);
     return { ...publicBooking(row, own), events: events.filter((e) => e.bookingId === row.id), addons: own, customer: person.get(row.customerId),
       pro: proPerson && proStats ? { ...proPerson, rating: Number(proStats.rating), ratingCount: proStats.ratingCount } : null,
-      reviewed: reviewed.some((r) => r.bookingId === row.id && r.authorId === row.customerId),
+      reviewed: !!review, reviewRating: review?.rating ?? null,
       ...(userId === row.customerId ? { completionPin: await completionPin(secret, row.id) } : {}) };
   }));
 }
