@@ -1,3 +1,4 @@
+// helper card
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { IonIcon } from '@ionic/angular';
@@ -61,18 +62,12 @@ import { AuthService } from '../../../core/services/auth.service';
       font-weight: 700;
       letter-spacing: 0.04em;
       color: #087F5B;
-      background: #ECFDF5;
-      padding: 3px 8px;
-      border-radius: 30px;
       white-space: nowrap;
     }
     .name { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .category {
       align-self: flex-start;
       max-width: 100%;
-      padding: 3px 10px;
-      border-radius: 30px;
-      background: #FFF2E8;
       color: #B64000;
       font-size: 11px;
       font-weight: 600;
@@ -99,7 +94,7 @@ import { AuthService } from '../../../core/services/auth.service';
       white-space: nowrap;
       transition: background-color 0.15s ease;
     }
-    .available { background: #FFF2E8; color: #B64000; }
+    .available { background: #FFFFFF; color: #B64000; box-shadow: inset 0 0 0 1px #E5E7EB; }
     .available:disabled { background: #F3F4F6; color: #9CA3AF; }
     .book { background: #D04A00; color: #FFFFFF; }
     .book:active { background: #C24400; }

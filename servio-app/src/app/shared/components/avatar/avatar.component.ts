@@ -1,3 +1,4 @@
+// avatar
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 const PALETTE = ['#FFF2E8', '#EBF5FF', '#EDFAF0', '#FDF0F5', '#F3E8FF'];
@@ -11,7 +12,7 @@ const INK = ['#B64000', '#1D4ED8', '#047857', '#BE185D', '#6D28D9'];
       <img [src]="src" [alt]="name" [style.width.px]="size" [style.height.px]="size" loading="lazy" />
     } @else {
       <span class="initials" [style.width.px]="size" [style.height.px]="size" [style.fontSize.px]="size * 0.36"
-        [style.background]="palette[0]" [style.color]="palette[1]" role="img" [attr.aria-label]="name">{{ initials }}</span>
+        [style.color]="palette[1]" role="img" [attr.aria-label]="name">{{ initials }}</span>
     }
     @if (online) {
       <span class="online" [style.width.px]="dotSize" [style.height.px]="dotSize" aria-label="Online"></span>
@@ -20,8 +21,8 @@ const INK = ['#B64000', '#1D4ED8', '#047857', '#BE185D', '#6D28D9'];
   styles: `
     :host { position: relative; display: inline-block; flex: 0 0 auto; line-height: 0; }
     img, .initials { display: block; border-radius: 50%; object-fit: cover; background: #F3F4F6; }
-    .initials { display: grid; place-items: center; font-weight: 700; line-height: 1; }
-    /* Centred where the approved portrait artwork places its presence dot. */
+    .initials { display: grid; place-items: center; font-weight: 700; line-height: 1; background: none; }
+    /* online dot */
     .online {
       position: absolute;
       left: 82%;

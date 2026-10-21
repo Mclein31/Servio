@@ -1,3 +1,4 @@
+// payment methods page
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular';

@@ -1,3 +1,4 @@
+// error handler
 import type { ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../env';

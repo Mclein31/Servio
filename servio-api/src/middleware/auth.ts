@@ -1,3 +1,4 @@
+// auth sessions
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';

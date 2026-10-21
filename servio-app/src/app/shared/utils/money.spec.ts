@@ -1,3 +1,4 @@
+// money tests
 import { ADDON_CATALOG, SKUS } from '../../core/data/mock-data';
 import { formatPhp, roundCentavos, splitPayout } from './money';
 

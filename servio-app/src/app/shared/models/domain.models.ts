@@ -1,3 +1,4 @@
+// domain models
 import { CategoryId, HelperSummary, RequestStatus } from './ui.models';
 
 export type OrderStatus =

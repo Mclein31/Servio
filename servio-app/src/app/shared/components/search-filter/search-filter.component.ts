@@ -1,3 +1,4 @@
+// search filter
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 
@@ -9,13 +10,6 @@ import { IonIcon } from '@ionic/angular';
     <div class="search" role="search">
       <ion-icon name="search-outline" class="lead" aria-hidden="true"></ion-icon>
       <input type="search" [placeholder]="placeholder" [attr.aria-label]="placeholder" (input)="onInput($event)" enterkeyhint="search" autocomplete="off" />
-      <button type="button" class="filter" (click)="filterClick.emit()"
-        [attr.aria-label]="selectedFilterCount > 0 ? 'Filters, ' + selectedFilterCount + ' active' : 'Filters'">
-        <ion-icon name="options-outline" aria-hidden="true"></ion-icon>
-        @if (selectedFilterCount > 0) {
-          <span class="dot" aria-hidden="true"></span>
-        }
-      </button>
     </div>
   `,
   styles: `
@@ -24,7 +18,7 @@ import { IonIcon } from '@ionic/angular';
       display: flex;
       align-items: center;
       height: 48px;
-      padding: 0 4px 0 16px;
+      padding: 0 16px;
       border-radius: 24px;
       background: #FFFFFF;
       border: 1px solid #E5E7EB;
@@ -37,7 +31,7 @@ import { IonIcon } from '@ionic/angular';
       flex: 1 1 auto;
       min-width: 0;
       height: 100%;
-      margin: 0 8px 0 10px;
+      margin: 0 0 0 10px;
       border: 0;
       outline: none;
       background: transparent;
@@ -47,37 +41,11 @@ import { IonIcon } from '@ionic/angular';
     }
     input::placeholder { color: #9CA3AF; }
     input::-webkit-search-cancel-button { -webkit-appearance: none; }
-    .filter {
-      position: relative;
-      flex: 0 0 auto;
-      display: grid;
-      place-items: center;
-      width: 40px;
-      height: 40px;
-      border: 0;
-      border-radius: 50%;
-      background: #FFF2E8;
-      color: #B64000;
-      font-size: 20px;
-      cursor: pointer;
-    }
-    .dot {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #FF5C00;
-      border: 1.5px solid #FFFFFF;
-    }
   `,
 })
 export class SearchFilterComponent {
   @Input() placeholder = 'Search services, skills, or neighbors…';
-  @Input() selectedFilterCount = 0;
   @Output() searchChange = new EventEmitter<string>();
-  @Output() filterClick = new EventEmitter<void>();
 
   onInput(event: Event): void {
     this.searchChange.emit((event.target as HTMLInputElement).value);

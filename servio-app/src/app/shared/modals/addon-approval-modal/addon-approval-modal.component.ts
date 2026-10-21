@@ -1,3 +1,4 @@
+// add-on approval modal
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonIcon, ToastController } from '@ionic/angular';

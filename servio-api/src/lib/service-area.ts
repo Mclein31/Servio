@@ -1,3 +1,4 @@
+// service area check
 import { ApiError } from './errors';
 
 export function validateServiceLocation(location: { lat: number; lng: number }) {

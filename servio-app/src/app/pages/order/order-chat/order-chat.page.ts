@@ -1,3 +1,4 @@
+// order chat page
 import { BookingCallService } from '../../../core/services/booking-call.service';
 import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';

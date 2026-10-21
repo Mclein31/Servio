@@ -1,3 +1,4 @@
+<!-- bulletin page -->
 <ion-header class="ion-no-border">
   <ion-toolbar class="servio-app-bar">
     <h1 class="servio-tab-title">Bulletin</h1>
@@ -8,8 +9,8 @@
   @if (community.error()) { <p class="servio-section" role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
   <div class="servio-section intro">
     <p class="servio-subtitle">Live requests from your neighborhood.</p>
-    <app-search-filter placeholder="Search requests, skills, or keywords…" [selectedFilterCount]="filter() === 'ALL' ? 0 : 1"
-      (searchChange)="query.set($event)" (filterClick)="openFilterSheet()"></app-search-filter>
+    <app-search-filter placeholder="Search requests, skills, or keywords…"
+      (searchChange)="query.set($event)"></app-search-filter>
   </div>
 
   <div class="servio-section">
@@ -51,7 +52,7 @@
     @for (r of requests(); track r.id) {
       <article class="request servio-card" [class.is-urgent]="r.status === 'URGENT'" role="button" tabindex="0"
         [attr.aria-label]="'View request: ' + r.title" (click)="openRequest(r)" (keydown.enter)="openRequest(r, $event)" (keydown.space)="openRequest(r, $event)">
-        <span class="cat" [style.background]="categoryById[r.category].tint" [style.color]="categoryById[r.category].accent">
+        <span class="cat" [style.color]="categoryById[r.category].accent">
           <ion-icon [name]="categoryById[r.category].icon" aria-hidden="true"></ion-icon>
         </span>
         <div class="body">

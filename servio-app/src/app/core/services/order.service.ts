@@ -1,3 +1,4 @@
+// orders
 import { environment } from '../../../environments/environment';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -333,8 +334,10 @@ export class OrderService {
   }
   async complete(pin: string): Promise<boolean> {
     if (this.api.settings.useMockApi()) return this.verifyCompletionPin(pin);
-    await this.api.post(`/bookings/${this.state().id}/verify-pin`, { pin }); await this.load(this.state().id); await this.auth.refreshProfile(true); await this.wallet.refresh();
-    return this.state().escrow === 'COMPLETED';
+    const { booking } = await this.api.post<{ booking: BookingDto }>(`/bookings/${this.state().id}/verify-pin`, { pin });
+    if (this.state().id === booking.id) { const order = await this.fromApi(booking); if (this.state().id === booking.id) this.state.set(order); }
+    void this.auth.refreshProfile(true).catch(() => undefined); void this.wallet.refresh().catch(() => undefined);
+    return booking.escrow === 'COMPLETED';
   }
 
   async cancel(reason: string): Promise<void> {

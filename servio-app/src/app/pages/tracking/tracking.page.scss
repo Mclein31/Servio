@@ -1,3 +1,4 @@
+// tracking page
 .intro {
   margin-top: 0;
 
@@ -55,29 +56,23 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 10px;
-  border-radius: 30px;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 
   &.enroute {
-    background: var(--servio-orange-tint);
     color: var(--servio-orange-text);
   }
 
   &.accepted {
-    background: var(--servio-blue-surface);
     color: var(--servio-blue);
   }
 
   &.arrived {
-    background: var(--servio-green-surface);
     color: var(--servio-green-text);
   }
 
   &.cancelled {
-    background: var(--servio-red-surface);
     color: var(--servio-red-strong);
   }
 }
@@ -92,7 +87,8 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: var(--servio-orange-tint);
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
 
   p {
     margin: 0;
@@ -158,9 +154,9 @@
   }
 
   &.warn {
-    background: var(--servio-amber-surface);
+    background: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
     color: #92400E;
-    border: 1px solid #FDE68A;
   }
 }
 
@@ -220,18 +216,12 @@
 }
 
 .done-pill {
-  padding: 4px 10px;
-  border-radius: 30px;
-  background: var(--servio-green-surface);
   color: var(--servio-green-strong);
   font-size: 11px;
   font-weight: 700;
 }
 
 .cancel-pill {
-  padding: 4px 10px;
-  border-radius: 30px;
-  background: var(--servio-red-surface);
   color: var(--servio-red-strong);
   font-size: 11px;
   font-weight: 700;
@@ -312,3 +302,7 @@
   }
 }
 
+.history ::ng-deep .ion-accordion-toggle-icon {
+  font-size: 16px;
+  color: var(--servio-neutral-300, #9CA3AF);
+}

@@ -1,3 +1,4 @@
+// health check
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { connectDb } from '../db/client';

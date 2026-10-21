@@ -1,3 +1,4 @@
+// peso format pipe
 import { Pipe, PipeTransform } from '@angular/core';
 import { formatPhp } from '../utils/money';
 

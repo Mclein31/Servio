@@ -1,3 +1,4 @@
+// location routes
 import { Hono } from 'hono';
 import type { AppEnv } from '../env';
 import { ApiError } from '../lib/errors';

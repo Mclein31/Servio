@@ -1,3 +1,4 @@
+// email sending
 import { connect } from 'cloudflare:sockets';
 import type { Bindings } from '../env';
 import { ApiError } from './errors';

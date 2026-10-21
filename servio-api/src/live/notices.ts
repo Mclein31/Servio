@@ -1,3 +1,4 @@
+// notification rules
 import type { notifications } from '../db/schema';
 
 export type Notice = Omit<typeof notifications.$inferInsert, 'id' | 'readAt' | 'createdAt'>;

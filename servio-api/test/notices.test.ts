@@ -1,3 +1,4 @@
+// notification rule tests
 import { describe, expect, it } from 'vitest';
 import { bookingNotices, bulletinNotices, type BookingInfo } from '../src/live/notices';
 

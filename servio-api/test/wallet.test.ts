@@ -1,3 +1,4 @@
+// wallet tests
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ledgerEntries, payouts } from '../src/db/schema';

@@ -1,3 +1,4 @@
+// app bootstrap
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { apiInterceptor } from './app/core/api/api.interceptor';
 import { bootstrapApplication } from '@angular/platform-browser';

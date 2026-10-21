@@ -1,3 +1,4 @@
+// live connection
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';

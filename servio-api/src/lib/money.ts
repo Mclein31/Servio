@@ -1,3 +1,4 @@
+// payout split
 export const PRO_SHARE_BPS = 8500;
 export const TRUST_FEE_CENTAVOS = 5000;
 

@@ -1,3 +1,4 @@
+// slide to confirm
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 

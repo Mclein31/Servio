@@ -1,3 +1,4 @@
+// notifications routes
 import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';

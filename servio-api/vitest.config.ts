@@ -1,3 +1,4 @@
+// test config
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';

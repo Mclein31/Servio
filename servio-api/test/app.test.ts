@@ -1,3 +1,4 @@
+// app tests
 import { describe, expect, it } from 'vitest';
 import { api, hasDb } from './helpers';
 

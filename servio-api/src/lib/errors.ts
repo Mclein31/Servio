@@ -1,3 +1,4 @@
+// api errors
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 export class ApiError extends Error {

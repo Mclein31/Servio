@@ -1,3 +1,4 @@
+// production secrets setup
 import { spawnSync } from 'node:child_process';
 
 try {

@@ -1,3 +1,4 @@
+// payment methods
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from '../api/api.service';
 import { PaymentMethod } from '../../shared/models/domain.models';

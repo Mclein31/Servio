@@ -1,3 +1,4 @@
+// rating and tip modal
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonFooter, IonHeader, IonIcon, IonTitle, IonToolbar, ToastController } from '@ionic/angular';

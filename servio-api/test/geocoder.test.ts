@@ -1,3 +1,4 @@
+// geocoder tests
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Bindings } from '../src/env';
 import { api, bookingFixture, hasDb } from './helpers';

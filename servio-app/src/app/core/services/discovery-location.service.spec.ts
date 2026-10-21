@@ -1,3 +1,4 @@
+// discovery location tests
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';

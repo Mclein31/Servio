@@ -1,3 +1,4 @@
+// icons
 import { addIcons } from 'ionicons';
 import {
   add,
@@ -51,7 +52,6 @@ import {
   newspaperOutline,
   notifications,
   notificationsOutline,
-  optionsOutline,
   personOutline,
   qrCodeOutline,
   radioOutline,
@@ -63,6 +63,7 @@ import {
   send,
   shieldCheckmark,
   shieldCheckmarkOutline,
+  speedometerOutline,
   star,
   starOutline,
   swapHorizontalOutline,
@@ -125,7 +126,6 @@ export function registerServioIcons(): void {
     newspaperOutline,
     notifications,
     notificationsOutline,
-    optionsOutline,
     personOutline,
     qrCodeOutline,
     radioOutline,
@@ -137,6 +137,7 @@ export function registerServioIcons(): void {
     send,
     shieldCheckmark,
     shieldCheckmarkOutline,
+    speedometerOutline,
     star,
     starOutline,
     swapHorizontalOutline,

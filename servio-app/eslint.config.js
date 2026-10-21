@@ -1,4 +1,5 @@
 // @ts-check
+// lint config
 const tseslint = require("typescript-eslint");
 const angular = require("angular-eslint");
 

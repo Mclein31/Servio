@@ -1,3 +1,4 @@
+// schema tests
 import { env } from 'cloudflare:test';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';

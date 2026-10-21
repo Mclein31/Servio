@@ -1,3 +1,4 @@
+// tracking
 import { computed, effect, inject, Injectable, NgZone, OnDestroy, signal, untracked } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
@@ -161,10 +162,10 @@ export class TrackingService implements OnDestroy {
   }
   ngOnDestroy():void { this.stopTimer(); clearInterval(this.clockTimer); void this.appListener?.then((listener)=>listener.remove()); }
   setSimulated(enabled:boolean):void { if(this.demoAllowed()) { this.simulate.set(enabled); this.locationError.set(''); } }
-  async currentLocation():Promise<{ lat:number; lng:number }> {
+  async currentLocation(maximumAge=0):Promise<{ lat:number; lng:number }> {
     if(this.mode()==='sim' && environment.demo) { const point=this.route.sample(this.startDistance).point; return { lat:point[0],lng:point[1] }; }
     if(Capacitor.isNativePlatform()) await Geolocation.requestPermissions({ permissions:['location'] });
-    const position=await Geolocation.getCurrentPosition({ enableHighAccuracy:true,timeout:15000,maximumAge:0 });
+    const position=await Geolocation.getCurrentPosition({ enableHighAccuracy:true,timeout:15000,maximumAge });
     return { lat:position.coords.latitude,lng:position.coords.longitude };
   }
   displayDistance(now=performance.now()):number {

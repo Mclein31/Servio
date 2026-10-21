@@ -1,3 +1,4 @@
+// app routes
 import { inject } from '@angular/core';
 import { OrderService } from './core/services/order.service';
 import { Routes } from '@angular/router';
@@ -41,7 +42,7 @@ export const routes: Routes = [
   { path: 'order/:id/completion', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/completion-otp-modal/completion-otp-modal.component').then((m) => m.CompletionOtpModalComponent) },
   { path: 'order/:id/review', canActivate: [authGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./shared/modals/rating-tip-modal/rating-tip-modal.component').then((m) => m.RatingTipModalComponent) },
 
-  { path: 'pro', canActivate: [proGuard], loadComponent: () => import('./pages/pro/dashboard/dashboard.page').then((m) => m.ProDashboardPage) },
+  { path: 'pro', pathMatch: 'full', redirectTo: 'tabs/pro' },
   { path: 'pro/radar-alert', canActivate: [proGuard], loadComponent: () => import('./pages/pro/radar-alert/radar-alert.page').then((m) => m.RadarAlertPage) },
   { path: 'pro/radar', redirectTo: 'pro/radar-alert' },
   { path: 'pro/order/:id/execute', canActivate: [proGuard], resolve: { booking: loadOrder }, loadComponent: () => import('./pages/pro/job-execute/job-execute.page').then((m) => m.JobExecutePage) },

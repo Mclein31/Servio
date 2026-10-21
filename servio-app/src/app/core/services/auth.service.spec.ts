@@ -1,3 +1,4 @@
+// auth tests
 import { formatPhLocal, PH_MOBILE_PATTERN } from './auth.service';
 
 describe('Philippine mobile input', () => {

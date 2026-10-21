@@ -1,3 +1,4 @@
+// payout split tests
 import { describe, expect, it } from 'vitest';
 import { ADDON_ROWS, SKU_ROWS } from '../src/db/catalog-data';
 import { splitPayout, TRUST_FEE_CENTAVOS } from '../src/lib/money';

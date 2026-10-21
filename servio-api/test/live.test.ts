@@ -1,3 +1,4 @@
+// live ticket tests
 import { env } from 'cloudflare:test';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

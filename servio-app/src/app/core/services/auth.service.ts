@@ -1,3 +1,4 @@
+// auth
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
 import { ApiService } from '../api/api.service';
@@ -198,7 +199,7 @@ export class AuthService {
     }
   }
 
-  landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/pro' : '/tabs/home'; }
+  landingPath(): string { return this.needsProfile() ? '/auth/profile' : this.user()?.role === 'PRO' ? '/tabs/pro' : '/tabs/home'; }
 
   async clearLocal(): Promise<void> {
     this.profileRevision++;

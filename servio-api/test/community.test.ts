@@ -1,3 +1,4 @@
+// bulletin tests
 import { env } from 'cloudflare:test';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

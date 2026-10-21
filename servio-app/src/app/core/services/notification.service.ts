@@ -1,3 +1,4 @@
+// notifications
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { App } from '@capacitor/app';

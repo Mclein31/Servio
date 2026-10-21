@@ -1,3 +1,4 @@
+// money
 export const PRO_SHARE = 0.85;
 export const PLATFORM_SHARE = 0.15;
 

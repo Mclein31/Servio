@@ -1,3 +1,4 @@
+// drizzle migrations config
 import { defineConfig } from 'drizzle-kit';
 
 try {

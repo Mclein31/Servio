@@ -1,3 +1,4 @@
+// db middleware
 import { createMiddleware } from 'hono/factory';
 import { connectDb } from '../db/client';
 import type { AppEnv } from '../env';

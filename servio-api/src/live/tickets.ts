@@ -1,3 +1,4 @@
+// live tickets
 import { timingSafeEqualString, toBase64Url } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
 export interface LiveTicket { resource:string; userId:string; sessionHash:string; exp:number; nonce:string }

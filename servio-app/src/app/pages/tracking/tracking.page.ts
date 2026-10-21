@@ -1,3 +1,4 @@
+// tracking page
 import { BookingCallService } from '../../core/services/booking-call.service';
 import { TrackingControlsComponent } from '../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';

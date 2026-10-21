@@ -1,3 +1,4 @@
+// bulletin and pros
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DiscoveryLocationService } from './discovery-location.service';
 import { ApiService } from '../api/api.service';

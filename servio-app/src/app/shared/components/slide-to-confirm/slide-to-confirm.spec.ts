@@ -1,3 +1,4 @@
+// slide to confirm tests
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SLIDE_CONFIRM_THRESHOLD, SlideToConfirmComponent, slideReleaseConfirms } from './slide-to-confirm.component';
 import { vi } from 'vitest';

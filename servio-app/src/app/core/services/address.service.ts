@@ -1,3 +1,4 @@
+// addresses
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { ApiService } from '../api/api.service';
 import { AuthService } from './auth.service';

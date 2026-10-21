@@ -1,3 +1,4 @@
+// demo data seeding
 import { execFileSync } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

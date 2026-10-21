@@ -1,3 +1,4 @@
+// pro otp page
 import { AfterViewInit, ChangeDetectionStrategy, Component, ViewChild, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -27,6 +28,7 @@ export class ProVerifyOtpPage implements AfterViewInit {
   readonly error = signal(false);
   readonly scanning = signal(false);
   readonly credited = signal<number | null>(this.orders.order().escrow === 'COMPLETED' ? this.orders.proPayoutPhp() : null);
+  readonly completedCode = signal(this.orders.order().code ?? this.orders.order().id);
 
   ngAfterViewInit(): void {
     if (this.credited() === null) this.codeInput?.focusFirst();
@@ -41,7 +43,9 @@ export class ProVerifyOtpPage implements AfterViewInit {
     this.saving.set(true); this.message.set('');
     try {
     const payout = this.orders.proPayoutPhp();
+    const code = this.orders.order().code ?? this.orders.order().id;
     if (await this.orders.complete(this.pin())) {
+      this.completedCode.set(code);
       navigator.vibrate?.([20, 40, 20]);
       this.credited.set(payout);
     } else {

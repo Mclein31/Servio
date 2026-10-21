@@ -1,3 +1,4 @@
+// post bulletin modal
 .wrap {
   display: flex;
   flex-direction: column;
@@ -42,7 +43,6 @@ legend,
 
   &.active {
     border-color: var(--servio-brand-orange);
-    background: #FFFBF8;
   }
 }
 
@@ -51,8 +51,7 @@ legend,
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .field {
@@ -123,7 +122,7 @@ textarea {
   }
 
   &.on {
-    background: var(--servio-red-surface);
+    background: #FFFFFF;
     border-color: #FECACA;
   }
 }

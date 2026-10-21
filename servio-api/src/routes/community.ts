@@ -1,3 +1,4 @@
+// bulletin and pros routes
 import { and, asc, desc, eq, inArray, isNull, ne, or, sql, type SQLWrapper } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';

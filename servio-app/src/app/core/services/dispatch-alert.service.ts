@@ -1,3 +1,4 @@
+// dispatch alerts
 import { Injectable, NgZone, inject } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';

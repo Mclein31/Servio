@@ -1,3 +1,4 @@
+// mock payments
 import type { PaymentOperation, PaymentProvider } from './provider';
 
 async function mock(operation: string, input: PaymentOperation) {

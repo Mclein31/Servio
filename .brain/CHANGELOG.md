@@ -2,6 +2,13 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.35] — 2026-10-21
+### Changed
+- **Pro dashboard inside the tab bar:** dashboard moved to `/tabs/pro` (`/pro` redirects); in Pro mode the first tab is "Dashboard" instead of Home.
+- **Instant availability toggle:** `ProService.availability` updates optimistically, saves the latest choice in the background, accepts a GPS fix up to 30 s old, and reverts with an error on failure.
+### Fixed
+- **Completion PIN reset on the Pro screen:** `OrderService.complete` now trusts the `verify-pin` response instead of the shared order state, which the post-completion live refresh replaced with an empty order (showing "Incorrect PIN" and clearing the boxes). Profile/wallet refresh failures no longer surface as PIN errors.
+
 ## [0.5.34] — 2026-10-21
 ### Added
 - **Notifications inbox (ADR-037):** table `notifications` (migration 0010; 0011 drops the briefly-added `push_tokens`). `GET /notifications`, `POST /notifications/read` (ids / booking+kind / all). Rows are written after commit in `live/notify.ts` from `live/notices.ts` rules (booking created/status/cancel/complete, messages, add-on quote/decision, reviews, dispatch offers and no-Pro refunds, bulletin accept/release/cancel); the actor is never notified. Each insert sends `{type:'notification'}` to the recipient's `user:` room.

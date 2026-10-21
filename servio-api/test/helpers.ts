@@ -1,3 +1,4 @@
+// test helpers
 import { env } from 'cloudflare:test';
 import app from '../src/index';
 

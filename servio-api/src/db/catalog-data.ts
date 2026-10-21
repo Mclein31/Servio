@@ -1,3 +1,4 @@
+// service catalog rows
 export const CATEGORY_ROWS = [
   { id: 'tutoring', label: 'Tutoring', icon: 'school-outline', sortOrder: 1 },
   { id: 'repairs', label: 'Repairs', icon: 'construct-outline', sortOrder: 2 },

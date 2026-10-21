@@ -1,3 +1,4 @@
+// profile tests
 import { env } from 'cloudflare:test';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

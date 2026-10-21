@@ -1,3 +1,4 @@
+// crypto helpers
 const encoder = new TextEncoder();
 
 export function toBase64Url(bytes: Uint8Array): string {

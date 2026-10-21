@@ -1,3 +1,4 @@
+// email auth tests
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
@@ -87,7 +88,7 @@ describe('email-code auth', () => {
     expect(await auth.isAuthenticated()).toBe(false);
     token.set('opaque-pro-session');
     api.get.mockResolvedValueOnce({ me: { ...newUser, fullName: 'Daniel K.', role: 'PRO' }, pro: { isOnline: true } });
-    expect(await auth.isAuthenticated()).toBe(true); expect(auth.landingPath()).toBe('/pro');
+    expect(await auth.isAuthenticated()).toBe(true); expect(auth.landingPath()).toBe('/tabs/pro');
   });
 
   it('retains offline email-code demos without calling the API', async () => {

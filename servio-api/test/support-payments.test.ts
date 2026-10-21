@@ -1,3 +1,4 @@
+// support and payments tests
 import { afterEach,beforeEach,describe,expect,it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { supportRequests,users } from '../src/db/schema';

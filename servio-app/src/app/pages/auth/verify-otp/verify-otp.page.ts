@@ -1,3 +1,4 @@
+// otp page
 import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonSpinner, IonToolbar } from '@ionic/angular';

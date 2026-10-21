@@ -1,3 +1,4 @@
+// onboarding trust visual
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 
@@ -75,7 +76,7 @@ import { IonIcon } from '@ionic/angular';
     }
     .release { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #087F5B; opacity: 0; }
 
-    /* 350 ms delay, 600 ms ease-out reveal, then staged PIN chips. */
+    /* unlock animation */
     .play .lock { animation: lock-out 0.6s ease-out 0.35s forwards; }
     .play .shield { animation: shield-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.65s forwards; }
     .play .ring.r1 { animation: ring 1.6s ease-out 0.9s; }

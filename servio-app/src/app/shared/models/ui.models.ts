@@ -1,3 +1,4 @@
+// ui models
 export type RequestStatus = 'OPEN' | 'URGENT' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
 export interface StepMilestone {

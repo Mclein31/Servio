@@ -1,3 +1,4 @@
+// wallet
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { LedgerEntry } from '../../shared/models/domain.models';
 import { roundCentavos } from '../../shared/utils/money';

@@ -1,8 +1,9 @@
+// bulletin page
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ActionSheetController, IonContent, IonFooter, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/angular';
+import { IonContent, IonFooter, IonHeader, IonIcon, IonModal, IonToolbar } from '@ionic/angular';
 import * as L from 'leaflet';
 import { servioTileLayer } from '../../shared/utils/map-tiles';
 import { TUGUEGARAO_CENTER } from '../../core/data/launch-city';
@@ -32,7 +33,6 @@ const PIN_COORDS: [number, number][] = [
 export class BulletinPage {
   private readonly sheets = inject(SheetsService);
   private readonly router = inject(Router);
-  private readonly actionSheets = inject(ActionSheetController);
   @ViewChild('requestDetails') requestDetails?: IonModal;
   readonly canDismissRequest = () => !this.saving();
   @ViewChild('pinMap') pinMapEl?: ElementRef<HTMLDivElement>;
@@ -174,25 +174,5 @@ export class BulletinPage {
   destroyPinMap(): void {
     this.pinMap?.remove();
     this.pinMap = undefined;
-  }
-
-  async openFilterSheet(): Promise<void> {
-    const sheet = await this.actionSheets.create({
-      header: 'Filter Requests',
-      buttons: [
-        ...this.filters.map((f) => ({
-          text: f.label,
-          role: this.filter() === f.id ? 'selected' : undefined,
-          handler: () => {
-            this.filter.set(f.id);
-          },
-        })),
-        {
-          text: 'Cancel',
-          role: 'cancel',
-        },
-      ],
-    });
-    await sheet.present();
   }
 }

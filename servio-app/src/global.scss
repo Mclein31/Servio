@@ -1,3 +1,4 @@
+// global styles
 @use 'theme/mixins' as *;
 
 @import '@fontsource/inter/400.css';
@@ -173,7 +174,8 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 16px;
-    background: var(--servio-orange-tint);
+    background: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
     color: var(--servio-orange-text);
   }
 
@@ -255,16 +257,10 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
   &.active {
-    background: var(--servio-orange-tint);
-    border-color: #FFD3B8;
-    color: var(--servio-orange-text);
-    font-weight: 600;
-  }
-
-  &.solid.active {
     background: var(--servio-action-orange);
     border-color: var(--servio-action-orange);
     color: #FFFFFF;
+    font-weight: 600;
   }
 
   &.urgent { color: var(--servio-red-strong); }

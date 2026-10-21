@@ -1,3 +1,4 @@
+// bulletin page
 .intro {
   margin-top: 0;
 
@@ -150,8 +151,7 @@
   place-items: center;
   width: 48px;
   height: 48px;
-  border-radius: 14px;
-  font-size: 22px;
+  font-size: 24px;
 }
 
 .body {
@@ -204,9 +204,6 @@
 }
 
 .price-badge {
-  padding: 4px 10px;
-  border-radius: 30px;
-  background: var(--servio-orange-tint);
   color: var(--servio-orange-text);
   font-size: 13px;
   font-weight: 700;

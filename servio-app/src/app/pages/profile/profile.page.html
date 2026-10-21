@@ -1,3 +1,4 @@
+<!-- profile page -->
 <ion-header class="ion-no-border">
   <ion-toolbar class="servio-app-bar">
     <div class="bar">
@@ -27,8 +28,7 @@
       </div>
       <div class="metrics">
         @for (m of (mock() ? metrics : liveMetrics()); track m.label) {
-          <div class="metric" [style.background]="m.tint">
-            <ion-icon [name]="m.icon" [style.color]="m.ink" aria-hidden="true"></ion-icon>
+          <div class="metric">
             <strong>{{ m.value }}</strong>
             <span>{{ m.label }}</span>
           </div>
@@ -46,7 +46,7 @@
     <div class="services servio-card">
       @for (s of services(); track s.name) {
         <div class="service">
-          <span class="svc-icon" [style.background]="s.tint" [style.color]="s.ink"><ion-icon [name]="s.icon" aria-hidden="true"></ion-icon></span>
+          <span class="svc-icon" [style.color]="s.ink"><ion-icon [name]="s.icon" aria-hidden="true"></ion-icon></span>
           <div class="svc-text">
             <span class="svc-name">{{ s.name }}</span>
             <span class="svc-detail">{{ s.detail }}</span>
@@ -63,7 +63,6 @@
     <nav class="settings servio-card" aria-label="Account settings">
       @for (item of settings(); track item.label) {
         <button type="button" class="setting" (click)="open(item)">
-          <span class="set-icon" [style.background]="item.tint" [style.color]="item.ink"><ion-icon [name]="item.icon" aria-hidden="true"></ion-icon></span>
           <span class="set-text">
             <span class="set-label">{{ item.label }}</span>
             <span class="set-caption">{{ item.caption }}</span>

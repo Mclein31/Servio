@@ -1,3 +1,4 @@
+// add-on tests
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addonQuotes, bookings, ledgerEntries } from '../src/db/schema';

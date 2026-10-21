@@ -1,3 +1,4 @@
+// pro tests
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -16,6 +17,7 @@ describe('ProService dispatch authorization', () => {
   const user = signal<AppUser | null>(null);
   const pro = signal<AppPro | null>(null);
   const post = vi.fn();
+  const currentLocation = vi.fn();
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -26,11 +28,11 @@ describe('ProService dispatch authorization', () => {
       ProService,
       { provide: ApiService, useValue: { settings: { useMockApi: () => false }, post } },
       { provide: AuthService, useValue: { user, pro } },
-      { provide: TrackingService, useValue: { mode: () => 'live' } },
+      { provide: TrackingService, useValue: { mode: () => 'live', currentLocation } },
       { provide: LiveService, useValue: { watch: vi.fn(() => () => undefined), events: { subscribe: () => ({ unsubscribe: vi.fn() }) } } },
       { provide: OrderService, useValue: {} },
       { provide: WalletService, useValue: { refresh: vi.fn() } },
-      { provide: Router, useValue: { url: '/pro', navigateByUrl: vi.fn() } },
+      { provide: Router, useValue: { url: '/tabs/pro', navigateByUrl: vi.fn() } },
     ] });
   });
 
@@ -52,5 +54,31 @@ describe('ProService dispatch authorization', () => {
     user.set({ ...user()!, role: 'PRO' });
     TestBed.tick();
     await vi.waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+  });
+
+  it('flips the availability toggle before the server answers', async () => {
+    const service = TestBed.inject(ProService);
+    await vi.waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    let answer!: (value: unknown) => void;
+    currentLocation.mockResolvedValue({ lat: 17.6, lng: 121.7 });
+    post.mockImplementation((path: string) => path === '/pro/availability' ? new Promise((resolve) => { answer = resolve; }) : Promise.resolve({ offer: null, serverNow: new Date().toISOString() }));
+    const saving = service.availability(true);
+    expect(service.online()).toBe(true);
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    answer({ pro: { ...pro()!, isOnline: true } });
+    await saving;
+    expect(service.online()).toBe(true);
+    expect(currentLocation).toHaveBeenCalledWith(30000);
+  });
+
+  it('reverts the toggle when going online fails', async () => {
+    const service = TestBed.inject(ProService);
+    await vi.waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    currentLocation.mockRejectedValue(new Error('Location permission denied.'));
+    const saving = service.availability(true);
+    expect(service.online()).toBe(true);
+    await saving;
+    expect(service.online()).toBe(false);
+    expect(service.error()).toBe('Location permission denied.');
   });
 });

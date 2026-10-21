@@ -1,3 +1,4 @@
+// pro flow tests
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
@@ -17,7 +18,7 @@ describe('server-owned Pro actions', () => {
   const settings = { ready: Promise.resolve(), useMockApi: signal(false) };
   const api = { settings, get: vi.fn(), post: vi.fn(), upload: vi.fn(), imageUrl: vi.fn() };
   const user = signal<{ id: string; role: string } | null>(null);
-  const wallet = { refresh: vi.fn(), credit: vi.fn() };
+  const wallet = { refresh: vi.fn().mockResolvedValue(undefined), credit: vi.fn() };
   let storage: Map<string,string>;
   beforeEach(() => {
     vi.clearAllMocks(); user.set(null); settings.useMockApi.set(false); storage = new Map();
@@ -32,12 +33,23 @@ describe('server-owned Pro actions', () => {
     api.post.mockRejectedValueOnce(new Error('PIN locked'));
     await expect(orders.complete('0000')).rejects.toThrow('PIN locked');
     expect(orders.order().escrow).toBe('HOLD_AUTHORIZED'); expect(wallet.credit).not.toHaveBeenCalled();
-    api.post.mockResolvedValueOnce({});
+    api.post.mockResolvedValueOnce({ booking: { ...original, status: 'COMPLETED', escrow: 'COMPLETED' } });
     api.get.mockImplementation(async (path: string) => path === '/catalog' ? { trustFeeCentavos: 5000, skus: [], addons: [] } : { booking: { ...original, status: 'COMPLETED', escrow: 'COMPLETED' } });
     expect(await orders.complete('2468')).toBe(true);
+    expect(orders.order().status).toBe('COMPLETED');
     expect(api.post).toHaveBeenLastCalledWith(`/bookings/${original.id}/verify-pin`, { pin: '2468' });
     expect(wallet.refresh).toHaveBeenCalled(); expect(wallet.credit).not.toHaveBeenCalled();
     expect(orders.order().completionPin).toBe('');
+  });
+
+  it('reports PIN success from the server even if a live refresh swaps the order mid-request', async () => {
+    const orders = TestBed.inject(OrderService); TestBed.tick(); await orders.load(original.id);
+    const other = { ...original, id: '00000000-0000-4000-8000-000000000003', code: 'SRV-8823' };
+    api.get.mockImplementation(async (path: string) => path === '/catalog' ? { trustFeeCentavos: 5000, skus: [], addons: [] } : { booking: structuredClone(other) });
+    api.post.mockImplementationOnce(async () => { await orders.load(other.id); return { booking: { ...original, status: 'COMPLETED', escrow: 'COMPLETED' } }; });
+    wallet.refresh.mockRejectedValueOnce(new Error('offline'));
+    expect(await orders.complete('2468')).toBe(true);
+    expect(orders.order().id).toBe(other.id);
   });
 
   it('never writes a live PIN/snapshot into the offline store when switching modes', async () => {

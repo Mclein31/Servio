@@ -1,3 +1,4 @@
+// demo seeding
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../db/client';
 import { bookingEvents, bookings, bulletinRequests, ledgerEntries, messages, payouts, proProfiles, proSkus, reviews, serviceSkus, uploads, userAddresses, users } from '../db/schema';

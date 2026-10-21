@@ -1,3 +1,4 @@
+// production environment
 const configuredApiUrl = (globalThis as typeof globalThis & { SERVIO_API_URL?: string }).SERVIO_API_URL?.trim();
 const resolvedApiUrl = configuredApiUrl && /^https?:\/\/[^\s]+\/api\/v1\/?$/.test(configuredApiUrl)
   ? configuredApiUrl.replace(/\/+$/, '')

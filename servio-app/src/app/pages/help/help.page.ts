@@ -1,3 +1,4 @@
+// help page
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { RouterLink } from '@angular/router';

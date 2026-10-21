@@ -1,3 +1,4 @@
+// test setup
 if (!window.matchMedia) {
   window.matchMedia = (query: string): MediaQueryList =>
     ({

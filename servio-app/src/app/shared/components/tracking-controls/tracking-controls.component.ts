@@ -1,3 +1,4 @@
+// tracking controls
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { IonToggle } from '@ionic/angular';
 import { TrackingService } from '../../../core/services/tracking.service';

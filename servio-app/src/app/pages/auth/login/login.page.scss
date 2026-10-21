@@ -1,3 +1,4 @@
+// login page
 .wrap {
   display: flex;
   flex-direction: column;
@@ -99,7 +100,8 @@
   gap: 12px;
   margin-top: 28px;
   padding: 16px;
-  background: var(--servio-green-surface);
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
   border-color: #D1FAE5;
 
   ion-icon {

@@ -1,3 +1,4 @@
+// pro dashboard page
 import { NotificationBellComponent } from '../../../shared/components/notification-bell/notification-bell.component';
 import { TrackingControlsComponent } from '../../../shared/components/tracking-controls/tracking-controls.component';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
@@ -37,7 +38,7 @@ import { PhpPipe } from '../../../shared/pipes/php.pipe';
             <strong>{{ online() ? 'ONLINE · Ready for jobs' : 'OFFLINE' }}</strong>
             <span>You control when you accept work.</span>
           </div>
-          <ion-toggle [checked]="online()" [disabled]="pro.saving()" (ionChange)="pro.availability($any($event).detail.checked)" aria-label="Online for jobs"></ion-toggle>
+          <ion-toggle [checked]="online()" (ionChange)="pro.availability($any($event).detail.checked)" aria-label="Online for jobs"></ion-toggle>
         </section>
 
         <section class="servio-card earnings">

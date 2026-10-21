@@ -1,3 +1,4 @@
+// pro
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../api/api.service';
@@ -25,8 +26,9 @@ export class ProService {
   private readonly router = inject(Router);
   readonly offer = signal<DispatchOffer | null>(null);
   readonly serverOffsetMs = signal(0);
-  readonly online = computed(() => this.api.settings.useMockApi() ? this.mockOnline() : this.auth.pro()?.isOnline ?? false);
+  readonly online = computed(() => this.api.settings.useMockApi() ? this.mockOnline() : this.pendingOnline() ?? this.auth.pro()?.isOnline ?? false);
   private readonly mockOnline = signal(true);
+  private readonly pendingOnline = signal<boolean | null>(null);
   readonly saving = signal(false);
   readonly error = signal('');
   private polling = false;
@@ -63,7 +65,7 @@ export class ProService {
       if (this.auth.user()?.id !== userId) return;
       const previous = this.offer()?.id;
       this.serverOffsetMs.set(Date.parse(result.serverNow) - Date.now()); this.offer.set(result.offer); this.error.set('');
-      if (result.offer && result.offer.id !== previous && this.router.url === '/pro') await this.router.navigateByUrl('/pro/radar-alert');
+      if (result.offer && result.offer.id !== previous && this.router.url === '/tabs/pro') await this.router.navigateByUrl('/pro/radar-alert');
     } catch (error) {
       if (error instanceof ApiFailure && error.code === 'PRO_REQUIRED') this.deniedProUserId = userId;
       this.error.set(error instanceof Error ? error.message : 'Could not receive jobs.');
@@ -71,17 +73,24 @@ export class ProService {
     finally { this.polling = false; }
   }
   async availability(online: boolean): Promise<void> {
-    if (this.saving()) return;
     if (this.api.settings.useMockApi()) { this.mockOnline.set(online); return; }
-    this.saving.set(true); this.error.set('');
+    this.pendingOnline.set(online); this.error.set('');
+    if (this.saving()) return;
+    this.saving.set(true);
     try {
-      let location: { lat: number; lng: number } | undefined;
-      if (online) {
-        location = await this.tracking.currentLocation();
-      }
-      const result = await this.api.post<{ pro: NonNullable<ReturnType<AuthService['pro']>> }>('/pro/availability', { online, ...location });
-      this.auth.pro.set(result.pro); await this.poll();
-    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Location is required to receive nearby jobs.'); }
+      let sent: boolean;
+      do {
+        sent = this.pendingOnline()!;
+        const location = sent ? await this.tracking.currentLocation(30000) : undefined;
+        const result = await this.api.post<{ pro: NonNullable<ReturnType<AuthService['pro']>> }>('/pro/availability', { online: sent, ...location });
+        this.auth.pro.set(result.pro);
+      } while (this.pendingOnline() !== sent);
+      this.pendingOnline.set(null);
+      void this.poll();
+    } catch (error) {
+      this.pendingOnline.set(null);
+      this.error.set(error instanceof Error ? error.message : 'Location is required to receive nearby jobs.');
+    }
     finally { this.saving.set(false); }
   }
   async accept(id = this.offer()?.id): Promise<string> {

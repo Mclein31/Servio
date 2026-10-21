@@ -1,3 +1,4 @@
+// payment provider types
 export interface PaymentOperation {
   bookingId: string;
   customerId: string;

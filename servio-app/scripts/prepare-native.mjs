@@ -1,3 +1,4 @@
+// native build prep
 import { spawnSync } from 'node:child_process';
 
 const mode = process.argv[2];

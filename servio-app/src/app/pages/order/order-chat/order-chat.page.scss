@@ -1,3 +1,4 @@
+// order chat page
 .bar {
   display: flex;
   align-items: center;
@@ -30,7 +31,7 @@
   justify-content: center;
   gap: 8px;
   padding: 8px 16px;
-  background: var(--servio-orange-tint);
+  background: #FFFFFF;
   color: var(--servio-orange-text);
   font-size: 12px;
   font-weight: 600;
@@ -66,7 +67,6 @@
   max-width: 90%;
   padding: 8px 14px;
   border-radius: 14px;
-  background: var(--servio-green-surface);
   color: var(--servio-green-text);
   font-size: 12px;
   font-weight: 600;
@@ -86,7 +86,8 @@
   max-width: 76%;
   padding: 10px 14px;
   border-radius: 18px 18px 18px 6px;
-  background: #F3F4F6;
+  background: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(17, 24, 39, 0.08);
   color: var(--servio-text-primary);
 
   p {

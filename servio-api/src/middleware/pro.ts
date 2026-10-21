@@ -1,3 +1,4 @@
+// pro-only guard
 import { and, eq } from 'drizzle-orm';
 import { createMiddleware } from 'hono/factory';
 import { proProfiles, users } from '../db/schema';

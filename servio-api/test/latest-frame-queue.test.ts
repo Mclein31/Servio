@@ -1,3 +1,4 @@
+// gps queue tests
 import {describe,it,expect} from 'vitest';
 import {LatestFrameQueue} from '../src/live/latest-frame-queue';
 describe('latest GPS processing',()=>{

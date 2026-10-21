@@ -1,3 +1,4 @@
+// wallet routes
 import { eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import * as v from 'valibot';

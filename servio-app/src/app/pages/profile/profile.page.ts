@@ -1,3 +1,4 @@
+// profile page
 import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';

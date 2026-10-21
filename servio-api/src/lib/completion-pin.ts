@@ -1,3 +1,4 @@
+// job completion pin
 import { ApiError } from './errors';
 
 export async function completionPin(secret: string | undefined, bookingId: string): Promise<string> {

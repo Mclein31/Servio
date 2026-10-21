@@ -1,3 +1,4 @@
+// stepper
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { IonIcon } from '@ionic/angular';
 import { buildMilestones, StepMilestone } from '../../models/ui.models';

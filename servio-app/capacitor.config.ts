@@ -1,3 +1,4 @@
+// capacitor config
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const demo = process.env['SERVIO_BUILD'] === 'demo';

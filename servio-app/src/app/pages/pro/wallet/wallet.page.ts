@@ -1,3 +1,4 @@
+// pro wallet page
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonIcon, IonModal, IonTitle, IonToolbar, ToastController } from '@ionic/angular';

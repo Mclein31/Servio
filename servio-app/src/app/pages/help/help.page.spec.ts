@@ -1,3 +1,4 @@
+// help page tests
 import { TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { vi } from 'vitest';

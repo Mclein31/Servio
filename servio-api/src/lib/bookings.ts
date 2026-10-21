@@ -1,3 +1,4 @@
+// booking helpers
 import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { Executor } from '../db/client';
 import { addonQuotes, bookingEvents, bookings as bookingTable, users, proProfiles, reviews } from '../db/schema';

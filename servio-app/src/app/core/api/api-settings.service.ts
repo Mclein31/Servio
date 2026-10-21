@@ -1,3 +1,4 @@
+// api settings
 import { Injectable, signal } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../../environments/environment';

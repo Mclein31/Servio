@@ -1,7 +1,8 @@
+// directory page
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ActionSheetController, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
 import { CATEGORIES } from '../../core/data/mock-data';
 import { CommunityService } from '../../core/services/community.service';
 import { SheetsService } from '../../core/services/sheets.service';
@@ -18,7 +19,6 @@ import { SearchFilterComponent } from '../../shared/components/search-filter/sea
 export class DirectoryPage {
   private readonly sheets = inject(SheetsService);
   private readonly router = inject(Router);
-  private readonly actionSheets = inject(ActionSheetController);
 
   readonly community = inject(CommunityService);
   ionViewWillEnter(): void { void this.community.refresh(); }
@@ -60,26 +60,5 @@ export class DirectoryPage {
 
   book(id: string): void {
     void this.router.navigate(['/checkout'], { queryParams: { helper: id } });
-  }
-
-  async openFilterSheet(): Promise<void> {
-    const sheet = await this.actionSheets.create({
-      header: 'Filter by Category',
-      buttons: [
-        ...this.chips.map((c) => ({
-          text: c.label,
-          icon: c.icon,
-          role: this.active() === c.id ? 'selected' : undefined,
-          handler: () => {
-            this.active.set(c.id);
-          },
-        })),
-        {
-          text: 'Cancel',
-          role: 'cancel',
-        },
-      ],
-    });
-    await sheet.present();
   }
 }

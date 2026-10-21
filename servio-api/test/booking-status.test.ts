@@ -1,3 +1,4 @@
+// booking status tests
 import { env } from 'cloudflare:test';
 import { and, eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

@@ -1,3 +1,4 @@
+// cors
 import { cors } from 'hono/cors';
 import { createMiddleware } from 'hono/factory';
 import type { AppEnv } from '../env';

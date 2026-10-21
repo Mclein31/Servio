@@ -1,3 +1,4 @@
+// post bulletin modal
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   IonContent,
@@ -47,7 +48,7 @@ const MAX_DESC = 200;
           <div class="cats">
             @for (c of categories; track c.id) {
               <button type="button" class="cat" [class.active]="category() === c.id" [attr.aria-pressed]="category() === c.id" (click)="pickCategory(c.id)">
-                <span class="well" [style.background]="c.tint" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
+                <span class="well" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
                 {{ c.shortLabel }}
               </button>
             }

@@ -1,3 +1,4 @@
+// onboarding tracking visual
 import {
   ChangeDetectionStrategy,
   Component,

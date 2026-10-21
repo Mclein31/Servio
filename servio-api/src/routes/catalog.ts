@@ -1,3 +1,4 @@
+// catalog routes
 import { asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { addonSkus, categories, serviceSkus } from '../db/schema';

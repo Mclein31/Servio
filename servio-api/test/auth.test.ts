@@ -1,3 +1,4 @@
+// auth tests
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from 'cloudflare:test';
 import { count, eq, sql } from 'drizzle-orm';

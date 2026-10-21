@@ -1,3 +1,4 @@
+// pro otp page
 .wrap {
   display: flex;
   flex-direction: column;
@@ -10,10 +11,8 @@
   width: 64px;
   height: 64px;
   margin-bottom: 18px;
-  border-radius: 20px;
-  background: var(--servio-green-surface);
   color: var(--servio-green-strong);
-  font-size: 32px;
+  font-size: 40px;
 }
 
 .servio-subtitle {
@@ -57,7 +56,8 @@
   margin-top: 24px;
   padding: 14px;
   border-radius: 16px;
-  background: var(--servio-green-surface);
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(17, 24, 39, 0.06);
   font-size: 13px;
   line-height: 19px;
   color: #065F46;
@@ -100,7 +100,6 @@
   height: 112px;
   color: var(--servio-green-strong);
   border-radius: 50%;
-  background: var(--servio-green-surface);
 }
 
 .success-btn {

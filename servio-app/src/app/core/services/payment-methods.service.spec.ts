@@ -1,3 +1,4 @@
+// payment methods tests
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { ApiService } from '../api/api.service';

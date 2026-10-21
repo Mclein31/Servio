@@ -1,3 +1,4 @@
+// city profiles and travel eta
 export const CANCELLATION_FEES = { enRouteCentavos: 10000, arrivedCentavos: 20000 } as const;
 
 export interface CityProfile {

@@ -1,3 +1,4 @@
+// demo auth tests
 import { env } from 'cloudflare:test';
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';

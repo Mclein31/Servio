@@ -1,3 +1,4 @@
+// demo guard tests
 import { describe, expect, it } from 'vitest';
 import { assertDemoDatabase, assertDisposableDemoDatabase, DEMO } from '../src/demo/guard';
 import { DEMO_BULLETIN, DEMO_IMAGES, DEMO_PROS } from '../src/demo/data';

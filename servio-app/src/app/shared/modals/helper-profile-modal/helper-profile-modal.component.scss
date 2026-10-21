@@ -1,3 +1,4 @@
+// helper profile modal
 .sheet {
   --background: var(--servio-surface);
 }
@@ -116,7 +117,7 @@ section {
   font-weight: 600;
 
   &.nbi {
-    background: var(--servio-green-surface);
+    background: #FFFFFF;
     border-color: #A7F3D0;
     color: var(--servio-green-text);
   }
@@ -147,7 +148,6 @@ section {
 
   &.selected {
     border-color: #FFB27F;
-    background: #FFFBF8;
   }
 }
 

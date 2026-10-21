@@ -1,3 +1,4 @@
+// mock data
 import {
   AddonSku,
   BulletinRequest,

@@ -1,3 +1,4 @@
+<!-- pro otp page -->
 @let o = orders.order();
 <ion-header class="ion-no-border">
   <ion-toolbar class="servio-detail-bar">
@@ -38,7 +39,7 @@
     <div class="success">
       <ion-icon class="tick" name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
       <h1><span class="price">{{ credited()! | php }}</span> Credited to Wallet!</h1>
-      <p>Escrow for order #{{ o.code ?? o.id }} moved from HOLD_AUTHORIZED to COMPLETED.</p>
+      <p>Escrow for order #{{ completedCode() }} moved from HOLD_AUTHORIZED to COMPLETED.</p>
       <button type="button" class="pill-btn block success-btn" (click)="viewWallet()">View Wallet</button>
     </div>
   }

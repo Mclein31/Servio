@@ -1,10 +1,11 @@
+<!-- tabs -->
 <ion-tabs>
   <ion-tab-bar slot="bottom" class="servio-tab-bar">
-    @for (item of tabs; track item.tab) {
+    @for (item of tabs(); track item.tab) {
       <ion-tab-button [tab]="item.tab">
         <span class="tab-pill">
           <ion-icon [name]="item.icon" aria-hidden="true"></ion-icon>
-          <ion-label>{{ item.label }}</ion-label>
+          <span class="tab-label"><ion-label>{{ item.label }}</ion-label></span>
         </span>
       </ion-tab-button>
     }

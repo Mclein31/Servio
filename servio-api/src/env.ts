@@ -1,3 +1,4 @@
+// worker env types
 import type { Database } from './db/client';
 
 export interface Bindings {

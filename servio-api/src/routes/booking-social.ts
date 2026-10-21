@@ -1,3 +1,4 @@
+// booking reviews and chat routes
 import { and, asc, eq, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import * as v from 'valibot';

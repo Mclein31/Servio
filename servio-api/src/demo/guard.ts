@@ -1,3 +1,4 @@
+// demo database guard
 export function assertDemoDatabase(raw: string | undefined, environment?: string): URL {
   if (['production', 'prod'].includes(environment?.trim().toLowerCase() ?? '')) throw new Error('Demo tools are disabled in production.');
   if (!raw) throw new Error('Set the SERVIO database URL before running demo tools.');

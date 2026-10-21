@@ -1,3 +1,4 @@
+// mailer tests
 import { connect } from 'cloudflare:sockets';
 import { env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';

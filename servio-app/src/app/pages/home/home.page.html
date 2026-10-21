@@ -1,3 +1,4 @@
+<!-- home page -->
 <ion-header class="ion-no-border">
   <ion-toolbar class="servio-app-bar">
     <div class="app-bar">
@@ -19,7 +20,7 @@
 <ion-content class="servio-page" [fullscreen]="false">
   <div class="servio-section first">
     @if (community.error()) { <p role="alert">{{ community.error() }} <button class="text-btn" (click)="community.refresh()">Retry</button></p> }
-    <app-search-filter placeholder="Search services, skills, or neighbors…" [selectedFilterCount]="0" (searchChange)="search($event)" (filterClick)="openFilters()"></app-search-filter>
+    <app-search-filter placeholder="Search services, skills, or neighbors…" (searchChange)="search($event)"></app-search-filter>
   </div>
 
   <div class="servio-section">
@@ -43,7 +44,7 @@
     </div>
     <div class="category-row">
       @for (c of categories; track c.id) {
-        <button type="button" class="category" [style.backgroundColor]="c.tint" (click)="openCategory(c.id)">
+        <button type="button" class="category" (click)="openCategory(c.id)">
           <span class="well" [style.color]="c.accent"><ion-icon [name]="c.icon" aria-hidden="true"></ion-icon></span>
           <span class="cat-label">{{ c.label }}</span>
           <span class="cat-caption">{{ c.caption }}</span>
@@ -68,7 +69,7 @@
         @for (r of bulletin(); track r.id) {
           <li>
             <a class="bulletin-row" routerLink="/tabs/bulletin">
-              <span class="req-icon" [style.backgroundColor]="categoryById[r.category]?.tint ?? 'var(--servio-orange-tint)'" [style.color]="categoryById[r.category]?.accent ?? 'var(--servio-brand-orange)'">
+              <span class="req-icon" [style.color]="categoryById[r.category]?.accent ?? 'var(--servio-brand-orange)'">
                 <ion-icon [name]="categoryById[r.category]?.icon ?? 'newspaper-outline'" aria-hidden="true"></ion-icon>
               </span>
               <span class="req-body">

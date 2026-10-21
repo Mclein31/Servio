@@ -1,3 +1,4 @@
+// latest gps frame queue
 export class LatestFrameQueue<K,V> {
   private readonly pending=new Map<K,V>();
   private running?:Promise<void>;
