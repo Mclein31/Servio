@@ -5,6 +5,7 @@ import * as v from 'valibot';
 import { bulletinRequests, bookings, proProfiles, proSkus, serviceSkus, users } from '../db/schema';
 import type { AppEnv } from '../env';
 import { ApiError } from '../lib/errors';
+import { issueLoyaltyCoupons, loyaltySummary } from '../lib/loyalty';
 import { ownedUpload, UPLOAD_KEY } from '../lib/uploads';
 import { validate } from '../lib/validation';
 import { requireUser } from '../middleware/auth';
@@ -223,6 +224,14 @@ me.post('/me/switch-role', validate('json', SwitchRoleSchema), async (c) => {
   });
 
   return c.json(result);
+});
+
+me.get('/me/rewards', async (c) => {
+  const summary = await c.get('db').transaction(async (tx) => {
+    await issueLoyaltyCoupons(tx, c.get('userId'));
+    return loyaltySummary(tx, c.get('userId'));
+  });
+  return c.json(summary);
 });
 
 me.get('/me/payment-methods', async (c) => {

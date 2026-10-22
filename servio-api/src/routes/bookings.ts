@@ -8,6 +8,7 @@ import type { AppEnv } from '../env';
 import { bookingDetails, bookingDetailsMany, participantBooking, serverNow } from '../lib/bookings';
 import { registerBookingSocial } from './booking-social';
 import { completionPin } from '../lib/completion-pin';
+import { claimCoupon, issueLoyaltyCoupons, markRedeemed, restoreCoupon } from '../lib/loyalty';
 import { sha256Hex, timingSafeEqualString } from '../lib/crypto';
 import { ApiError } from '../lib/errors';
 import { splitPayout, TRUST_FEE_CENTAVOS } from '../lib/money';
@@ -31,6 +32,7 @@ const CreateBooking = v.pipe(v.strictObject({
   paymentMethod: v.picklist(['GCASH', 'CARD']),
   proId: v.optional(v.pipe(v.string(), v.uuid())),
   bulletinId: v.optional(v.pipe(v.string(), v.uuid())),
+  couponId: v.optional(v.pipe(v.string(), v.uuid())),
 }), v.check((input) => input.schedule === 'ASAP'
   ? !input.scheduleStartAt && !input.scheduleEndAt
   : !!input.scheduleStartAt && !!input.scheduleEndAt && Date.parse(input.scheduleEndAt) > Date.parse(input.scheduleStartAt),
@@ -50,6 +52,7 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
   const requestHash = await sha256Hex(JSON.stringify([
     input.skuId, input.address.street, input.address.barangay, input.address.city, input.address.landmark ?? null,
     input.lat, input.lng, input.schedule, input.paymentMethod, input.proId ?? null, input.scheduleStartAt ?? null, input.scheduleEndAt ?? null, ...(input.bulletinId ? [input.bulletinId] : []),
+    ...(input.couponId ? [`coupon:${input.couponId}`] : []),
   ]));
   const trustFeeCentavos = Number(c.env.TRUST_FEE_CENTAVOS ?? TRUST_FEE_CENTAVOS);
   if (!Number.isInteger(trustFeeCentavos) || trustFeeCentavos < 0 || trustFeeCentavos > 2_147_483_647) {
@@ -87,6 +90,9 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     }
     const total = sku.priceCentavos + trustFeeCentavos;
     if (!Number.isSafeInteger(total) || total > 2_147_483_647) throw new ApiError(422, 'AMOUNT_TOO_LARGE', 'This booking exceeds the supported amount.');
+    const claim = input.couponId ? await claimCoupon(tx, input.couponId, customerId, sku.priceCentavos) : null;
+    const discountCentavos = claim?.discountCentavos ?? 0;
+    const charge = total - discountCentavos;
     const profile = cityProfile(c.env.LAUNCH_CITY);
     const scheduleStartAt = input.scheduleStartAt ? new Date(input.scheduleStartAt) : null;
     const scheduleEndAt = input.scheduleEndAt ? new Date(input.scheduleEndAt) : null;
@@ -96,16 +102,19 @@ bookings.post('/bookings', validate('json', CreateBooking), async (c) => {
     const [row] = await tx.insert(bookingTable).values({
       ...input, scheduleStartAt, scheduleEndAt, expectedArrivalAt: scheduleEndAt,
       noShowDeadlineAt: scheduleEndAt ? new Date(scheduleEndAt.getTime() + profile.noShowGraceMinutes * 60000) : null,
-      customerId, skuName: sku.name, priceCentavos: sku.priceCentavos, trustFeeCentavos,
+      customerId, skuName: sku.name, priceCentavos: sku.priceCentavos, trustFeeCentavos, discountCentavos,
       status: input.proId ? 'ACCEPTED' : 'PENDING_ACCEPTANCE', escrow: 'HOLD_AUTHORIZED',
       isDemo: customer!.isDemo, idempotencyKey: key, requestHash,
     }).returning();
-    await mockPayments.authorizeHold({ bookingId: row!.id, customerId, amountCentavos: total, paymentMethod: input.paymentMethod });
-    await tx.insert(bookingEvents).values({ bookingId: row!.id, status: row!.status, actorId: customerId, note: 'Mock escrow authorized.' });
+    if (claim) await markRedeemed(tx, claim.coupon.id, row!.id, await serverNow(tx));
+    await mockPayments.authorizeHold({ bookingId: row!.id, customerId, amountCentavos: charge, paymentMethod: input.paymentMethod });
+    await tx.insert(bookingEvents).values({ bookingId: row!.id, status: row!.status, actorId: customerId,
+      note: claim ? `Mock escrow authorized. Loyalty coupon ${claim.coupon.percentOff}% off (discount=${discountCentavos}).` : 'Mock escrow authorized.' });
     await tx.insert(messages).values({ bookingId: row!.id, body: `Booking ${row!.code} ${input.proId ? 'accepted' : 'posted'}. Mock escrow authorized.` });
     const txnId = crypto.randomUUID();
     await tx.insert(ledgerEntries).values([
-      { txnId, account: `customer:${customerId}`, amountCentavos: -total, bookingId: row!.id, kind: 'ESCROW_HOLD' },
+      { txnId, account: `customer:${customerId}`, amountCentavos: -charge, bookingId: row!.id, kind: 'ESCROW_HOLD' },
+      ...(discountCentavos ? [{ txnId, account: 'platform_promotions', amountCentavos: -discountCentavos, bookingId: row!.id, kind: 'ESCROW_HOLD', memo: 'Loyalty coupon' }] : []),
       { txnId, account: `escrow:${row!.id}`, amountCentavos: total, bookingId: row!.id, kind: 'ESCROW_HOLD' },
     ]);
     if (input.bulletinId) await tx.update(bulletinRequests).set({ bookingId: row!.id }).where(eq(bulletinRequests.id, input.bulletinId));
@@ -193,17 +202,21 @@ bookings.post('/bookings/:id/status', validate('param', idSchema), validate('jso
         SELECT COALESCE(SUM(amount_centavos), 0)::text AS held FROM ledger_entries WHERE account = ${`escrow:${booking.id}`}
       `);
       const held = Number(balanceResult.rows[0]!.held);
-      if (!Number.isSafeInteger(held) || held <= 0 || held > 2_147_483_647 || fee > held || (fee && !booking.proId)) {
+      if (!Number.isSafeInteger(held) || held <= 0 || held > 2_147_483_647 || fee > held || (fee && !booking.proId) || booking.discountCentavos > held) {
         throw new ApiError(409, 'ESCROW_INVALID', 'The escrow needs support review before cancelling.');
       }
-      const refund = held - fee;
+      // The customer gets back what they paid minus any fee; SERVIO's coupon funding returns to promotions.
+      const refund = Math.max(0, held - booking.discountCentavos - fee);
+      const promoBack = held - fee - refund;
       if (refund) await mockPayments.refund({ bookingId: booking.id, customerId: booking.customerId, amountCentavos: refund, paymentMethod: booking.paymentMethod });
       const txnId = crypto.randomUUID();
       await tx.insert(ledgerEntries).values([
         { txnId, bookingId: booking.id, account: `escrow:${booking.id}`, amountCentavos: -held, kind: 'REFUND' },
         ...(refund ? [{ txnId, bookingId: booking.id, account: `customer:${booking.customerId}`, amountCentavos: refund, kind: 'REFUND' }] : []),
         ...(fee ? [{ txnId, bookingId: booking.id, account: `pro_wallet:${booking.proId}`, amountCentavos: fee, kind: 'REFUND', memo: `${booking.status === 'ARRIVED' ? 'Visit' : 'Trip'} fee` }] : []),
+        ...(promoBack ? [{ txnId, bookingId: booking.id, account: 'platform_promotions', amountCentavos: promoBack, kind: 'REFUND', memo: 'Loyalty coupon' }] : []),
       ]);
+      await restoreCoupon(tx, booking.id);
       if (isPro) await tx.update(proProfiles).set({ cancellationStrikes: sql`${proProfiles.cancellationStrikes} + 1` }).where(eq(proProfiles.userId, userId));
       patch.escrow = 'REFUNDED';
       note = `${reason} [${isPro ? 'PRO_CANCELLED' : noShow ? 'NO_SHOW' : 'CUSTOMER_CANCELLED'}; fee=${fee}; refund=${refund}]`;
@@ -300,7 +313,7 @@ bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
       if (Number(balance.rows[0]!.held) !== detail.totalCentavos || row.escrow !== 'HOLD_AUTHORIZED') {
         throw new ApiError(409, 'ESCROW_INVALID', 'Escrow needs support review before release.');
       }
-      await mockPayments.capture({ bookingId: row.id, customerId: row.customerId, amountCentavos: detail.totalCentavos, paymentMethod: row.paymentMethod });
+      await mockPayments.capture({ bookingId: row.id, customerId: row.customerId, amountCentavos: detail.totalCentavos - row.discountCentavos, paymentMethod: row.paymentMethod });
       const split = splitPayout(gross);
       const txnId = crypto.randomUUID();
       await tx.insert(ledgerEntries).values([
@@ -313,6 +326,8 @@ bookings.post('/bookings/:id/verify-pin', validate('param', idSchema),
       await tx.insert(bookingEvents).values({ bookingId: row.id, status: 'COMPLETED', actorId: c.get('userId'), note: 'Customer completion PIN verified.', createdAt: await serverNow(tx) });
       await tx.insert(messages).values({ bookingId: row.id, body: 'Job completed. Escrow released after customer PIN verification.', createdAt: await serverNow(tx) });
       await tx.update(proProfiles).set({ jobsDone: sql`${proProfiles.jobsDone} + 1` }).where(eq(proProfiles.userId, row.proId!));
+      const rewards = await issueLoyaltyCoupons(tx, row.customerId);
+      if (rewards.length) c.set('liveHints', { ...c.get('liveHints'), rewards });
       return { booking: changed! };
     });
     if (result.error) throw result.error;

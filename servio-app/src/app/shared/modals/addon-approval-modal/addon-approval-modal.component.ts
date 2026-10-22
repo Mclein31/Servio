@@ -78,8 +78,8 @@ export class AddonApprovalModalComponent {
 
   readonly newTotal = computed(() => {
     const q = this.quote();
-    if (!q) return this.orders.escrowTotalPhp();
-    return q.decision === 'APPROVED' ? this.orders.escrowTotalPhp() : roundCentavos(this.orders.escrowTotalPhp() + q.sku.pricePhp);
+    if (!q) return this.orders.customerTotalPhp();
+    return q.decision === 'APPROVED' ? this.orders.customerTotalPhp() : roundCentavos(this.orders.customerTotalPhp() + q.sku.pricePhp);
   });
 
   constructor() {
@@ -100,7 +100,7 @@ export class AddonApprovalModalComponent {
     catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not decide add-on.'); return; }
     finally { this.saving.set(false); }
     const toast = await this.toasts.create({
-      message: approve ? `Approved. Escrow is now ${formatPhp(this.orders.escrowTotalPhp())}.` : 'Add-on declined. Your helper continues the original job.',
+      message: approve ? `Approved. Escrow is now ${formatPhp(this.orders.customerTotalPhp())}.` : 'Add-on declined. Your helper continues the original job.',
       duration: 2000,
       position: 'top',
       color: approve ? 'success' : undefined,

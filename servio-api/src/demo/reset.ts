@@ -22,7 +22,8 @@ export async function resetDemoOrder(db: Database, userId: string, city?: string
     const txnId = crypto.randomUUID();
     const total = booking.priceCentavos+booking.trustFeeCentavos;
     const rows = [...net.rows.map((r) => ({ account:r.account, amountCentavos:-Number(r.amount) })),
-      { account:`customer:${booking.customerId}`,amountCentavos:-total },{ account:`escrow:${booking.id}`,amountCentavos:total }];
+      { account:`customer:${booking.customerId}`,amountCentavos:-(total-booking.discountCentavos) },{ account:`escrow:${booking.id}`,amountCentavos:total },
+      ...(booking.discountCentavos ? [{ account:'platform_promotions',amountCentavos:-booking.discountCentavos }] : [])];
     if (rows.some((r) => !Number.isSafeInteger(r.amountCentavos) || Math.abs(r.amountCentavos)>2147483647)) throw new ApiError(409,'FULL_RESET_REQUIRED','Use the guarded full demo reset.');
     await tx.insert(ledgerEntries).values(rows.map((r) => ({ ...r,txnId,bookingId:booking.id,kind:'DEMO_RESET',memo:'Order reset' })));
     const [review] = await tx.select().from(reviews).where(eq(reviews.bookingId,booking.id));

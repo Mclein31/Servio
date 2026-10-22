@@ -114,6 +114,10 @@ h3 {
     font-weight: 600;
   }
 
+  &.discount .price {
+    color: #059669;
+  }
+
   &.total {
     color: var(--servio-text-primary);
     font-weight: 700;
@@ -192,6 +196,15 @@ h3 {
 
   &.card {
     color: var(--servio-text-primary);
+  }
+
+  &.coupon {
+    color: #B45309;
+    background: var(--servio-amber-surface);
+  }
+
+  &.none {
+    color: var(--servio-text-muted);
   }
 }
 

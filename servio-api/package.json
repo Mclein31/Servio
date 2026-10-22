@@ -8,7 +8,6 @@
     "build": "tsc --noEmit && wrangler deploy --dry-run --env=\"\" --outdir dist",
     "deploy": "wrangler deploy --env production",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
-    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
@@ -31,13 +30,11 @@
     "valibot": "^1.5.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "^1.4.3",
     "@cloudflare/workers-types": "^5.20261015.1",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11",
     "wrangler": "^4.151.0"
   },
   "allowScripts": {

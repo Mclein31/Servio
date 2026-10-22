@@ -53,10 +53,31 @@
       </div>
     </section>
 
+    @if (rewards.available().length) {
+    <section>
+      <h3>Loyalty coupon</h3>
+      <div class="servio-card methods" role="radiogroup" aria-label="Loyalty coupon">
+        @for (c of rewards.available(); track c.id) {
+          <button type="button" class="method" role="radio" [attr.aria-checked]="couponId() === c.id" (click)="couponId.set(c.id)">
+            <span class="logo coupon"><ion-icon name="pricetag-outline" aria-hidden="true"></ion-icon></span>
+            <span class="grow"><strong>{{ c.percentOff }}% off · save {{ couponSaving(c) | php }}</strong><span>Earned at {{ c.milestone }} orders · up to {{ c.maxDiscountCentavos / 100 | php }}</span></span>
+            <span class="radio" [class.on]="couponId() === c.id"></span>
+          </button>
+        }
+        <button type="button" class="method" role="radio" [attr.aria-checked]="!couponId()" (click)="couponId.set(null)">
+          <span class="logo none"><ion-icon name="close" aria-hidden="true"></ion-icon></span>
+          <span class="grow"><strong>Don't use a coupon</strong><span>Save it for a later booking</span></span>
+          <span class="radio" [class.on]="!couponId()"></span>
+        </button>
+      </div>
+    </section>
+    }
+
     <section class="servio-card panel">
       <h3 class="flush">Escrow breakdown</h3>
       <div class="line"><span>Base Labor · {{ sku.name }}</span><span class="price">{{ sku.pricePhp | php }}</span></div>
       <div class="line"><span>Platform Trust & Safety Fee</span><span class="price">{{ feePhp() | php }}</span></div>
+      @if (coupon(); as c) { <div class="line discount"><span>Loyalty coupon · {{ c.percentOff }}% off</span><span class="price">−{{ discountPhp() | php }}</span></div> }
       <div class="divider"></div>
       <div class="line total"><span>Total Escrow Hold</span><span class="price">{{ totalPhp() | php }}</span></div>
     </section>

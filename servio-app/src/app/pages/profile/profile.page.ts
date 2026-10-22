@@ -77,6 +77,7 @@ export class ProfilePage {
       { label: 'Saved Addresses', caption: 'Pin your home or work on the map', icon: 'location-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/addresses' },
       { label: 'My Requests & Bookings', caption: 'Active and past orders', icon: 'receipt-outline', tint: 'var(--servio-cat-repairs)', ink: '#D04A00', route: '/tabs/tracking' },
       { label: 'Saved Helpers', caption: 'Neighbors you trust', icon: 'heart-outline', tint: 'var(--servio-cat-beauty)', ink: '#DB2777', route: '/tabs/directory' },
+      { label: 'Loyalty Rewards', caption: 'Earn coupons as you keep booking', route: '/rewards', icon: 'gift-outline', tint: 'var(--servio-amber-surface)', ink: '#B45309' },
       { label: 'Payment Methods (GCash / Card)', caption: 'Choose your preferred checkout method', route: '/payment-methods', icon: 'card-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
       { label: 'Help & Community Safety', caption: 'Disputes, safety and support', route: '/help', icon: 'shield-checkmark-outline', tint: 'var(--servio-cat-tutoring)', ink: '#2563EB' },
     ];

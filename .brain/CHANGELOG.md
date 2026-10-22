@@ -2,6 +2,13 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.37] — 2026-10-22
+### Added
+- **Loyalty coupons (ADR-038):** customers earn a coupon at 3, 10 and 15 completed orders (`config/loyalty.ts`). New `customer_coupons` table and `bookings.discount_centavos` (migration `0012_loyalty_coupons`), `GET /me/rewards`, optional `couponId` on `POST /bookings`, and a `REWARD` notification kind. SERVIO funds discounts through the `platform_promotions` ledger account; Pro payouts are unchanged and cancelled bookings return their coupon.
+- **App:** Loyalty Rewards page (`/rewards`, linked from Profile) with progress, coupons and milestones; checkout coupon picker (best coupon preselected, can be removed) with a discount line; customer totals on Tracking, the PIN sheet, add-on approval, receipt and history show the discounted amount.
+- Verified on local `servio_dev` with wrangler dev: backfill, redeem, reuse rejection, cancel refund + coupon return, and completion ledger (customer −₱1,050, promotions −₱100, Pro +₱935, platform +₱215). App build and lint pass. Automated test suites are currently removed from the working tree, so none were run.
+- Production: migration 0012 applied to Neon (13/13) and Worker deployed (version 61a1ed4c); `/me/rewards` responds with auth required and health is ok.
+
 ## [0.5.36] — 2026-10-22
 ### Changed
 - **Bulletin hides completed requests:** `GET /bulletin` excludes `COMPLETED` rows (including the author's own); `CommunityService.requests` filters them too, so Bulletin and the Home preview show only unfinished requests.

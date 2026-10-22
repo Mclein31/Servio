@@ -57,6 +57,7 @@ export interface Order {
   schedule: string;
   paymentMethod: PaymentMethod;
   trustFeePhp: number;
+  discountPhp?: number;
   addons: AddonQuote[];
   status: OrderStatus;
   escrow: EscrowState;

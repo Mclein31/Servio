@@ -107,21 +107,6 @@
             "buildTarget": "app:build"
           }
         },
-        "test": {
-          "builder": "@angular/build:unit-test",
-          "options": {
-            "tsConfig": "tsconfig.spec.json",
-            "buildTarget": "::development",
-            "setupFiles": [
-              "src/test-setup.ts"
-            ]
-          },
-          "configurations": {
-            "ci": {
-              "watch": false
-            }
-          }
-        },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {

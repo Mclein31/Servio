@@ -14,6 +14,7 @@ import { PhpPipe } from '../../shared/pipes/php.pipe';
 import { PaymentMethodsService } from '../../core/services/payment-methods.service';
 import { AddressService } from '../../core/services/address.service';
 import { roundCentavos } from '../../shared/utils/money';
+import { couponDiscountPhp, RewardsService } from '../../core/services/rewards.service';
 
 export function scheduleWindow(label: string, now = new Date()): { scheduleStartAt: string; scheduleEndAt: string } | undefined {
   if (label.startsWith('Immediate')) return undefined;
@@ -37,6 +38,7 @@ export class CheckoutPage {
   private readonly location = inject(Location);
   private readonly paymentMethods = inject(PaymentMethodsService);
   readonly addresses = inject(AddressService);
+  readonly rewards = inject(RewardsService);
   readonly auth = inject(AuthService);
 
   @ViewChild(SlideToConfirmComponent) slide?: SlideToConfirmComponent;
@@ -52,6 +54,8 @@ export class CheckoutPage {
   readonly schedule = signal(this.schedules[0]);
   readonly payment = signal<PaymentMethod>('GCASH');
   private paymentInitialized = false;
+  readonly couponId = signal<string | null>(null);
+  private couponInitialized = false;
   readonly address = this.addresses.selected;
 
   readonly isOwnHelper = computed(() => {
@@ -63,7 +67,10 @@ export class CheckoutPage {
   });
 
   readonly feePhp = this.community.trustFeePhp;
-  readonly totalPhp = computed(() => roundCentavos((this.sku()?.pricePhp ?? 0) + this.feePhp()));
+  readonly coupon = computed(() => this.rewards.available().find((c) => c.id === this.couponId()) ?? null);
+  readonly discountPhp = computed(() => { const c = this.coupon(); return c ? couponDiscountPhp(this.sku()?.pricePhp ?? 0, c) : 0; });
+  readonly totalPhp = computed(() => roundCentavos((this.sku()?.pricePhp ?? 0) + this.feePhp() - this.discountPhp()));
+  couponSaving(coupon: { percentOff: number; maxDiscountCentavos: number }): number { return couponDiscountPhp(this.sku()?.pricePhp ?? 0, coupon); }
 
   async ionViewWillEnter(): Promise<void> {
     this.sku.set(null); this.helper.set(null); this.error.set('');
@@ -82,10 +89,21 @@ export class CheckoutPage {
       const sku = (helper?.skus ?? this.community.skus()).find((s) => s.id === this.query.get('sku')) ?? (helper?.skus ?? this.community.skus())[0];
       if (!sku) throw new Error('No catalog services are available yet.');
       this.sku.set(sku);
+      await this.loadCoupons();
       if (this.isOwnHelper()) {
         this.error.set('You cannot book your own service.');
       }
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not load checkout.'); }
+  }
+
+  // Coupons are optional: a rewards failure must not block checkout.
+  private async loadCoupons(): Promise<void> {
+    try { await this.rewards.refresh(); } catch { return; }
+    if (this.couponId() && !this.coupon()) this.couponId.set(null);
+    if (!this.couponInitialized) {
+      const best = [...this.rewards.available()].sort((a, b) => this.couponSaving(b) - this.couponSaving(a))[0];
+      this.couponId.set(best?.id ?? null); this.couponInitialized = true;
+    }
   }
 
   back(): void {
@@ -106,15 +124,18 @@ export class CheckoutPage {
     if (!this.address()) { this.error.set('Choose and confirm your service address first.'); this.slide?.reset(); return; }
     this.saving.set(true); this.error.set('');
     const window = scheduleWindow(this.schedule());
-    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window, this.address(), this.bulletinId]);
+    const fingerprint = JSON.stringify([this.payment(), this.schedule(), this.sku()?.id, this.helper()?.id, window, this.address(), this.bulletinId, this.coupon()?.id]);
     if (this.attempt?.fingerprint !== fingerprint) this.attempt = { fingerprint, key: crypto.randomUUID() };
     try {
-      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window, this.address()!, this.bulletinId);
+      await this.orders.book(this.payment(), this.schedule(), this.sku()!, this.helper() ?? undefined, this.attempt.key, window, this.address()!, this.bulletinId, this.coupon()?.id);
       await this.router.navigateByUrl('/tabs/tracking', { replaceUrl: true });
       if (this.community.api.settings.useMockApi()) setTimeout(() => {
         if (this.community.api.settings.useMockApi() && this.orders.order().status === 'ACCEPTED') this.orders.setStatus('EN_ROUTE');
       }, 3500);
-    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Could not authorize booking.'); this.slide?.reset(); }
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not authorize booking.'); this.slide?.reset();
+      if (this.couponId()) await this.loadCoupons();
+    }
     finally { this.saving.set(false); }
   }
 }

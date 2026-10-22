@@ -45,7 +45,7 @@ function qrCells(seed: string): boolean[] {
             <div class="released">
               <span class="check"><ion-icon name="checkmark" aria-hidden="true"></ion-icon></span>
               <h1 class="sheet-title">Job complete</h1>
-              <p><span class="price">{{ orders.escrowTotalPhp() | php }}</span> was settled from escrow. {{ o.helper.name }} received <span class="price">{{ orders.proPayoutPhp() | php }}</span>; the remainder covers the platform share and trust fee.</p>
+              <p><span class="price">{{ orders.escrowTotalPhp() | php }}</span> was settled from escrow. {{ o.helper.name }} received <span class="price">{{ orders.proPayoutPhp() | php }}</span>; the remainder covers the platform share and trust fee.@if (orders.discountPhp() > 0) { Your loyalty coupon saved you <span class="price">{{ orders.discountPhp() | php }}</span>. }</p>
             </div>
             @if (o.reviewed) {
               <p class="thanks">Thanks for rating {{ o.helper.name }}.</p>
@@ -91,7 +91,7 @@ function qrCells(seed: string): boolean[] {
 
             <div class="warning">
               <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
-              <p>Do not release this PIN if you are dissatisfied. Sharing this PIN authorizes the release of <strong class="price">{{ orders.escrowTotalPhp() | php }}</strong> from escrow.</p>
+              <p>Do not release this PIN if you are dissatisfied. Sharing this PIN authorizes the release of <strong class="price">{{ orders.customerTotalPhp() | php }}</strong> from escrow.</p>
             </div>
 
             <div class="sheet-actions">

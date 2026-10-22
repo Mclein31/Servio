@@ -60,6 +60,11 @@ export function bookingNotices(b: BookingInfo, change: BookingChange, actorId: s
   return out.filter((n) => n.userId !== actorId);
 }
 
+export function rewardNotices(rewards: { customerId: string; milestone: number; percentOff: number; maxDiscountCentavos: number }[]): Notice[] {
+  return rewards.map((r) => ({ userId: r.customerId, bookingId: null, kind: 'REWARD', route: '/rewards',
+    title: `You earned ${r.percentOff}% off`, body: `Thanks for ${r.milestone} completed orders! Use your coupon (up to ₱${r.maxDiscountCentavos / 100}) on your next booking.` }));
+}
+
 export function bulletinNotices(request: { id: string; authorId: string; acceptedProId: string | null }, action: 'accept' | 'release' | 'cancel', actorId: string, previousProId?: string | null): Notice[] {
   const route = '/tabs/bulletin';
   const n = (userId: string | null | undefined, title: string, body: string): Notice[] => userId && userId !== actorId ? [{ userId, kind: 'BULLETIN', title, body, route, bookingId: null }] : [];

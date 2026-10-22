@@ -220,6 +220,7 @@ export const bookings = pgTable(
     priceCentavos: integer('price_centavos').notNull(),
     trustFeeCentavos: integer('trust_fee_centavos').notNull(),
     tipCentavos: integer('tip_centavos').notNull().default(0),
+    discountCentavos: integer('discount_centavos').notNull().default(0),
     address: jsonb('address').$type<AddressSnapshot>().notNull(),
     lat: doublePrecision('lat').notNull(),
     lng: doublePrecision('lng').notNull(),
@@ -243,6 +244,31 @@ export const bookings = pgTable(
     check('bookings_money_chk', sql`${t.priceCentavos} > 0 AND ${t.trustFeeCentavos} >= 0 AND ${t.tipCentavos} >= 0`),
     check('bookings_schedule_window_chk', sql`(${t.scheduleStartAt} IS NULL AND ${t.scheduleEndAt} IS NULL) OR (${t.scheduleStartAt} IS NOT NULL AND ${t.scheduleEndAt} IS NOT NULL AND ${t.scheduleEndAt} > ${t.scheduleStartAt})`),
     check('bookings_pin_attempts_chk', sql`${t.pinAttempts} >= 0`),
+    check('bookings_discount_chk', sql`${t.discountCentavos} >= 0 AND ${t.discountCentavos} < ${t.priceCentavos}`),
+  ],
+);
+
+export const customerCoupons = pgTable(
+  'customer_coupons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => users.id),
+    milestone: smallint('milestone').notNull(),
+    percentOff: smallint('percent_off').notNull(),
+    maxDiscountCentavos: integer('max_discount_centavos').notNull(),
+    status: text('status').$type<'AVAILABLE' | 'REDEEMED'>().notNull().default('AVAILABLE'),
+    bookingId: uuid('booking_id').references(() => bookings.id),
+    redeemedAt: timestamp('redeemed_at', { withTimezone: true }),
+    createdAt: created(),
+  },
+  (t) => [
+    uniqueIndex('customer_coupons_milestone_uq').on(t.customerId, t.milestone),
+    index('customer_coupons_booking_idx').on(t.bookingId),
+    check('customer_coupons_status_chk', sql`${t.status} IN ('AVAILABLE','REDEEMED')`),
+    check('customer_coupons_redemption_chk', sql`(${t.status} = 'AVAILABLE') = (${t.bookingId} IS NULL)`),
+    check('customer_coupons_amount_chk', sql`${t.percentOff} BETWEEN 1 AND 90 AND ${t.maxDiscountCentavos} > 0`),
   ],
 );
 
@@ -439,7 +465,7 @@ export const supportRequests = pgTable('support_requests', {
   check('support_requests_status_chk',sql`${t.status} IN ('OPEN','REVIEWING','RESOLVED')`),
 ]);
 
-export const NOTIFICATION_KINDS = ['BOOKING', 'MESSAGE', 'ADDON', 'OFFER', 'BULLETIN', 'REVIEW'] as const;
+export const NOTIFICATION_KINDS = ['BOOKING', 'MESSAGE', 'ADDON', 'OFFER', 'BULLETIN', 'REVIEW', 'REWARD'] as const;
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
@@ -453,6 +479,6 @@ export const notifications = pgTable('notifications', {
 }, (t) => [
   index('notifications_owner_created_idx').on(t.userId, t.createdAt, t.id),
   index('notifications_owner_unread_idx').on(t.userId).where(sql`${t.readAt} IS NULL`),
-  check('notifications_kind_chk', sql`${t.kind} IN ('BOOKING','MESSAGE','ADDON','OFFER','BULLETIN','REVIEW')`),
+  check('notifications_kind_chk', sql`${t.kind} IN ('BOOKING','MESSAGE','ADDON','OFFER','BULLETIN','REVIEW','REWARD')`),
   check('notifications_route_chk', sql`${t.route} IS NULL OR ${t.route} ~ '^/[A-Za-z0-9/_-]{0,200}$'`),
 ]);

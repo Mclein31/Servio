@@ -64,9 +64,9 @@
       <div class="escrow-line">
         <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
         @if (o.escrow === 'REFUNDED') { <span>Booking cancelled · refund recorded</span> } @else if (o.escrow === 'HOLD_AUTHORIZED') {
-          <span><span class="price">{{ orders.escrowTotalPhp() | php }}</span> held in escrow until you share your PIN</span>
+          <span><span class="price">{{ orders.customerTotalPhp() | php }}</span> held in escrow until you share your PIN</span>
         } @else {
-          <span>Escrow released · <span class="price">{{ orders.escrowTotalPhp() | php }}</span></span>
+          <span>Escrow released · <span class="price">{{ orders.customerTotalPhp() | php }}</span></span>
         }
       </div>
 

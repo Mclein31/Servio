@@ -41,7 +41,7 @@ try {
       await client.query('LOCK TABLE users,bookings,bulletin_requests IN ACCESS EXCLUSIVE MODE');
       const real=await client.query('SELECT 1 FROM users WHERE NOT is_demo UNION ALL SELECT 1 FROM bookings WHERE NOT is_demo UNION ALL SELECT 1 FROM bulletin_requests WHERE NOT is_demo LIMIT 1');
       if (real.rowCount) throw new Error('Refusing to truncate non-demo rows.');
-      await client.query('TRUNCATE notifications,support_requests,sessions,login_codes,uploads,user_addresses,addon_quotes,dispatch_offers,messages,reviews,ledger_entries,payouts,booking_events,bookings,bulletin_requests,pro_skus,pro_profiles,users');
+      await client.query('TRUNCATE customer_coupons,notifications,support_requests,sessions,login_codes,uploads,user_addresses,addon_quotes,dispatch_offers,messages,reviews,ledger_entries,payouts,booking_events,bookings,bulletin_requests,pro_skus,pro_profiles,users');
       await client.query("ALTER SEQUENCE booking_code_seq RESTART WITH 8800");
       await client.query('COMMIT');
     } catch(error) { await client.query('ROLLBACK'); throw error; }

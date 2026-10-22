@@ -66,6 +66,9 @@ const RATING_WORDS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
         <div class="line"><span>Approved add-ons</span><span class="price">{{ orders.approvedAddonsPhp() | php }}</span></div>
       }
       <div class="line"><span>Trust & Safety Fee</span><span class="price">{{ o.trustFeePhp | php }}</span></div>
+      @if (orders.discountPhp() > 0) {
+        <div class="line discount"><span>Loyalty coupon</span><span class="price">−{{ orders.discountPhp() | php }}</span></div>
+      }
       <div class="line tip"><span>Tip for {{ o.helper.name }}</span><span class="price">{{ tipPhp() | php }}</span></div>
       <div class="divider"></div>
       <div class="line total"><span>Total paid</span><span class="price">{{ totalPhp() | php }}</span></div>
@@ -100,7 +103,7 @@ export class RatingFormComponent {
     const t = this.tip();
     return roundCentavos(t === 'custom' ? Math.min(5000, Math.max(0, this.custom())) : t);
   });
-  readonly totalPhp = computed(() => roundCentavos(this.orders.escrowTotalPhp() + this.tipPhp()));
+  readonly totalPhp = computed(() => roundCentavos(this.orders.customerTotalPhp() + this.tipPhp()));
   readonly canSubmit = computed(() => this.rating() > 0 && !this.saving() && !this.orders.order().reviewed);
 
   rate(s: number): void {

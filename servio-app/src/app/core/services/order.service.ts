@@ -92,6 +92,9 @@ export class OrderService {
   );
   readonly serviceGrossPhp = computed(() => roundCentavos(this.state().sku.pricePhp + this.approvedAddonsPhp()));
   readonly escrowTotalPhp = computed(() => roundCentavos(this.serviceGrossPhp() + this.state().trustFeePhp));
+  readonly discountPhp = computed(() => this.state().discountPhp ?? 0);
+  // What the customer pays; SERVIO funds the loyalty discount, so escrow and Pro payout stay whole.
+  readonly customerTotalPhp = computed(() => roundCentavos(this.escrowTotalPhp() - this.discountPhp()));
   readonly basePayout = computed(() => splitPayout(this.state().sku.pricePhp));
   readonly addonPayoutPhp = computed(() =>
     roundCentavos(
@@ -174,7 +177,7 @@ export class OrderService {
     });
   }
 
-  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress, bulletinId?: string): Promise<void> {
+  async book(paymentMethod: PaymentMethod, schedule: string, sku?: ServiceSku, helper?: HelperSummary, key: string = crypto.randomUUID(), window?: { scheduleStartAt: string; scheduleEndAt: string }, place?: SavedAddress, bulletinId?: string, couponId?: string): Promise<void> {
     const user = this.auth.user();
     if (helper && user) {
       const isSelf = helper.id === user.id || (this.api.settings.useMockApi() && !!user.fullName && helper.name === user.fullName);
@@ -185,7 +188,7 @@ export class OrderService {
       if (!place) throw new Error('Choose and confirm your service address.');
       const { booking } = await this.api.post<{ booking: BookingDto }>('/bookings', {
         skuId: sku.id, address: { street: place.street, barangay: place.barangay, city: place.city, ...(place.landmark?.trim() ? { landmark: place.landmark.trim() } : {}) }, lat: place.lat, lng: place.lng,
-        schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}), ...(bulletinId ? { bulletinId } : {}),
+        schedule: schedule.startsWith('Immediate') ? 'ASAP' : schedule, ...window, paymentMethod, ...(helper?.id ? { proId: helper.id } : {}), ...(bulletinId ? { bulletinId } : {}), ...(couponId ? { couponId } : {}),
       }, { 'Idempotency-Key': key });
       await this.load(booking.id); return;
     }
@@ -316,7 +319,7 @@ export class OrderService {
         helper: b.pro?.name ?? 'SERVIO Pro', when: new Date(b.events[b.events.length - 1]?.createdAt ?? Date.now()).toLocaleDateString('en-PH'),
         status: b.status, bookingId: b.id, rating: b.reviewRating ?? null,
         canReview: b.status === 'COMPLETED' && b.customerId === this.auth.user()?.id && !b.reviewed,
-        amountPhp: (b.priceCentavos + b.trustFeeCentavos + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
+        amountPhp: (b.priceCentavos + b.trustFeeCentavos - (b.discountCentavos ?? 0) + b.addons.filter((a) => a.decision === 'APPROVED').reduce((sum,a) => sum + a.priceCentavos,0) + b.tipCentavos) / 100 })));
       const selected = (this.kept && this.kept === this.state().id ? result.bookings.find((b) => b.id === this.kept) : undefined) ?? selectActiveBooking(result.bookings, this.state().id);
       const order = selected ? await this.fromApi(selected) : this.emptyOrder();
       if (revision === this.revision) { this.state.set(order); this.error.set(''); if(selected)void this.hydrateImages(selected,revision); }
@@ -405,7 +408,7 @@ export class OrderService {
         avatarUrl: this.state().helper.id===b.proId ? this.state().helper.avatarUrl : '', rating: b.pro?.rating ?? helper?.rating ?? 0, reviewCount: b.pro?.ratingCount ?? helper?.reviewCount ?? 0 },
       customerName, customerAvatarUrl: this.state().customerId===b.customerId ? this.state().customerAvatarUrl : '',
       address: { ...b.address, landmark: b.address.landmark ?? '' }, schedule: b.schedule === 'ASAP' ? 'Immediate / ASAP' : b.schedule,
-      paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, status: b.status, escrow: b.escrow,
+      paymentMethod: b.paymentMethod, trustFeePhp: b.trustFeeCentavos / 100, discountPhp: (b.discountCentavos ?? 0) / 100, status: b.status, escrow: b.escrow,
       completionPin: b.completionPin ?? '', tipPhp: b.tipCentavos / 100,
       statusTimes: Object.fromEntries(currentEvents.map((e) => [e.status, new Date(e.createdAt)])),
       addons: b.addons.map((a) => ({ id: a.id, sku: { id: a.addonSkuId, name: a.addonName, pricePhp: a.priceCentavos / 100, detail: '' },

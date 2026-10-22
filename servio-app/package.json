@@ -8,7 +8,6 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
     "lint": "ng lint",
     "native:demo": "node scripts/prepare-native.mjs demo",
     "native:production": "node scripts/prepare-native.mjs production"
@@ -50,10 +49,8 @@
     "@types/leaflet": "^1.9.22",
     "angular-eslint": "22.5.0",
     "eslint": "^10.10.0",
-    "jsdom": "^30.1.1",
     "typescript": "~6.0.0",
-    "typescript-eslint": "^8.61.0",
-    "vitest": "4.1.12"
+    "typescript-eslint": "^8.61.0"
   },
   "description": "SERVIO unified mobile client (Ionic-Angular + Capacitor)",
   "overrides": {

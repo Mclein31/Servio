@@ -1,434 +1,860 @@
-# SERVIO Backend Audit & Q&A Guide
+# SERVIO Backend Cheat Sheet (plain-English version)
 
-> **Written:** 2026-10-21 · **Scope:** `servio-api/` (Cloudflare Worker) and the `servio-app/` code that talks to it.
-> All links are relative to this file. Line numbers match the code as of this date.
+> **Written:** 2026-10-21 · **Simplified:** 2026-10-22 · **Covers:** `servio-api/` (the server) and the parts of `servio-app/` (the phone app) that talk to it.
+> Links open the real code. Each section starts with a plain explanation, then the details.
+
+---
+
+## 0. Words you'll hear (glossary)
+
+| Word | Plain meaning |
+|---|---|
+| **Backend / server / API** | The program on the internet that the app asks for data ("give me my bookings", "create a booking"). |
+| **Frontend / app** | What the user sees and taps on the phone. |
+| **Endpoint / route** | One "door" on the server, like `POST /bookings`. Each one does one job. |
+| **GET / POST / PATCH / DELETE** | The type of request: read / create or do something / edit / remove. |
+| **JSON** | The text format the app and server use to send data: `{ "name": "Ana" }`. |
+| **Database (Postgres)** | Where everything is saved permanently: users, bookings, money, messages. Think of a big set of Excel sheets (tables). |
+| **Table / row** | A sheet / one line in that sheet (one booking = one row in `bookings`). |
+| **Transaction** | A group of DB changes that either **all** happen or **none** happen. No half-finished money moves. |
+| **Lock (`FOR UPDATE`)** | "I'm using this row, wait your turn." Stops two people changing the same thing at once. |
+| **Token** | A long random string the app gets after login. It's like a wristband at an event: show it and you're let in. |
+| **Hash** | A one-way scramble. You can check if something matches, but you can't un-scramble it. Used so stolen data is useless. |
+| **HMAC** | A hash mixed with a secret key only the server knows, so nobody else can make a valid one. |
+| **WebSocket** | A phone line that stays open between app and server so the server can push updates instantly. Normal requests are more like sending letters. |
+| **Cloudflare Worker** | Our server code, run by Cloudflare on their computers worldwide. We don't manage any machine. |
+| **Durable Object** | A tiny always-the-same mini-server on Cloudflare. We use them as "chat rooms" for live updates. |
+| **R2** | Cloudflare's file storage (like Google Drive for the app's photos). |
+| **Mock** | Fake version used for testing/demos (e.g. fake payments). |
+| **Centavos** | We store ₱150.50 as `15050` so math never has decimal mistakes. |
 
 ---
 
 ## 1. The big picture
 
+**In one sentence:** the phone app sends requests over the internet to our server on Cloudflare; the server checks them, reads/writes the database, and sends back an answer. For live things (tracking, chat), the app also keeps a WebSocket open so the server can push updates.
+
 ```
- Ionic/Angular app (phone)                         Cloudflare
- ─────────────────────────                         ──────────────────────────────────────────────
- OrderService / ProService ...                     Worker "servio-api"  (Hono router)
-   │  HTTPS JSON  (Bearer token)  ───────────────▶   /api/v1/*  routes ──▶ Postgres (Neon via Hyperdrive)
-   │                                                     │                 R2 bucket (photos/KYC)
-   │                                                     ▼
-   │  WebSocket (wss, 60s ticket) ◀──────────────▶   OrderRoom Durable Object (one per "room")
-   │                                                     booking:<id>  user:<id>  pro:<id>
-   │
-   └─ /locations/reverse ───────────────────────▶   Geocoder Durable Object ──▶ OpenStreetMap Nominatim
+ PHONE APP (Ionic/Angular)                       CLOUDFLARE (our server)
+ ─────────────────────────                       ─────────────────────────────────────────
+   normal requests (HTTPS + JSON) ───────────▶   Worker "servio-api"  ──▶ Postgres database (Neon)
+                                                       │              ──▶ R2 (photos, documents)
+   live connection (WebSocket)    ◀──────────▶   OrderRoom "rooms" (one per booking / user / Pro)
+   "what address is this pin?"    ───────────▶   Geocoder ──▶ OpenStreetMap (free address lookup)
 ```
 
-| Layer | What it is | Where |
+| Part | Plain meaning | Code |
 |---|---|---|
-| Runtime | Cloudflare Worker (serverless, runs at the edge) | [wrangler.toml](../servio-api/wrangler.toml) |
-| HTTP router | Hono, every route under `/api/v1` | [src/index.ts:26-50](../servio-api/src/index.ts#L26-L50) |
-| Validation | Valibot schemas on every body/query/param → `422 VALIDATION_FAILED` | [src/lib/validation.ts](../servio-api/src/lib/validation.ts) |
-| Database | Postgres via Drizzle ORM; new connection per request | [src/db/client.ts](../servio-api/src/db/client.ts), [src/db/schema.ts](../servio-api/src/db/schema.ts) |
-| Migrations | SQL files 0000 → 0011 | [servio-api/drizzle/](../servio-api/drizzle/) |
-| Realtime | `OrderRoom` Durable Object holding WebSockets | [src/live/order-room.ts](../servio-api/src/live/order-room.ts) |
-| Files | R2 bucket, upload via signed URLs | [src/routes/uploads.ts](../servio-api/src/routes/uploads.ts) |
-| Email | Raw SMTP over TLS socket to Gmail | [src/lib/mailer.ts](../servio-api/src/lib/mailer.ts) |
-| Payments | **Mock only** — returns fake references | [src/payments/mock.ts](../servio-api/src/payments/mock.ts) |
-| Money math | Centavos (integers), Pro gets 85% | [src/lib/money.ts](../servio-api/src/lib/money.ts) |
-| City config | Tuguegarao center, ETA speed, cancellation fees | [src/config/cities.ts](../servio-api/src/config/cities.ts) |
+| Runtime | Where the server runs: Cloudflare Workers. | [wrangler.toml](../servio-api/wrangler.toml) |
+| Router (Hono) | The receptionist: looks at the URL and sends it to the right code. | [src/index.ts:26-50](../servio-api/src/index.ts#L26-L50) |
+| Validation (Valibot) | The bouncer: rejects bad input (missing fields, wrong types) with `422`. | [src/lib/validation.ts](../servio-api/src/lib/validation.ts) |
+| Database (Drizzle + Postgres) | Saves everything. Drizzle lets us write queries in TypeScript. | [src/db/schema.ts](../servio-api/src/db/schema.ts) |
+| Migrations | Step-by-step instructions to build/change the DB tables (0000 → 0011). | [servio-api/drizzle/](../servio-api/drizzle/) |
+| Realtime | `OrderRoom` keeps the live connections. | [src/live/order-room.ts](../servio-api/src/live/order-room.ts) |
+| Files | Photos go to R2. | [src/routes/uploads.ts](../servio-api/src/routes/uploads.ts) |
+| Email | Sends login codes through Gmail (see §8). | [src/lib/mailer.ts](../servio-api/src/lib/mailer.ts) |
+| Payments | **Fake (mock)** — no real money moves yet. | [src/payments/mock.ts](../servio-api/src/payments/mock.ts) |
+| Money math | Pro gets 85%. | [src/lib/money.ts](../servio-api/src/lib/money.ts) |
+| City settings | Tuguegarao center, speed for ETA, cancellation fees. | [src/config/cities.ts](../servio-api/src/config/cities.ts) |
 
-### Route files at a glance
+### All the "doors" (route files)
 
-| File | Endpoints |
+| File | What it handles |
 |---|---|
-| [routes/auth.ts](../servio-api/src/routes/auth.ts) | `POST /auth/request-code`, `/auth/verify-code`, `/auth/sign-out` |
-| [routes/me.ts](../servio-api/src/routes/me.ts) | `GET/PATCH /me`, `/me/upgrade-pro`, `/me/pro-trade`, `/me/switch-role`, `/me/payment-methods`, `DELETE /me/services/:skuId` |
-| [routes/addresses.ts](../servio-api/src/routes/addresses.ts) | `GET/POST /me/addresses`, `PATCH/DELETE /me/addresses/:id` |
-| [routes/catalog.ts](../servio-api/src/routes/catalog.ts) | `GET /catalog` (public, cached 5 min) |
-| [routes/bookings.ts](../servio-api/src/routes/bookings.ts) | `POST /bookings`, `GET /bookings`, `GET /bookings/:id`, `/contact`, `/status`, `/addons`, `/addons/:q/decision`, `/verify-pin` |
-| [routes/booking-social.ts](../servio-api/src/routes/booking-social.ts) | `POST /bookings/:id/review`, `GET/POST /bookings/:id/messages` (chat) |
-| [routes/pro.ts](../servio-api/src/routes/pro.ts) | `POST /pro/availability`, `/pro/location`, `/pro/dispatch`, `/offers/:id/accept|decline` |
-| [routes/community.ts](../servio-api/src/routes/community.ts) | `GET/POST /bulletin`, `/bulletin/:id`, `/accept`, `/release`, `/cancel`, `GET /pros` |
-| [routes/wallet.ts](../servio-api/src/routes/wallet.ts) | `GET /wallet`, `POST /wallet/cashout` |
-| [routes/uploads.ts](../servio-api/src/routes/uploads.ts) | `POST /uploads/presign`, `PUT/GET /uploads/blob/:key`, `GET /uploads/:key` |
-| [routes/live.ts](../servio-api/src/routes/live.ts) | `POST …/live-ticket`, `GET …/live` (WebSocket upgrade) |
-| [routes/notifications.ts](../servio-api/src/routes/notifications.ts) | `GET /notifications`, `POST /notifications/read` |
-| [routes/locations.ts](../servio-api/src/routes/locations.ts) | `GET /locations/reverse` |
-| [routes/support.ts](../servio-api/src/routes/support.ts) | help reports + admin review |
-| [routes/health.ts](../servio-api/src/routes/health.ts) | `GET /health` |
-| [routes/demo.ts](../servio-api/src/routes/demo.ts) | `POST /demo/reset-order` (disabled in production) |
+| [routes/auth.ts](../servio-api/src/routes/auth.ts) | Login with email code, sign out |
+| [routes/me.ts](../servio-api/src/routes/me.ts) | My profile, become a Pro, switch Customer/Pro, payment methods |
+| [routes/addresses.ts](../servio-api/src/routes/addresses.ts) | My saved addresses |
+| [routes/catalog.ts](../servio-api/src/routes/catalog.ts) | List of services and prices (public) |
+| [routes/bookings.ts](../servio-api/src/routes/bookings.ts) | Create a booking, see bookings, change status, add-ons, finish with PIN, cancel |
+| [routes/booking-social.ts](../servio-api/src/routes/booking-social.ts) | Reviews + tips, chat messages |
+| [routes/pro.ts](../servio-api/src/routes/pro.ts) | Pro online/offline, location, job offers (accept/decline) |
+| [routes/community.ts](../servio-api/src/routes/community.ts) | Bulletin board posts, list of nearby Pros |
+| [routes/wallet.ts](../servio-api/src/routes/wallet.ts) | Pro wallet balance, cash out |
+| [routes/uploads.ts](../servio-api/src/routes/uploads.ts) | Photo/document uploads |
+| [routes/live.ts](../servio-api/src/routes/live.ts) | Opening a live (WebSocket) connection |
+| [routes/notifications.ts](../servio-api/src/routes/notifications.ts) | Notification inbox |
+| [routes/locations.ts](../servio-api/src/routes/locations.ts) | Map pin → street address |
+| [routes/support.ts](../servio-api/src/routes/support.ts) | Help/report a problem |
+| [routes/health.ts](../servio-api/src/routes/health.ts) | "Is the server OK?" check |
+| [routes/demo.ts](../servio-api/src/routes/demo.ts) | Reset a demo order (turned off in production) |
 
-### What happens on every request
+### What happens to every request (like an airport check)
 
-1. [requestId](../servio-api/src/middleware/request-id.ts) — gives the request an `X-Request-Id` and logs method/path/status/duration.
-2. [corsMiddleware](../servio-api/src/middleware/cors.ts) — only allows origins in `ALLOWED_ORIGINS` (e.g. `capacitor://localhost`).
-3. [notifyLive](../servio-api/src/live/notify.ts#L20) — wraps every `/api/v1` call; **after** a successful `POST` it pushes realtime events (see §4).
-4. Per-route: [withDb](../servio-api/src/middleware/db.ts) opens a Postgres connection → [requireUser](../servio-api/src/middleware/auth.ts#L40) checks the Bearer token → optional [requirePro](../servio-api/src/middleware/pro.ts).
-5. Errors are thrown as `ApiError` and turned into `{ error: { code, message, requestId } }` by [errorHandler](../servio-api/src/middleware/error.ts).
+1. **Tag it** — [requestId](../servio-api/src/middleware/request-id.ts) gives it an ID number and logs how long it took. If something breaks, we search the logs by this ID.
+2. **Check where it's from** — [cors](../servio-api/src/middleware/cors.ts) only allows our app (e.g. `capacitor://localhost`).
+3. **Open the database** — [withDb](../servio-api/src/middleware/db.ts).
+4. **Check the wristband** — [requireUser](../servio-api/src/middleware/auth.ts#L40) checks the login token. Pro-only doors also run [requirePro](../servio-api/src/middleware/pro.ts).
+5. **Do the work** in the route.
+6. **If anything fails**, [errorHandler](../servio-api/src/middleware/error.ts) sends a clean error: `{ error: { code, message, requestId } }`.
+7. **After success**, [notifyLive](../servio-api/src/live/notify.ts#L20) tells the right live rooms "something changed" (§5).
 
-### How the app calls it
+### How the app side calls the server
 
-| Piece | Job | Where |
+| Piece | Plain meaning | Code |
 |---|---|---|
-| `ApiService` | Builds `apiUrl + path`, does GET/POST/PATCH, uploads photos | [api.service.ts:14](../servio-app/src/app/core/api/api.service.ts#L14) |
-| `apiInterceptor` | Adds `Authorization: Bearer …` + `X-Request-Id`, shows error toast, clears session on 401 | [api.interceptor.ts:13](../servio-app/src/app/core/api/api.interceptor.ts#L13) |
-| `SessionService` | Stores the token in Capacitor Preferences | [session.service.ts](../servio-app/src/app/core/api/session.service.ts) |
-| `ApiSettingsService` | Which API URL to use, and whether mock/offline mode is on | [api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts) |
-| Environments | Dev → `http://localhost:8787/api/v1`; Prod → `https://servio-api.mcleinonza0531.workers.dev/api/v1` | [environment.ts](../servio-app/src/environments/environment.ts), [environment.prod.ts](../servio-app/src/environments/environment.prod.ts) |
+| `ApiService` | The app's "messenger": builds the URL and sends the request. | [api.service.ts:14](../servio-app/src/app/core/api/api.service.ts#L14) |
+| `apiInterceptor` | Automatically attaches the login token to every request; shows an error popup; logs you out if the token is rejected (401). | [api.interceptor.ts:13](../servio-app/src/app/core/api/api.interceptor.ts#L13) |
+| `SessionService` | Saves the token on the phone so you stay logged in. | [session.service.ts](../servio-app/src/app/core/api/session.service.ts) |
+| `ApiSettingsService` | Which server to use, and demo (mock) mode on/off. | [api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts) |
+| Server address | Dev: `http://localhost:8787/api/v1` · Live: `https://servio-api.mcleinonza0531.workers.dev/api/v1` | [environment.ts](../servio-app/src/environments/environment.ts), [environment.prod.ts](../servio-app/src/environments/environment.prod.ts) |
 
 ---
-## 2. Booking lifecycle (the core flow)
+## 2. Booking lifecycle (the main flow)
+
+**In plain words:** a booking moves through steps like a delivery order on Grab/Foodpanda. Only the Pro can move it forward, one step at a time. It only finishes when the Pro types the customer's secret PIN.
 
 ```
-PENDING_ACCEPTANCE ──(Pro accepts offer)──▶ ACCEPTED ──▶ EN_ROUTE ──▶ ARRIVED ──▶ IN_PROGRESS ──(PIN)──▶ COMPLETED
-        │                                      │            │           │             │
-        └──────────── CANCELLED ◀──────────────┴────────────┴───────────┘   (customer can't cancel here → dispute)
+WAITING FOR PRO ──(Pro accepts)──▶ ACCEPTED ──▶ ON THE WAY ──▶ ARRIVED ──▶ WORKING ──(PIN)──▶ DONE
+ (PENDING_ACCEPTANCE)                           (EN_ROUTE)                (IN_PROGRESS)    (COMPLETED)
+        │                              │             │            │             │
+        └────────── CANCELLED ◀────────┴─────────────┴────────────┘   (can't cancel while working → contact support)
 ```
-If the customer picked a specific Pro (`proId`) the booking starts directly at `ACCEPTED`.
+If the customer picked a specific Pro, it skips "waiting" and starts at ACCEPTED.
 
-| Step | Who | App call site | Backend handler |
+| Step | Who | App code | Server code |
 |---|---|---|---|
 | Book | Customer | [checkout.page.ts:112](../servio-app/src/app/pages/checkout/checkout.page.ts#L112) → [order.service.ts:173](../servio-app/src/app/core/services/order.service.ts#L173) | `POST /bookings` [bookings.ts:42-115](../servio-api/src/routes/bookings.ts#L42-L115) |
-| Get offer | Pro | [pro.service.ts:55](../servio-app/src/app/core/services/pro.service.ts#L55) | `POST /pro/dispatch` [pro.ts:43](../servio-api/src/routes/pro.ts#L43) |
+| Get a job offer | Pro | [pro.service.ts:55](../servio-app/src/app/core/services/pro.service.ts#L55) | `POST /pro/dispatch` [pro.ts:43](../servio-api/src/routes/pro.ts#L43) |
 | Accept / decline | Pro | [radar-alert.page.ts:78](../servio-app/src/app/pages/pro/radar-alert/radar-alert.page.ts#L78) → [pro.service.ts:96](../servio-app/src/app/core/services/pro.service.ts#L96) | `POST /offers/:id/accept` [pro.ts:56-84](../servio-api/src/routes/pro.ts#L56-L84) |
 | On the way / Arrived / Start | Pro | [job-execute.page.ts:58](../servio-app/src/app/pages/pro/job-execute/job-execute.page.ts#L58) → [order.service.ts:325](../servio-app/src/app/core/services/order.service.ts#L325) | `POST /bookings/:id/status` [bookings.ts:170-229](../servio-api/src/routes/bookings.ts#L170-L229) |
-| Request add-on | Pro | [order.service.ts:329](../servio-app/src/app/core/services/order.service.ts#L329) | `POST /bookings/:id/addons` [bookings.ts:238](../servio-api/src/routes/bookings.ts#L238) |
-| Approve add-on | Customer | [order.service.ts:219](../servio-app/src/app/core/services/order.service.ts#L219) | `POST /bookings/:id/addons/:q/decision` [bookings.ts:256](../servio-api/src/routes/bookings.ts#L256) |
-| Complete (PIN) | Pro types customer's PIN | [verify-otp.page.ts:47](../servio-app/src/app/pages/pro/verify-otp/verify-otp.page.ts#L47) → [order.service.ts:335](../servio-app/src/app/core/services/order.service.ts#L335) | `POST /bookings/:id/verify-pin` [bookings.ts:283-320](../servio-api/src/routes/bookings.ts#L283-L320) |
+| Ask for an add-on | Pro | [order.service.ts:329](../servio-app/src/app/core/services/order.service.ts#L329) | `POST /bookings/:id/addons` [bookings.ts:238](../servio-api/src/routes/bookings.ts#L238) |
+| Approve add-on | Customer | [order.service.ts:219](../servio-app/src/app/core/services/order.service.ts#L219) | `POST …/addons/:q/decision` [bookings.ts:256](../servio-api/src/routes/bookings.ts#L256) |
+| Finish (PIN) | Pro types the customer's PIN | [verify-otp.page.ts:47](../servio-app/src/app/pages/pro/verify-otp/verify-otp.page.ts#L47) → [order.service.ts:335](../servio-app/src/app/core/services/order.service.ts#L335) | `POST /bookings/:id/verify-pin` [bookings.ts:283-320](../servio-api/src/routes/bookings.ts#L283-L320) |
 | Cancel | Either | [tracking.page.ts:96](../servio-app/src/app/pages/tracking/tracking.page.ts#L96) → [order.service.ts:343](../servio-app/src/app/core/services/order.service.ts#L343) | `POST /bookings/:id/status {to:'CANCELLED'}` [bookings.ts:183-210](../servio-api/src/routes/bookings.ts#L183-L210) |
 | Review + tip | Customer | [order.service.ts:370](../servio-app/src/app/core/services/order.service.ts#L370) | `POST /bookings/:id/review` [booking-social.ts:18-49](../servio-api/src/routes/booking-social.ts#L18-L49) |
 
-### What `POST /bookings` does, in order (one DB transaction)
-1. Validates body (SKU, address, lat/lng, ASAP vs scheduled window, GCASH/CARD).
-2. **Idempotency:** if the app sends the same `Idempotency-Key`, it returns the existing booking instead of creating a duplicate (advisory lock + `requestHash`). Prevents double-booking on double-tap or retry.
-3. If booking from a bulletin request, checks the customer owns it and the same Pro accepted it.
-4. Checks SKU is active; if a Pro was chosen, checks they're `PRO`, KYC `APPROVED`, and offer that SKU; blocks self-booking.
-5. Inserts the booking (`status` = `ACCEPTED` if Pro chosen, else `PENDING_ACCEPTANCE`; `escrow` = `HOLD_AUTHORIZED`).
-6. Calls `mockPayments.authorizeHold`, writes a `booking_events` row, a system chat message, and two **ledger entries** (customer −total, escrow +total).
+### What the server does when you tap "Book" (all-or-nothing)
+1. **Checks the form** — service, address, location, ASAP or scheduled, GCash or card.
+2. **Stops duplicates** — the app sends a unique "Idempotency-Key" with each booking attempt. If the same key comes twice (double-tap, bad signal retry), the server returns the first booking instead of making a second one.
+3. **Bulletin check** — if it came from a bulletin post, makes sure it's your post and the same Pro.
+4. **Pro check** — if you picked a Pro: they must be an approved Pro, offer that service, and not be you.
+5. **Saves the booking** — status ACCEPTED (Pro picked) or waiting.
+6. **Holds the money** (fake for now) and writes it in the money log (ledger, §3), plus a history entry and a system chat message.
+
+If any step fails, **nothing** is saved (that's what a transaction means).
 
 ### Status rules ([bookings.ts:165-167](../servio-api/src/routes/bookings.ts#L165-L167))
-- Only the **assigned Pro** can move forward, and only one step: `ACCEPTED→EN_ROUTE→ARRIVED→IN_PROGRESS`.
-- On `EN_ROUTE`, the server computes the ETA from the Pro's last GPS (if < 120 s old) using haversine × 1.3 road factor ÷ 20 km/h, clamped 15–60 min ([cities.ts:36](../servio-api/src/config/cities.ts#L36)), plus a no-show deadline (+30 min).
-- `COMPLETED` can only be reached through `/verify-pin`.
+- Only the **assigned Pro** moves it forward, one step only. Skipping → `409 INVALID_TRANSITION`.
+- When the Pro taps **On the way**, the server guesses the arrival time (ETA): straight-line distance × 1.3 (roads curve) ÷ 20 km/h, kept between 15 and 60 min ([cities.ts:36](../servio-api/src/config/cities.ts#L36)). It also sets a "late" deadline 30 min after that.
+- **DONE** can only happen through the PIN.
 
-## 3. Cancellation & money (escrow)
+---
+## 3. Money: escrow, fees, ledger, wallet
+
+**In plain words:** when you book, the money is **held** (not given to the Pro yet) — that's "escrow", like a middleman holding the payment. When the job is done (PIN), the held money is split: 85% to the Pro, 15% + ₱50 to SERVIO. If cancelled, you get a refund minus any fee.
 
 ### Cancellation fees ([bookings.ts:183-210](../servio-api/src/routes/bookings.ts#L183-L210), [cities.ts:2](../servio-api/src/config/cities.ts#L2))
 
-| Who cancels | When | Fee to Pro | Refund to customer |
+| Who cancels | When | Pro gets | Customer gets back |
 |---|---|---|---|
-| Customer | PENDING / ACCEPTED | ₱0 | full |
-| Customer | EN_ROUTE | ₱100 trip fee | rest |
-| Customer | EN_ROUTE but Pro is past the no-show deadline | ₱0 (`NO_SHOW`) | full |
-| Customer | ARRIVED | ₱200 visit fee | rest |
-| Customer | IN_PROGRESS | **blocked** → `DISPUTE_REQUIRED` | — |
-| Pro | any active stage | ₱0 | full, and Pro gets a `cancellationStrikes +1` |
-| System | no Pro accepted (5 tries or 5 min with none) | ₱0 | full ([demo-dispatch.ts:44-57](../servio-api/src/dispatch/demo-dispatch.ts#L44-L57)) |
+| Customer | waiting / accepted | ₱0 | everything |
+| Customer | Pro is on the way | ₱100 (gas/time) | the rest |
+| Customer | Pro is on the way **but late** | ₱0 | everything |
+| Customer | Pro has arrived | ₱200 (visit) | the rest |
+| Customer | work started | **not allowed** → contact support | — |
+| Pro | any time | ₱0 | everything (Pro gets a "strike") |
+| System | no Pro accepted (5 tries / 5 min) | ₱0 | everything ([demo-dispatch.ts:44-57](../servio-api/src/dispatch/demo-dispatch.ts#L44-L57)) |
 
-A reason is required. The escrow balance is recomputed from the ledger before refunding; if it looks wrong → `409 ESCROW_INVALID`.
+A reason is required. Before refunding, the server re-counts the held money; if it doesn't add up → `409 ESCROW_INVALID` (safety stop).
 
-### The ledger (double-entry)
-Every money movement inserts rows into `ledger_entries` with one shared `txnId`; the amounts in a transaction sum to zero. Balances are never stored — they are `SUM(amount_centavos)` per account.
+### The ledger (money log)
+Think of a bank passbook where **every peso moved is written twice**: once where it left, once where it went. Each move's lines add up to **zero**, so money can't appear or disappear. We never save a "balance" number; we add up the log each time (`SUM`).
 
-| Account | Meaning |
+| Account | Plain meaning |
 |---|---|
-| `customer:<id>` | what the customer paid/got back |
-| `escrow:<bookingId>` | money held for that job |
-| `pro_wallet:<id>` | Pro earnings (the wallet balance) |
-| `platform_revenue` | SERVIO commission + trust fee + cashout fees |
-| `payout_clearing` | money sent out to GCash on cashout |
+| `customer:<id>` | what the customer paid / got back |
+| `escrow:<bookingId>` | the money being held for that job |
+| `pro_wallet:<id>` | the Pro's earnings |
+| `platform_revenue` | SERVIO's cut + fees |
+| `payout_clearing` | money sent out when a Pro cashes out |
 
-On completion ([bookings.ts:298-310](../servio-api/src/routes/bookings.ts#L298-L310)): escrow −total → Pro gets 85% of (service + approved add-ons) → platform gets 15% + ₱50 trust fee. Split math: [money.ts:11](../servio-api/src/lib/money.ts#L11).
+**Example (₱1,000 service):** customer pays ₱1,000 + ₱50 trust fee = ₱1,050. Book → customer −1050, escrow +1050. Done → escrow −1050, Pro wallet +850 (85%), SERVIO +200 (15% = ₱150, plus the ₱50 fee). Each line adds up to zero. Split math: [money.ts:11](../servio-api/src/lib/money.ts#L11), release: [bookings.ts:298-310](../servio-api/src/routes/bookings.ts#L298-L310).
 
 ### Completion PIN ([completion-pin.ts](../servio-api/src/lib/completion-pin.ts))
-- 4 digits = `HMAC-SHA256(PIN_SECRET, bookingId)` → never stored, recomputed when needed.
-- Only the **customer** sees it (added to the booking response only when `userId === customerId`, [lib/bookings.ts:32](../servio-api/src/lib/bookings.ts#L32)).
-- Pro has 5 tries, then `423 PIN_LOCKED`. Comparison is timing-safe.
+- A 4-digit code made from the booking ID + a server secret. It is **not saved anywhere**; the server can re-create it any time.
+- Only the **customer** sees it ([lib/bookings.ts:32](../servio-api/src/lib/bookings.ts#L32)). The Pro must get it from the customer in person = proof the job was done.
+- 5 wrong tries → locked (`423 PIN_LOCKED`).
 
 ### Wallet ([wallet.ts](../servio-api/src/routes/wallet.ts))
-- `GET /wallet`: available balance, today's earnings (PH time), "pending escrow" for active jobs, paginated ledger.
-- `POST /wallet/cashout`: min ₱500, ₱15 fee, GCash `09xxxxxxxxx`. Locks the wallet, checks balance, writes ledger, creates payout — **immediately marked `PAID` (mock)**.
+- **See wallet:** balance, today's earnings, money still on hold for active jobs, history.
+- **Cash out:** minimum ₱500, ₱15 fee, to a GCash number. Locked so two cashouts can't happen at once. Marked **PAID instantly (fake)**.
 
 ---
-## 4. Dispatch — how a Pro gets matched
+## 4. Dispatch — how a Pro gets a job
 
-**Online/offline toggle:** [pro.service.ts:75](../servio-app/src/app/core/services/pro.service.ts#L75) grabs phone GPS → `POST /pro/availability {online, lat, lng}` ([pro.ts:19](../servio-api/src/routes/pro.ts#L19)). Only KYC-`APPROVED` Pros can go online. While online, the phone refreshes its position every 30 s via `POST /pro/location` ([tracking.service.ts:154-157](../servio-app/src/app/core/services/tracking.service.ts#L154-L157)).
+**In plain words:** like Grab looking for a driver. The server offers the job to the **closest** available Pro. They have 60 seconds to accept. If not, it tries the next one, up to 5 Pros.
 
-**Matching** — [advanceDispatch](../servio-api/src/dispatch/demo-dispatch.ts#L16-L58):
-1. Skip if a live offer (60 s) is still pending.
-2. Find the **nearest** eligible Pro with SQL ([demo-dispatch.ts:25-37](../servio-api/src/dispatch/demo-dispatch.ts#L25-L37)): role PRO, active, KYC approved, online, offers this SKU, not the customer, GPS fresher than 120 s, not already offered this booking, not holding another pending offer. Sort by distance → rating.
-3. Create a `dispatch_offers` row that expires in 60 s.
-4. Up to 5 Pros are tried one at a time. If none accept (or none found for 5 min) → auto-cancel + full refund.
+**Going online:** Pro taps the toggle → app gets phone GPS → `POST /pro/availability` ([pro.service.ts:75](../servio-app/src/app/core/services/pro.service.ts#L75), [pro.ts:19](../servio-api/src/routes/pro.ts#L19)). Only approved Pros. While online, location updates every 30 s ([tracking.service.ts:154-157](../servio-app/src/app/core/services/tracking.service.ts#L154-L157)).
 
-**Who runs it?** `dispatchTick` runs whenever any Pro calls `POST /pro/dispatch` ([pro.ts:43-54](../servio-api/src/routes/pro.ts#L43-L54)). The app calls it every 15 s and immediately when the Pro's live socket says `dispatch` ([pro.service.ts:38-53](../servio-app/src/app/core/services/pro.service.ts#L38-L53)). A new offer sends the Pro to the radar screen with sound + haptics ([dispatch-alert.service.ts](../servio-app/src/app/core/services/dispatch-alert.service.ts)).
+**Who gets picked** ([demo-dispatch.ts:16-58](../servio-api/src/dispatch/demo-dispatch.ts#L16-L58)): a Pro who is approved, online, offers that service, isn't the customer, sent GPS in the last 2 min, wasn't already offered this job, and isn't holding another offer. Closest first, then best rating.
 
-**Accept** ([pro.ts:56-84](../servio-api/src/routes/pro.ts#L56-L84)) locks the Pro and booking, rechecks it's still pending & unexpired, sets `proId` + `ACCEPTED`. Decline/expired → `advanceDispatch` offers the next Pro.
+**What keeps it running:** the Pro's app asks the server every 15 s "any jobs?" (`POST /pro/dispatch`, [pro.service.ts:38-53](../servio-app/src/app/core/services/pro.service.ts#L38-L53)). Each time, the server also moves the matching forward. A new offer opens the radar screen with a sound + vibration ([dispatch-alert.service.ts](../servio-app/src/app/core/services/dispatch-alert.service.ts)).
 
-## 5. Realtime ("online" live updates)
+⚠️ Weak spot: if **no** Pro has the app open, nobody "pushes" the matching forward, so the booking just waits (see §13 #3).
+
+**Accepting** ([pro.ts:56-84](../servio-api/src/routes/pro.ts#L56-L84)): locks the booking, checks it's still free and the 60 s haven't passed, then assigns the Pro. Two Pros tapping at the same time → only one wins.
+
+---
+## 5. Realtime (live updates without refreshing)
+
+**In plain words:** normally the app has to *ask* the server for news. With a WebSocket, the app keeps a line open, and the server can *tell* the app the moment something changes ("the Pro is on the way!"). We group these lines into **rooms**, like group chats.
 
 ### Rooms
-One `OrderRoom` Durable Object per resource name:
-
-| Room | Who joins | Receives |
+| Room | Who is inside | What they hear |
 |---|---|---|
-| `booking:<id>` | customer + assigned Pro | status changes, add-ons, chat messages, **live GPS** |
-| `user:<id>` | that user | "something about your bookings changed", new notification |
-| `pro:<id>` | that Pro | "new dispatch offer" |
+| `booking:<id>` | the customer + the Pro of that booking | status changes, add-ons, new chat messages, **Pro's live location** |
+| `user:<id>` | just you | "your bookings changed", "new notification" |
+| `pro:<id>` | just that Pro | "you have a new job offer" |
 
-### Connecting securely (two steps)
-1. App: `POST /bookings/:id/live-ticket` (or `/me/…`, `/pro/…`) with the Bearer token → server returns a **60-second HMAC-signed ticket** ([tickets.ts:13](../servio-api/src/live/tickets.ts#L13), [routes/live.ts:16-28](../servio-api/src/routes/live.ts#L16-L28)).
-2. App opens `wss://…/live?token=…` → Worker forwards to the room → room verifies signature, session not revoked, user is a participant, ticket not reused, ≤ 8 sockets per user ([order-room.ts:22-66](../servio-api/src/live/order-room.ts#L22-L66)). Sends `{type:'connected', serverNow}`.
+Each room is one `OrderRoom` Durable Object ([order-room.ts](../servio-api/src/live/order-room.ts)).
 
-Why a ticket? Browsers can't put an `Authorization` header on a WebSocket, so the token would end up in the URL; a short one-time ticket is safer.
+### Getting into a room safely (two steps)
+1. App asks for a **ticket**: `POST /bookings/:id/live-ticket` (with the login token). Server gives a ticket that works **once** and only for **60 seconds** ([tickets.ts:13](../servio-api/src/live/tickets.ts#L13), [routes/live.ts:16-28](../servio-api/src/routes/live.ts#L16-L28)).
+2. App connects with that ticket. The room checks: real ticket? not used before? still logged in? are you part of this booking? max 8 connections per person ([order-room.ts:22-66](../servio-api/src/live/order-room.ts#L22-L66)).
 
-### How events get pushed
-[notifyLive](../servio-api/src/live/notify.ts#L20-L105) runs **after** every successful POST (in `waitUntil`, so the HTTP response isn't delayed). It looks at the path (`/bookings/:id/status`, `/messages`, `/offers/:id/accept`, `/bulletin/:id/accept`…), then `POST`s `http://order-room/notify` on the right rooms, which broadcasts to all sockets ([order-room.ts:96-105](../servio-api/src/live/order-room.ts#L96-L105)). It also writes inbox notifications ([notices.ts](../servio-api/src/live/notices.ts)).
+**Why a ticket?** A WebSocket can't carry the login token the normal way, so it would end up in the URL (where it can leak into logs). A one-time, 60-second ticket is useless if leaked.
 
-Events are **hints**, not data: the app reacts by re-fetching the booking with a normal GET ([order.service.ts:118-146](../servio-app/src/app/core/services/order.service.ts#L118-L146)). This keeps the DB the single source of truth.
+### How a change reaches your phone
+1. Something happens, e.g. the Pro taps "On the way" (`POST /bookings/:id/status`).
+2. After the server saves it, [notifyLive](../servio-api/src/live/notify.ts#L20-L105) looks at what happened and pings the right rooms. It does this in the background so the Pro's app isn't slowed down.
+3. The room sends a small message to everyone inside, like `{type:'status'}` ([order-room.ts:96-105](../servio-api/src/live/order-room.ts#L96-L105)).
+4. Your app hears it and **re-downloads the booking** with a normal request ([order.service.ts:118-146](../servio-app/src/app/core/services/order.service.ts#L118-L146)).
 
-### Client side — [live.service.ts](../servio-app/src/app/core/services/live.service.ts)
-- `watch(resource)` shares one socket per room ([live.service.ts:35](../servio-app/src/app/core/services/live.service.ts#L35)).
-- Ping every 10 s; no message for 25 s → reconnect. Ticket renewed every 4.5 min.
-- Reconnect with backoff 1 s → 2 s → … → max 10 s; also on app resume and when the phone regains internet.
-- **Fallback polling:** if the socket is down, `OrderService` re-fetches bookings every 5 s; when up, every 30 s ([order.service.ts:158-169](../servio-app/src/app/core/services/order.service.ts#L158-L169)).
+The message is just a **"hey, check again"** (a hint), not the data itself. That way the database is always the one source of truth.
 
+### Keeping the connection alive ([live.service.ts](../servio-app/src/app/core/services/live.service.ts))
+- One connection per room, shared by all screens.
+- App says "ping" every 10 s. Nothing heard for 25 s → reconnect.
+- Reconnect waits 1 s, 2 s, … up to 10 s between tries; also reconnects when you reopen the app or get internet back.
+- **Backup plan:** while disconnected, the app checks the server every 5 s by itself (every 30 s when connected) ([order.service.ts:158-169](../servio-app/src/app/core/services/order.service.ts#L158-L169)).
+
+---
 ## 6. Live GPS tracking & maps
 
-| Part | How | Where |
-|---|---|---|
-| Pro phone GPS | `Geolocation.watchPosition` every ~1 s while app in foreground and Pro online / en route | [tracking.service.ts:148](../servio-app/src/app/core/services/tracking.service.ts#L148) |
-| Send GPS | Sent **over the booking WebSocket** (not HTTP), max 1/s | [tracking.service.ts:229](../servio-app/src/app/core/services/tracking.service.ts#L229), [live.service.ts:42](../servio-app/src/app/core/services/live.service.ts#L42) |
-| Server check | Only the assigned Pro while `EN_ROUTE`; timestamp within 2 min; ≥ 750 ms apart; simulated GPS only for demo bookings outside production | [order-room.ts:71-95](../servio-api/src/live/order-room.ts#L71-L95) |
-| Server stores | Last fix in room storage (new joiners get it instantly) + `pro_profiles.last_lat/lng` (max every 15 s) | same |
-| Customer map | Leaflet + OpenStreetMap tiles, rider marker animated every frame | [tracking-map.component.ts](../servio-app/src/app/shared/components/tracking-map/tracking-map.component.ts), [map-tiles.ts](../servio-app/src/app/shared/utils/map-tiles.ts) |
-| Road route | OSRM public router (`router.project-osrm.org`) — **only in non-production builds** | [tracking.service.ts:218-228](../servio-app/src/app/core/services/tracking.service.ts#L218-L228) |
-| "Reconnecting…" | Shown when no fix for 20 s | [tracking.service.ts:74](../servio-app/src/app/core/services/tracking.service.ts#L74) |
-| Address pin → address | Tap/drag pin → wait 350 ms → `GET /locations/reverse` | [addresses.page.ts:90-113](../servio-app/src/app/pages/addresses/addresses.page.ts#L90-L113) |
-| Reverse geocoding | One global `Geocoder` Durable Object calls Nominatim, ≤ 1 request / 1.1 s (OSM policy), caches 7 days | [geocoder.ts:28-63](../servio-api/src/locations/geocoder.ts#L28-L63), [locations.ts](../servio-api/src/routes/locations.ts) |
-| Nearby Pros / requests | SQL haversine distance; Pro distance only if GPS < 15 min old; "Nearby" bulletin = < 3 km | [community.ts:26-31](../servio-api/src/routes/community.ts#L26-L31), [community.ts:66-116](../servio-api/src/routes/community.ts#L66-L116) |
+**In plain words:** the Pro's phone sends its location about once a second through the booking's live room. The customer's map moves the rider icon smoothly. Maps and address lookups use free OpenStreetMap.
 
+| Part | Plain explanation | Code |
+|---|---|---|
+| Pro's GPS | Phone reads location ~every 1 s while the app is open and the Pro is online/on the way. | [tracking.service.ts:148](../servio-app/src/app/core/services/tracking.service.ts#L148) |
+| Sending it | Sent through the **WebSocket**, max once per second. | [tracking.service.ts:229](../servio-app/src/app/core/services/tracking.service.ts#L229), [live.service.ts:42](../servio-app/src/app/core/services/live.service.ts#L42) |
+| Server checks | Only the assigned Pro, only while ON THE WAY, time must be recent (≤ 2 min), not faster than every 0.75 s. Fake GPS only allowed for demo bookings. | [order-room.ts:71-95](../servio-api/src/live/order-room.ts#L71-L95) |
+| Server saves | The last point (so someone joining late sees it right away) + the Pro's last location in the DB every 15 s. | same |
+| Customer's map | Leaflet library + free OpenStreetMap pictures. Rider icon slides smoothly. | [tracking-map.component.ts](../servio-app/src/app/shared/components/tracking-map/tracking-map.component.ts), [map-tiles.ts](../servio-app/src/app/shared/utils/map-tiles.ts) |
+| Road line | Uses the free OSRM route server — **only in test builds**. | [tracking.service.ts:218-228](../servio-app/src/app/core/services/tracking.service.ts#L218-L228) |
+| "Reconnecting…" | Shown if no location for 20 s. | [tracking.service.ts:74](../servio-app/src/app/core/services/tracking.service.ts#L74) |
+| Pin → address | Move the pin, wait 0.35 s, ask the server for the street name. | [addresses.page.ts:90-113](../servio-app/src/app/pages/addresses/addresses.page.ts#L90-L113) |
+| Address lookup | One shared `Geocoder` asks OpenStreetMap (Nominatim). It waits 1.1 s between requests (their rule) and remembers answers for 7 days. | [geocoder.ts:28-63](../servio-api/src/locations/geocoder.ts#L28-L63) |
+| Nearby Pros / posts | Distance is calculated in the database with the haversine formula (distance on a round Earth). "Nearby" = under 3 km. | [community.ts:26-31](../servio-api/src/routes/community.ts#L26-L31), [community.ts:66-116](../servio-api/src/routes/community.ts#L66-L116) |
+
+---
 ## 7. Chat, calls, notifications
 
-**Chat** — messages are rows in `messages` tied to a booking.
-- Send: `POST /bookings/:id/messages` with `body` and/or `photoKey` ([booking-social.ts:66-82](../servio-api/src/routes/booking-social.ts#L66-L82)). Closed after COMPLETED/CANCELLED. Only participants.
-- Read: `GET /bookings/:id/messages?after=<lastId>` (cursor) ([booking-social.ts:51-64](../servio-api/src/routes/booking-social.ts#L51-L64)).
-- Realtime: `notifyLive` broadcasts `{type:'message'}` to `booking:<id>`; chat page re-fetches ([order-chat.page.ts:76-95](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L76-L95)). Send: [order-chat.page.ts:133](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L133); photo: [order-chat.page.ts:149](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L149).
-- System messages ("Booking status: en route") are inserted by the server with `senderId = null`.
+**Chat** — each message is a row in the `messages` table, linked to a booking.
+- **Send:** `POST /bookings/:id/messages` with text and/or a photo ([booking-social.ts:66-82](../servio-api/src/routes/booking-social.ts#L66-L82)). Only the customer and Pro. Closed when the job ends.
+- **Read:** `GET /bookings/:id/messages?after=<last id>` — "give me only messages newer than the last one I have" ([booking-social.ts:51-64](../servio-api/src/routes/booking-social.ts#L51-L64)).
+- **Live:** new message → room ping → chat screen re-downloads ([order-chat.page.ts:76-95](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L76-L95)).
+- Automatic messages ("Booking status: en route") are added by the server with no sender.
 
-**Calls** — not VoIP. `GET /bookings/:id/contact` returns the other person's phone number only during an active assigned booking ([bookings.ts:124-135](../servio-api/src/routes/bookings.ts#L124-L135)); the app opens `tel:` ([booking-call.service.ts](../servio-app/src/app/core/services/booking-call.service.ts)).
+**Calls** — no in-app calling. During an active job, `GET /bookings/:id/contact` gives the other person's phone number ([bookings.ts:124-135](../servio-api/src/routes/bookings.ts#L124-L135)) and the phone's normal dialer opens ([booking-call.service.ts](../servio-app/src/app/core/services/booking-call.service.ts)). After the job, the number is hidden again.
 
-**Notifications** — server inbox, not remote push.
-- Rules for who gets what: [notices.ts](../servio-api/src/live/notices.ts). Saved in `notifications` table, then `user:<id>` room is pinged ([notify.ts:14-18](../servio-api/src/live/notify.ts#L14-L18)).
+**Notifications** — an inbox inside the app, **not** real push notifications.
+- The server decides who gets what ([notices.ts](../servio-api/src/live/notices.ts)), saves it in the `notifications` table, and pings your `user:` room.
 - Bell + list: `GET /notifications`, `POST /notifications/read` ([routes/notifications.ts](../servio-api/src/routes/notifications.ts)); app: [notification.service.ts](../servio-app/src/app/core/services/notification.service.ts).
-- If the app is in the background (but still alive) it shows a **local** phone notification. No Firebase/APNs, so nothing arrives when the app is fully closed.
+- If the app is in the background (still running), the **app itself** shows a phone notification. If the app is fully closed, nothing arrives (no Firebase/Apple push yet).
 
 ---
-## 8. Login (email code)
+## 8. Login with an email code (and how the email is sent)
 
-1. App [auth.service.ts:81](../servio-app/src/app/core/services/auth.service.ts#L81) → `POST /auth/request-code` ([auth.ts:42-83](../servio-api/src/routes/auth.ts#L42-L83)): rate-limited (10/min per IP and per email, max 5 codes/hour), makes a random 6-digit code, stores only its **SHA-256 hash**, emails it via Gmail SMTP. Valid 10 min. In local dev without SMTP, the code is printed in the API log.
-2. App [auth.service.ts:92](../servio-app/src/app/core/services/auth.service.ts#L92) → `POST /auth/verify-code` ([auth.ts:85-134](../servio-api/src/routes/auth.ts#L85-L134)): max 5 wrong tries, code is single-use, creates the user if new (role `CUSTOMER`), returns a session token.
-3. Session: random 32-byte token, DB stores only its hash, valid 30 days ([middleware/auth.ts:14-46](../servio-api/src/middleware/auth.ts#L14-L46)). Sign-out sets `revokedAt`.
-4. Demo accounts (non-production only) can use a fixed `DEMO_LOGIN_CODE`.
+**In plain words:** no passwords. You type your email, we email you a 6-digit code, you type the code, and you're in. The app then keeps a "wristband" (token) so you stay logged in for 30 days.
 
-**Roles:** `CUSTOMER`, `PRO`, `ADMIN`. One account can switch between Customer and Pro mode ([me.ts:185-226](../servio-api/src/routes/me.ts#L185-L226)); switching to Customer is blocked while you have an active job and also sets you offline.
+### 8.1 The login steps
 
-## 9. Offline (mock) mode vs online (API) mode
+```
+ App                         Server                                 Gmail
+  │ 1. "send code to ana@…"   │                                       │
+  │ ────────────────────────▶ │ make code 482913, save its HASH       │
+  │                           │ ─── 2. email "482913 is your code" ─▶ │ ──▶ Ana's inbox
+  │ 3. "ana@…, code 482913"   │                                       │
+  │ ────────────────────────▶ │ hash it, compare, OK → create session │
+  │ ◀──── 4. token ────────── │                                       │
+```
 
-There is a single switch: `ApiSettingsService.useMockApi` ([api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts)).
+**Step 1 — `POST /auth/request-code`** ([auth.ts:42-83](../servio-api/src/routes/auth.ts#L42-L83))
+1. **Speed limit:** max 10 tries per minute per phone (IP) and per email ([auth.ts:32-40](../servio-api/src/routes/auth.ts#L32-L40)). Stops spam.
+2. **Demo shortcut:** in test builds, demo accounts skip email and use a fixed code.
+3. **Max 5 codes per hour** per email.
+4. **Make the code:** a random number 000000–999999 ([auth.ts:24](../servio-api/src/routes/auth.ts#L24)).
+5. **Cancel older codes** for that email — only the newest one works.
+6. **Save only the hash** of `email + code` with an expiry 10 minutes from now ([auth.ts:25](../servio-api/src/routes/auth.ts#L25), [:61-64](../servio-api/src/routes/auth.ts#L61-L64)). Even someone who sees the database can't read the code.
+7. **Email it** with `sendMail()` (see 8.2). If the email fails, the code is cancelled right away so a code nobody received can't be used ([auth.ts:78-81](../servio-api/src/routes/auth.ts#L78-L81)).
 
-| | Online / API mode | Offline / mock mode |
+**Step 3 — `POST /auth/verify-code`** ([auth.ts:85-134](../servio-api/src/routes/auth.ts#L85-L134))
+1. Find the newest unused code for that email (and **lock** it so two tries can't race).
+2. Expired? → "wrong or expired". 5 wrong tries already? → `CODE_LOCKED`, ask for a new one.
+3. Hash what you typed and compare with the saved hash (timing-safe = takes the same time whether it's close or not, so hackers learn nothing from timing).
+4. Wrong → add 1 to the try counter. Right → mark the code **used** (it works only once).
+5. New email? Create a user as `CUSTOMER`. Turned-off account or admin → blocked.
+6. Create a **session** and send back the token.
+
+**The session / token** ([middleware/auth.ts:14-46](../servio-api/src/middleware/auth.ts#L14-L46)): 32 random bytes, the DB stores only its hash, lasts 30 days. Sign-out marks it revoked. The app saves it with Capacitor Preferences and sends it on every request as `Authorization: Bearer <token>`.
+
+**Roles:** `CUSTOMER`, `PRO`, `ADMIN`. One account can switch between Customer and Pro mode ([me.ts:185-226](../servio-api/src/routes/me.ts#L185-L226)), but not during an active job, and switching to Customer sets you offline.
+
+### 8.2 How the email is actually sent (SMTP) — [mailer.ts](../servio-api/src/lib/mailer.ts)
+
+**What is SMTP?** It's the language email servers speak, like a script at a post office counter. Our server walks up to Gmail's counter and has a short conversation: "Hi" → "here's my login" → "from me" → "to Ana" → "here's the letter" → "bye". Gmail answers each line with a **3-digit number** that means OK or not OK.
+
+**Why we wrote it by hand:** the usual email library (nodemailer) needs normal Node.js network features that Cloudflare Workers don't have. Workers *can* open a raw secure connection with `connect()` from `cloudflare:sockets` ([mailer.ts:2](../servio-api/src/lib/mailer.ts#L2)), so we speak SMTP ourselves. No extra library, no paid email service.
+
+**Settings (stored as secret environment variables, not in the code)** — [env.ts:21-26](../servio-api/src/env.ts#L21-L26)
+
+| Setting | Meaning | Default |
 |---|---|---|
-| Turned on by | default in every build | Demo builds only: "Demo connection" dialog → **Offline demo** ([demo-connection.service.ts](../servio-app/src/app/core/services/demo-connection.service.ts)) |
-| Login | real email code | any email, code **`123456`** ([auth.service.ts:10](../servio-app/src/app/core/services/auth.service.ts#L10)); token starts with `mock.` and is never sent to the server |
-| Data | from the API / Postgres | hard-coded data in [mock-data.ts](../servio-app/src/app/core/data/mock-data.ts) |
-| Booking state | server | saved to `localStorage` (`servio.demo.*`) via [demo-store.ts](../servio-app/src/app/core/services/demo-store.ts) |
-| Status changes, PIN, wallet | API endpoints | changed locally in `OrderService` (e.g. [order.service.ts:204](../servio-app/src/app/core/services/order.service.ts#L204), [:234](../servio-app/src/app/core/services/order.service.ts#L234)) |
-| Tracking | real GPS over WebSocket | simulated rider on a fixed Tuguegarao route ([tuguegarao-route.ts](../servio-app/src/app/core/data/tuguegarao-route.ts)) |
-| Chat | real messages | auto-replies after 1.4 s |
-| Bulletin accept/cancel | works | throws "requires an API connection" |
+| `SMTP_HOST` | Which email server | `smtp.gmail.com` |
+| `SMTP_PORT` | Which "door" | `465` (encrypted from the start) |
+| `SMTP_USER` | The Gmail address we send from | — |
+| `SMTP_PASSWORD` | Its password (for Gmail, an app password) | — |
+| `MAIL_FROM` / `MAIL_FROM_NAME` | What the receiver sees as sender | `SMTP_USER` / `SERVIO` |
 
-Pattern used everywhere: `if (this.api.settings.useMockApi()) { …local… } else { await this.api.post(…) }` — e.g. [order.service.ts:325-374](../servio-app/src/app/core/services/order.service.ts#L325-L374).
+#### Step 1 — `sendMail()` decides what to do ([mailer.ts:20-39](../servio-api/src/lib/mailer.ts#L20-L39))
+1. **Is the email address safe?** No spaces, `<`, `>`, quotes, commas or line breaks ([:14](../servio-api/src/lib/mailer.ts#L14)). If not → `422`.
+2. **Is email set up?** (`SMTP_USER` + `SMTP_PASSWORD` exist)
+   - Not set up **on a dev computer** → don't send; just **print the code in the server log** and return `'logged'`. That's how you log in locally without Gmail.
+   - Not set up **in production** → `503 EMAIL_UNAVAILABLE` ("can't send email right now").
+3. **Build the letter** with `buildMessage()` (step 2).
+4. **Send it** with `smtpSend()` (step 3). If Gmail fails → `502 EMAIL_FAILED` ("try again in a minute"). The real error goes only to the server log, never to the user.
 
-"Offline" here means **demo without a server**; the app does **not** queue actions to sync later. With mock mode off and no internet, requests fail and a toast says "Cannot reach SERVIO".
+#### Step 2 — `buildMessage()` writes the letter ([mailer.ts:103-120](../servio-api/src/lib/mailer.ts#L103-L120))
+An email is just text: a **header** (envelope info) + a blank line + the **body**.
 
-There's also a **simulated GPS** toggle for demo accounts in API mode (`TrackingService.simulate`): the Pro phone sends fake GPS along the demo route with `simulated: true`, which the server only accepts for demo bookings outside production.
+```
+From: SERVIO <servio@gmail.com>
+To: <ana@example.com>
+Subject: 482913 is your SERVIO code
+Date: Thu, 22 Oct 2026 03:00:00 GMT
+Message-ID: <random-id@servio.app>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="srv-abc123"
 
-## 10. Bulletin (neighborhood requests)
+--srv-abc123
+Content-Type: text/plain; charset=UTF-8          ← plain-text version
+Content-Transfer-Encoding: base64
+WW91ciBTRVJWSU8gc2lnbi1pbiBjb2RlIGlz...
+--srv-abc123
+Content-Type: text/html; charset=UTF-8           ← pretty version (big orange code)
+Content-Transfer-Encoding: base64
+PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6...
+--srv-abc123--                                   ← end
+```
 
-1. Customer posts: `POST /bulletin` ([community.ts:33](../servio-api/src/routes/community.ts#L33)) → status `OPEN`/`URGENT`.
-2. A qualified Pro reserves it: `POST /bulletin/:id/accept` ([community.ts:127](../servio-api/src/routes/community.ts#L127)) → `ACCEPTED`, `acceptedProId` set. No booking/money yet.
-3. Customer confirms in checkout: `POST /bookings` with `bulletinId` + that `proId` → creates a normal booking with escrow and links it.
-4. Before checkout either side can `release` (back to open), and the author can `cancel`. Once a booking exists, cancellation follows booking rules.
+What each trick is for:
+- **Two versions (plain + HTML):** "multipart/alternative" = the email app shows the pretty one if it can, else the plain one. The **boundary** is a random divider line between them.
+- **Base64:** turns the text into safe letters/numbers so emojis, `₱`, `’` don't get broken on the way ([:93-98](../servio-api/src/lib/mailer.ts#L93-L98)). Lines are cut at 76 characters (email rule) ([:100](../servio-api/src/lib/mailer.ts#L100)).
+- **Special characters in the subject/name** get wrapped as `=?UTF-8?B?…?=` (the email way of saying "this part is base64") ([:101](../servio-api/src/lib/mailer.ts#L101)).
+- **Header injection block** ([:104-106](../servio-api/src/lib/mailer.ts#L104-L106)): if a subject or address had a line break, someone could sneak in extra header lines (like `Bcc: everyone@…`). Any line break → refuse.
+- **Message-ID + Date:** required by email rules; helps avoid the spam folder.
 
-## 11. Uploads (photos, avatars, KYC)
+The actual text of the login email is in [auth.ts:72-74](../servio-api/src/routes/auth.ts#L72-L74): subject `482913 is your SERVIO code`, "works once, expires in 10 minutes, never share it".
 
-1. App: `POST /uploads/presign {purpose, contentType, contentLength}` → server makes a random key `uploads/<purpose>/YYYY/MM/<uuid>.jpg` and a signed URL valid 15 min ([uploads.ts:52-63](../servio-api/src/routes/uploads.ts#L52-L63)).
-2. App `PUT`s the file straight to that URL ([api.service.ts:92-98](../servio-app/src/app/core/api/api.service.ts#L92-L98)) — production goes through the Worker into R2 (`UPLOADS_MODE=worker`).
-3. App sends only the key (e.g. `photoKey`) to other endpoints; server checks owner, purpose, and that size/type match ([lib/uploads.ts:15-23](../servio-api/src/lib/uploads.ts#L15-L23)).
-4. Viewing: `GET /uploads/:key` checks permission (owner, booking participant, approved Pro avatar…) and returns a 60-second download URL ([uploads.ts:111-148](../servio-api/src/routes/uploads.ts#L111-L148)). KYC files are owner-only.
+#### Step 3 — `smtpSend()` has the conversation with Gmail ([mailer.ts:41-87](../servio-api/src/lib/mailer.ts#L41-L87))
 
-JPEG/PNG ≤ 5 MB; PDF ≤ 10 MB (KYC only). The app converts/shrinks images first.
+1. **Open a secure line** to `smtp.gmail.com:465` with encryption on (`secureTransport: 'on'`) ([:42](../servio-api/src/lib/mailer.ts#L42)). Everything after this, including the password, is encrypted.
+2. **Talk, line by line.** `send()` writes one line (ending in `\r\n`, the email "Enter key"); `reply(code)` waits for Gmail's answer and checks the number.
 
-## 12. Database tables (quick map) — [schema.ts](../servio-api/src/db/schema.ts)
-
-`users`, `sessions`, `login_codes`, `user_addresses`, `pro_profiles` (KYC, online, last GPS, rating), `categories`, `service_skus`, `addon_skus`, `pro_skus` (which Pro offers what), `bookings`, `booking_events` (status history), `addon_quotes`, `dispatch_offers`, `bulletin_requests`, `messages`, `reviews`, `ledger_entries`, `payouts`, `uploads`, `support_requests`, `notifications`.
-
-Booking codes are `SRV-<sequence>`. All money columns are **integer centavos** with DB `CHECK` constraints.
-
----
-## 13. Audit findings (things to know or fix)
-
-### Strengths
-- **Transactions + row locks** around every money/status change (`SELECT … FOR UPDATE`, advisory locks), so double taps and races don't double-charge or double-accept.
-- **Idempotent booking creation** and support reports.
-- **Double-entry ledger** instead of stored balances, with DB checks.
-- **Secrets are hashed** (session tokens, login codes); PIN and live tickets use HMAC; comparisons are timing-safe.
-- **Strict input validation** on every route; consistent error shape with request IDs.
-- **Participant checks** on every booking read/write (`participantBooking`, [lib/bookings.ts:18](../servio-api/src/lib/bookings.ts#L18)).
-
-### Gaps / risks
-
-| # | Finding | Where | Impact |
+| # | We send | Gmail answers | Meaning |
 |---|---|---|---|
-| 1 | **Becoming a Pro skips KYC.** `/me/upgrade-pro` sets `kycStatus: 'APPROVED'` immediately and gives a fake 5.0 rating with 1 review. | [me.ts:86-108](../servio-api/src/routes/me.ts#L86-L108) | Anyone can take jobs with no vetting. Fine for a prototype; must change before real users. |
-| 2 | **Payments are fully mocked.** Holds, captures, refunds, tips and cashouts only write ledger rows; cashout is set to `PAID` instantly. | [payments/mock.ts](../servio-api/src/payments/mock.ts), [wallet.ts:81-82](../servio-api/src/routes/wallet.ts#L81-L82) | No real money moves. |
-| 3 | **Dispatch only runs when some Pro polls `/pro/dispatch`.** There is no cron trigger. If no Pro app is open, a pending booking is never offered and never auto-cancelled/refunded. | [pro.ts:43-45](../servio-api/src/routes/pro.ts#L43-L45), [wrangler.toml](../servio-api/wrangler.toml) | Customer could wait forever with money on hold. Fix: add a Cron Trigger calling `dispatchTick`. |
-| 4 | **No remote push notifications.** Only in-app inbox + local alerts while the app process is alive. | [notification.service.ts](../servio-app/src/app/core/services/notification.service.ts) | Pros miss job offers when the app is closed. |
-| 5 | **Road routing is disabled in production builds** and uses the public OSRM demo server in dev. | [tracking.service.ts:204](../servio-app/src/app/core/services/tracking.service.ts#L204) | In production the map shows the live dot without a road path. |
-| 6 | **GPS only while the app is in the foreground.** | [tracking.service.ts:145](../servio-app/src/app/core/services/tracking.service.ts#L145) | If the Pro switches apps, tracking pauses ("Reconnecting…"). |
-| 7 | **New DB connection on every request** (and separate ones inside `notifyLive` and `OrderRoom`). Hyperdrive pools in production, but local dev opens many connections. | [middleware/db.ts](../servio-api/src/middleware/db.ts) | Extra latency/connection load. |
-| 8 | **No service-area limit.** `validateServiceLocation` only checks lat/lng are valid numbers; `radiusKm: null`. | [service-area.ts](../servio-api/src/lib/service-area.ts), [catalog.ts:40](../servio-api/src/routes/catalog.ts#L40) | Bookings can be placed anywhere in the world. |
-| 9 | **4-digit PIN** with 5 attempts → 0.05% guess chance; locked bookings need support to unlock, but no unlock endpoint exists. | [bookings.ts:290](../servio-api/src/routes/bookings.ts#L290) | Stuck job if a Pro mistypes 5 times. |
-| 10 | **No admin console API** for KYC review, catalog management or disputes; only support-report status. | [support.ts:38-50](../servio-api/src/routes/support.ts#L38-L50) | Admin features in the brief aren't built yet. |
-| 11 | Pro-cancel has no fee and only increments `cancellationStrikes`, which nothing reads. | [bookings.ts:207](../servio-api/src/routes/bookings.ts#L207) | No real penalty for Pros cancelling. |
+| 1 | *(nothing, just connect)* | `220` | "Hello, I'm ready." |
+| 2 | `EHLO servio.app` | `250` | "Hi, I'm servio.app." → "Nice to meet you." |
+| 3 | `AUTH PLAIN <base64 of user + password>` | `235` | "Here's my login." → "Logged in." |
+| 4 | `MAIL FROM:<servio@gmail.com>` | `250` | "It's from me." → "OK." |
+| 5 | `RCPT TO:<ana@example.com>` | `250` | "It's for Ana." → "OK." |
+| 6 | `DATA` | `354` | "I'm about to send the letter." → "Go ahead, end with a dot." |
+| 7 | *the whole letter* + a line with only `.` | `250` | "Done." → "Queued for delivery." |
+| 8 | `QUIT` | — | "Bye." |
+
+If **any** answer is a different number than expected, it stops with an error like `SMTP 535: bad password` ([:57](../servio-api/src/lib/mailer.ts#L57)).
+
+Small details that matter:
+- **Reading answers** ([:49-64](../servio-api/src/lib/mailer.ts#L49-L64)): Gmail can reply in several lines (`250-…`, `250-…`, then `250 …`). A **space** after the number means "this is the last line". The code keeps reading until it sees that.
+- **Dot-stuffing** ([:89-91](../servio-api/src/lib/mailer.ts#L89-L91)): a line with only `.` means "end of letter". So if the letter itself has a line starting with `.`, we add a second dot (`..`) so Gmail doesn't think the letter ended early. Gmail removes the extra dot.
+- **15-second timeout** ([:13](../servio-api/src/lib/mailer.ts#L13), [:122-131](../servio-api/src/lib/mailer.ts#L122-L131)): if Gmail is slow or stuck, give up after 15 s and close the line, so the user isn't waiting forever.
+- **Always hang up** (`finally { socket.close() }`, [:84-86](../servio-api/src/lib/mailer.ts#L84-L86)): even after an error, the connection is closed.
+
+#### What can go wrong (and what the user sees)
+
+| Problem | What the user sees | Code |
+|---|---|---|
+| Bad email address | "Enter a valid email address." (`422`) | [mailer.ts:21](../servio-api/src/lib/mailer.ts#L21) |
+| Email not set up (production) | "We can't send email right now." (`503`) | [mailer.ts:28](../servio-api/src/lib/mailer.ts#L28) |
+| Wrong Gmail password / Gmail down / timeout | "We couldn't send the email. Try again in a minute." (`502`) | [mailer.ts:37](../servio-api/src/lib/mailer.ts#L37) |
+| Asked too many times | "Too many tries…" (`429`) | [auth.ts:37](../servio-api/src/routes/auth.ts#L37), [:56](../servio-api/src/routes/auth.ts#L56) |
+| Local dev, no Gmail set up | Nothing sent — the code is printed in the terminal running `npm run dev` | [mailer.ts:23-25](../servio-api/src/lib/mailer.ts#L23-L25) |
+
+**Limits to know:** Gmail caps how many emails one account can send per day, and emails from a personal Gmail can land in spam. For real launch, switch `SMTP_HOST`/`USER`/`PASSWORD` to a proper email service — no code change needed.
 
 ---
-## 14. Example questions & answers
+## 9. Offline (demo) mode vs online (real) mode
+
+**In plain words:** "offline mode" is a **pretend version** of the app that works with no server at all — for demos. It is **not** "works without internet and syncs later".
+
+One switch controls it: `ApiSettingsService.useMockApi` ([api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts)).
+
+| | Real (online) mode | Demo (offline) mode |
+|---|---|---|
+| How to turn on | It's the default | Demo builds only: "Demo connection" → **Offline demo** ([demo-connection.service.ts](../servio-app/src/app/core/services/demo-connection.service.ts)) |
+| Login | real email code | any email, code **`123456`** ([auth.service.ts:10](../servio-app/src/app/core/services/auth.service.ts#L10)) |
+| Data | from the server | built-in sample data ([mock-data.ts](../servio-app/src/app/core/data/mock-data.ts)) |
+| Saving | in the database | in the phone's browser storage (`localStorage`) ([demo-store.ts](../servio-app/src/app/core/services/demo-store.ts)) |
+| Status / PIN / wallet | server does it | the app fakes it ([order.service.ts:204](../servio-app/src/app/core/services/order.service.ts#L204)) |
+| Tracking | real GPS | a pretend rider driving a fixed Tuguegarao route ([tuguegarao-route.ts](../servio-app/src/app/core/data/tuguegarao-route.ts)) |
+| Chat | real messages | fake reply after 1.4 s |
+| Bulletin accept/cancel | works | "requires an API connection" |
+
+**How the code switches:** every action looks like
+`if (useMockApi()) { do it on the phone } else { ask the server }` — e.g. [order.service.ts:325-374](../servio-app/src/app/core/services/order.service.ts#L325-L374).
+
+**No internet in real mode?** Requests fail and you see "Cannot reach SERVIO". Nothing is saved for later.
+
+**Fake GPS for demo accounts:** in real mode, a demo Pro can turn on simulated GPS. The server only accepts it for demo bookings, never in production.
+
+---
+## 10. Bulletin (neighborhood request board)
+
+**In plain words:** like a community Facebook post: "Need someone to fix my sink." A Pro raises their hand, then the customer turns it into a normal booking.
+
+1. **Customer posts** → `POST /bulletin` ([community.ts:33](../servio-api/src/routes/community.ts#L33)). Status `OPEN` or `URGENT`.
+2. **A Pro reserves it** → `POST /bulletin/:id/accept` ([community.ts:127](../servio-api/src/routes/community.ts#L127)). No money yet.
+3. **Customer checks out** → a normal booking is created with that Pro, with money held.
+4. **Before checkout**, the Pro can let go (`release`) and the customer can `cancel`. After checkout, normal booking cancel rules apply.
+
+---
+## 11. Uploads (photos, avatars, ID documents)
+
+**In plain words:** the app doesn't send the photo through every request. It uploads the photo once, gets a **name tag (key)** for it, and from then on just sends the name tag.
+
+1. **Ask permission:** `POST /uploads/presign` with type and size → server makes a random file name and a **temporary upload link** valid 15 min ([uploads.ts:52-63](../servio-api/src/routes/uploads.ts#L52-L63)).
+2. **Upload** the file to that link ([api.service.ts:92-98](../servio-app/src/app/core/api/api.service.ts#L92-L98)). In production it goes through our Worker into R2.
+3. **Use the key** (e.g. `photoKey`) in chat, add-ons, profile. The server checks it's your file and the right kind ([lib/uploads.ts:15-23](../servio-api/src/lib/uploads.ts#L15-L23)).
+4. **Viewing:** `GET /uploads/:key` checks you're allowed to see it, then gives a link that works for 60 seconds ([uploads.ts:111-148](../servio-api/src/routes/uploads.ts#L111-L148)). ID documents (KYC) only the owner can see.
+
+Limits: JPEG/PNG up to 5 MB; PDF up to 10 MB (ID documents only). The app shrinks photos before uploading.
+
+---
+## 12. Database tables (what's saved where) — [schema.ts](../servio-api/src/db/schema.ts)
+
+| Table | Holds |
+|---|---|
+| `users`, `sessions`, `login_codes` | accounts, logged-in devices, email codes (hashed) |
+| `user_addresses` | saved addresses |
+| `pro_profiles` | Pro info: ID check status, online, last location, rating |
+| `categories`, `service_skus`, `addon_skus`, `pro_skus` | service menu, prices, add-ons, who offers what |
+| `bookings`, `booking_events`, `addon_quotes` | bookings, their history, add-on requests |
+| `dispatch_offers` | job offers sent to Pros |
+| `bulletin_requests` | bulletin posts |
+| `messages`, `reviews`, `notifications` | chat, ratings, inbox |
+| `ledger_entries`, `payouts` | money log, cash-outs |
+| `uploads`, `support_requests` | files, help reports |
+
+Booking codes look like `SRV-1234`. All money is whole centavos, and the database itself refuses bad values (e.g. negative prices).
+
+---
+## 13. Audit: what's good, what needs fixing
+
+### What's done well
+- **No double charges / double accepts:** every money or status change is all-or-nothing and locks the rows it touches.
+- **No duplicate bookings** on double-tap (idempotency key).
+- **Money log that must balance** (double-entry ledger) instead of a balance number that could drift.
+- **Secrets are never saved readable:** tokens and login codes are hashed; PIN and live tickets use HMAC.
+- **Every input is checked**, and every error has the same shape + a request ID.
+- **You only see your own bookings** (`participantBooking`, [lib/bookings.ts:18](../servio-api/src/lib/bookings.ts#L18)).
+
+### What needs fixing (before real users)
+
+| # | Problem (plain) | Where | Why it matters |
+|---|---|---|---|
+| 1 | **Anyone can become a Pro instantly.** No ID check; they even get a fake 5.0 rating. | [me.ts:86-108](../servio-api/src/routes/me.ts#L86-L108) | Strangers could take jobs. OK for a prototype only. |
+| 2 | **Payments are fake.** Nothing actually charges or pays out. | [payments/mock.ts](../servio-api/src/payments/mock.ts), [wallet.ts:81-82](../servio-api/src/routes/wallet.ts#L81-L82) | No real money moves. |
+| 3 | **Matching only runs when a Pro's app is open.** No timer on the server. | [pro.ts:43-45](../servio-api/src/routes/pro.ts#L43-L45) | A booking could wait forever with money on hold. Fix: a Cloudflare Cron Trigger (timer) every minute. |
+| 4 | **No real push notifications.** | [notification.service.ts](../servio-app/src/app/core/services/notification.service.ts) | Pros miss jobs when the app is closed. |
+| 5 | **No road line on the map in production.** | [tracking.service.ts:204](../servio-app/src/app/core/services/tracking.service.ts#L204) | Customer sees the dot but not the route. |
+| 6 | **GPS stops when the Pro leaves the app.** | [tracking.service.ts:145](../servio-app/src/app/core/services/tracking.service.ts#L145) | Customer sees "Reconnecting…". |
+| 7 | **New DB connection per request.** | [middleware/db.ts](../servio-api/src/middleware/db.ts) | A bit slower; Hyperdrive helps in production. |
+| 8 | **No service area.** | [service-area.ts](../servio-api/src/lib/service-area.ts) | Someone could book from another country. |
+| 9 | **PIN lock has no unlock.** 5 wrong tries = stuck. | [bookings.ts:290](../servio-api/src/routes/bookings.ts#L290) | Job can't be finished without manual DB fix. |
+| 10 | **No admin tools** for ID review, menu, disputes. | [support.ts:38-50](../servio-api/src/routes/support.ts#L38-L50) | Admin features not built yet. |
+| 11 | **Pro cancelling has no real penalty** (strikes are counted but not used). | [bookings.ts:207](../servio-api/src/routes/bookings.ts#L207) | Pros can cancel freely. |
+| 12 | **Login emails come from Gmail.** Daily send limit, may go to spam. | [mailer.ts](../servio-api/src/lib/mailer.ts) | Switch to an email service before launch (settings only). |
+
+---
+## 14. Plugins & libraries (what each one does)
+
+### Mobile app — Capacitor plugins (native phone features)
+
+| Plugin | What it does in SERVIO | Used in |
+|---|---|---|
+| `@capacitor/core` | Base of Capacitor. `Capacitor.isNativePlatform()` checks if we're on a real phone vs browser. | many services |
+| `@capacitor/android`, `@capacitor/ios` | Wrap the web app into a real Android / iOS app. | [android/](../servio-app/android/), [ios/](../servio-app/ios/) |
+| `@capacitor/geolocation` | Reads phone GPS — Pro live tracking, going online, "use my location" on the address map. | [tracking.service.ts](../servio-app/src/app/core/services/tracking.service.ts), [addresses.page.ts](../servio-app/src/app/pages/addresses/addresses.page.ts) |
+| `@capacitor/camera` | Picks/takes photos — chat photos, add-on proof photos, profile avatar. | [order-chat.page.ts:154](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L154), [add-quote.page.ts:55](../servio-app/src/app/pages/pro/add-quote/add-quote.page.ts#L55), [profile-setup.page.ts:55](../servio-app/src/app/pages/auth/profile-setup/profile-setup.page.ts#L55) |
+| `@capacitor/preferences` | Small key-value storage on the phone — saves the login token and API settings. | [session.service.ts](../servio-app/src/app/core/api/session.service.ts), [api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts) |
+| `@capacitor/local-notifications` | Shows phone notifications created by the app itself (not server push). | [notification.service.ts](../servio-app/src/app/core/services/notification.service.ts) |
+| `@capacitor/app` | Tells us when the app goes to background / comes back → reconnect WebSocket, pause GPS. | [live.service.ts:30](../servio-app/src/app/core/services/live.service.ts#L30), [tracking.service.ts:93](../servio-app/src/app/core/services/tracking.service.ts#L93) |
+| `@capacitor/haptics` | Vibrates the phone when a new job offer arrives. | [dispatch-alert.service.ts:77](../servio-app/src/app/core/services/dispatch-alert.service.ts#L77) |
+| `@capacitor-community/native-audio` | Loops the alarm sound for a new job offer. | [dispatch-alert.service.ts:25-70](../servio-app/src/app/core/services/dispatch-alert.service.ts#L25-L70) |
+| `@capacitor/status-bar` | Sets the top status bar style (dark text on light). | [app.component.ts:22](../servio-app/src/app/app.component.ts#L22) |
+| `@capacitor/keyboard` | Installed; handles keyboard resizing natively. No code calls it directly. | — |
+| `@capacitor/cli` (dev) | `npx cap sync / open` — copies the web build into the native projects. | [capacitor.config.ts](../servio-app/capacitor.config.ts) |
+
+### Mobile app — other libraries
+
+| Library | What it does |
+|---|---|
+| `@angular/*` (v22) | The app framework: components, routing, forms, HTTP. |
+| `@ionic/angular` (v9) | Mobile UI components (buttons, modals, tabs, toasts) that look native. |
+| `ionicons` | The icon set ([icons.ts](../servio-app/src/app/icons.ts)). |
+| `leaflet` | Draws the maps (tracking, address pin) with OpenStreetMap tiles. |
+| `rxjs` | Streams/observables used by Angular HTTP and services. |
+| `@fontsource/inter` | Bundles the Inter font locally (no Google Fonts call) ([global.scss](../servio-app/src/global.scss)). |
+| `eslint`, `angular-eslint`, `typescript-eslint` (dev) | Code linting (`npm run lint`). |
+
+### Backend (servio-api) libraries
+
+| Library | What it does in SERVIO | Used in |
+|---|---|---|
+| `hono` | Small, fast web router for Cloudflare Workers — defines all `/api/v1` routes. | [index.ts](../servio-api/src/index.ts) |
+| `valibot` + `@hono/valibot-validator` | Checks every request body/query/param; bad input → `422`. | [validation.ts](../servio-api/src/lib/validation.ts) |
+| `drizzle-orm` | Type-safe SQL query builder for Postgres (tables in TypeScript). | [schema.ts](../servio-api/src/db/schema.ts) |
+| `pg` | The actual Postgres driver (opens the DB connection). | [client.ts](../servio-api/src/db/client.ts) |
+| `@aws-sdk/client-s3` + `s3-request-presigner` | Talks to R2 (S3-compatible) and makes signed upload/download URLs. | [uploads.ts](../servio-api/src/routes/uploads.ts) |
+| `@neon/config` | Neon branch settings — preview DB branches auto-delete after 7 days. | [neon.ts](../servio-api/neon.ts) |
+| `@neon/env` | Installed but not imported anywhere (can be removed). | — |
+| `wrangler` (dev) | Cloudflare CLI — `npm run dev` (local server) and `npm run deploy`. | [wrangler.toml](../servio-api/wrangler.toml) |
+| `drizzle-kit` (dev) | Generates/runs SQL migrations (`db:generate`, `db:migrate`). | [drizzle/](../servio-api/drizzle/) |
+| `tsx` (dev) | Runs TypeScript scripts: seed, demo reset, backup/restore. | [scripts/](../servio-api/scripts/) |
+| `typescript`, `@cloudflare/workers-types`, `@types/pg` (dev) | Type checking. | — |
+
+### Cloudflare features (configured in [wrangler.toml](../servio-api/wrangler.toml), not npm)
+
+| Feature | What it does |
+|---|---|
+| Workers | Runs the API serverless, close to users. |
+| Durable Objects | `OrderRoom` (WebSocket rooms) and `Geocoder` (one global address lookup queue). |
+| R2 | File storage for photos and KYC docs. |
+| Hyperdrive | Connection pooling/caching to the Neon Postgres DB (production). |
+| Rate Limiting (`AUTH_LIMITER`) | 10 login requests per minute per IP/email. |
+
+### Free external services
+- **Neon** — hosted Postgres database.
+- **OpenStreetMap** tiles — map images.
+- **Nominatim** — turns lat/lng into an address.
+- **OSRM** — road route line (dev builds only).
+- **Gmail SMTP** — sends login codes.
+
+---
+## 15. Questions & answers (short version)
 
 ### General / architecture
 
-**Q: What is your backend built with?**
-A: A Cloudflare Worker written in TypeScript using the Hono framework. Data is in PostgreSQL (Neon, reached through Cloudflare Hyperdrive) via Drizzle ORM. Photos are in Cloudflare R2. Realtime uses Durable Objects with WebSockets. Entry point: [servio-api/src/index.ts](../servio-api/src/index.ts).
+**Q: What is the backend built with?**
+A: TypeScript on Cloudflare Workers, using Hono. Database is Postgres (Neon) through Drizzle ORM. Files go to R2. Realtime uses Durable Objects + WebSockets. → [index.ts](../servio-api/src/index.ts)
 
-**Q: How does the mobile app talk to the backend?**
-A: Over HTTPS with JSON. Every call goes through `ApiService` ([api.service.ts](../servio-app/src/app/core/api/api.service.ts)); an interceptor adds `Authorization: Bearer <token>` and a request ID ([api.interceptor.ts](../servio-app/src/app/core/api/api.interceptor.ts)). Live updates use a WebSocket ([live.service.ts](../servio-app/src/app/core/services/live.service.ts)).
+**Q: What is the app built with?**
+A: Ionic + Angular, packaged as Android/iOS apps by Capacitor.
 
-**Q: Where are all the API routes registered?**
-A: [index.ts:33-50](../servio-api/src/index.ts#L33-L50) mounts every route file under `/api/v1`.
+**Q: Why serverless (Cloudflare Workers)?**
+A: No server to manage, scales by itself, free tier, and it runs close to the user.
+
+**Q: How does the app talk to the backend?**
+A: HTTPS + JSON for normal calls, WebSocket for live updates. → [api.service.ts](../servio-app/src/app/core/api/api.service.ts)
+
+**Q: What is a REST API / what does `/api/v1` mean?**
+A: Each URL is a resource (`/bookings`, `/wallet`) and the method says the action (GET = read, POST = create/do, PATCH = edit, DELETE = remove). `v1` is the version so we can change the API later without breaking old apps.
+
+**Q: Where are routes registered?**
+A: [index.ts:33-50](../servio-api/src/index.ts#L33-L50).
 
 **Q: Why Postgres and not Firebase?**
-A: Bookings and money need strict transactions and row locking (two Pros must not accept the same job; money must not be released twice). Postgres gives that; see the `transaction(...)` + `.for('update')` calls in [bookings.ts](../servio-api/src/routes/bookings.ts).
+A: Money and bookings need transactions and row locks so two Pros can't take the same job and money isn't paid twice.
 
-**Q: How do you handle errors?**
-A: Routes throw `ApiError(status, code, message)` ([errors.ts](../servio-api/src/lib/errors.ts)); [error.ts](../servio-api/src/middleware/error.ts) turns it into `{ error: { code, message, requestId } }`. The app shows `message` as a toast and signs you out on 401.
+**Q: What is an ORM / why Drizzle?**
+A: It lets us write DB queries in TypeScript with type checking instead of raw SQL strings. Drizzle is light and works on Workers.
+
+**Q: What is a migration?**
+A: A SQL file that changes the DB structure step by step (0000 → 0011). → [drizzle/](../servio-api/drizzle/)
+
+**Q: What is Hyperdrive?**
+A: Cloudflare's connection pool for Postgres. It keeps DB connections warm so each request is faster.
+
+**Q: How are errors handled?**
+A: Code throws `ApiError`; the server returns `{ error: { code, message, requestId } }`. The app shows the message as a toast. → [error.ts](../servio-api/src/middleware/error.ts)
+
+**Q: How is input validated?**
+A: Valibot checks every body/query/param. Wrong input → `422 VALIDATION_FAILED`. → [validation.ts](../servio-api/src/lib/validation.ts)
+
+**Q: What is CORS and why is it there?**
+A: It only lets allowed origins (our app, e.g. `capacitor://localhost`) call the API from a browser/webview. → [cors.ts](../servio-api/src/middleware/cors.ts)
+
+**Q: What is the request ID for?**
+A: Every request gets an `X-Request-Id` so we can find that exact request in the logs when debugging.
+
+**Q: How do you check if the server is up?**
+A: `GET /api/v1/health` → `ok` or `degraded` + DB latency. → [health.ts](../servio-api/src/routes/health.ts)
+
+**Q: How do you deploy?**
+A: `npm run deploy` in `servio-api` (Wrangler → Cloudflare). The app is built with `ng build` then `npx cap sync`.
+
+**Q: Is the catalog cached?**
+A: Yes, `GET /catalog` is public and cached 5 minutes. → [catalog.ts:36](../servio-api/src/routes/catalog.ts#L36)
+
+### Login & accounts
+
+**Q: How does login work?**
+A: Enter email → get a 6-digit code → enter code → get a session token. No passwords. → [auth.ts](../servio-api/src/routes/auth.ts)
+
+**Q: How is the code protected?**
+A: Only its hash is stored, valid 10 min, 5 wrong tries max, single-use, rate-limited.
+
+**Q: Where is the token saved on the phone?**
+A: Capacitor Preferences. → [session.service.ts](../servio-app/src/app/core/api/session.service.ts)
+
+**Q: How long does a session last?**
+A: 30 days. Sign-out revokes it. The DB only stores its hash. → [middleware/auth.ts](../servio-api/src/middleware/auth.ts)
+
+**Q: What happens on a 401?**
+A: The app clears the session and sends you back to login. → [api.interceptor.ts](../servio-app/src/app/core/api/api.interceptor.ts)
+
+**Q: What roles are there?**
+A: `CUSTOMER`, `PRO`, `ADMIN`. One account can switch Customer ↔ Pro (not during an active job). → [me.ts:185-226](../servio-api/src/routes/me.ts#L185-L226)
+
+**Q: Are Pros verified (KYC)?**
+A: The system supports it (only `APPROVED` Pros get jobs), but right now upgrading to Pro auto-approves. Admin review is future work. → [me.ts:86-108](../servio-api/src/routes/me.ts#L86-L108)
+
+**Q: Can I save addresses?**
+A: Yes, `/me/addresses` (add, edit, delete). → [addresses.ts](../servio-api/src/routes/addresses.ts)
 
 ### Booking
 
 **Q: What happens when I tap "Book"?**
-A: [checkout.page.ts:112](../servio-app/src/app/pages/checkout/checkout.page.ts#L112) calls `OrderService.book()` ([order.service.ts:173](../servio-app/src/app/core/services/order.service.ts#L173)), which sends `POST /bookings` with an `Idempotency-Key`. The server ([bookings.ts:42-115](../servio-api/src/routes/bookings.ts#L42-L115)) validates, creates the booking, places a mock escrow hold, records ledger entries and a system message, then `notifyLive` alerts online Pros.
+A: App sends `POST /bookings`. Server validates, creates the booking, holds the money (mock), writes ledger rows, then alerts Pros. → [bookings.ts:42-115](../servio-api/src/routes/bookings.ts#L42-L115)
 
-**Q: What if the user taps Book twice or the network retries?**
-A: The same `Idempotency-Key` returns the same booking ([bookings.ts:59-67](../servio-api/src/routes/bookings.ts#L59-L67)). A different body with the same key gets `409 IDEMPOTENCY_CONFLICT`.
+**Q: What if I tap Book twice?**
+A: Same `Idempotency-Key` → same booking returned, no duplicate. → [bookings.ts:59-67](../servio-api/src/routes/bookings.ts#L59-L67)
+
+**Q: What is idempotency?**
+A: Doing the same request many times gives the same result as doing it once.
+
+**Q: What are the booking statuses?**
+A: `PENDING_ACCEPTANCE → ACCEPTED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED`, or `CANCELLED`.
+
+**Q: Can a Pro skip a step?**
+A: No. One step at a time, only by the assigned Pro. Skipping → `409 INVALID_TRANSITION`.
 
 **Q: How is a Pro chosen?**
-A: If the customer picked one, they're assigned directly. Otherwise [demo-dispatch.ts:16-58](../servio-api/src/dispatch/demo-dispatch.ts#L16-L58) offers the job to the **nearest** online, approved Pro who offers that service and has fresh GPS (< 2 min), one at a time, 60 s each, up to 5 Pros.
+A: Nearest online, approved Pro who offers that service with fresh GPS. Offered one at a time, 60 s each, up to 5 Pros. → [demo-dispatch.ts](../servio-api/src/dispatch/demo-dispatch.ts)
 
 **Q: What if no Pro accepts?**
-A: After 5 tries (or 5 minutes with no one found) the booking is cancelled with a full refund and the message "No available Pro" ([demo-dispatch.ts:44-57](../servio-api/src/dispatch/demo-dispatch.ts#L44-L57)).
+A: After 5 tries or 5 minutes → auto-cancel + full refund.
 
-**Q: How does the Pro move the job forward?**
-A: Job screen ([job-execute.page.ts:58](../servio-app/src/app/pages/pro/job-execute/job-execute.page.ts#L58)) → `POST /bookings/:id/status` ([bookings.ts:170](../servio-api/src/routes/bookings.ts#L170)). Only the assigned Pro, only one step at a time; a skip gets `409 INVALID_TRANSITION`.
+**Q: Can I pick a specific Pro?**
+A: Yes. Then the booking starts as `ACCEPTED` directly. You can't book yourself.
 
-**Q: How do you calculate the ETA?**
-A: When the Pro taps "On the way", the server uses the Pro's last GPS: straight-line distance × 1.3 (roads aren't straight) ÷ 20 km/h, kept between 15 and 60 minutes ([cities.ts:36-40](../servio-api/src/config/cities.ts#L36-L40)).
+**Q: Can I schedule for later?**
+A: Yes — ASAP or a scheduled time window.
+
+**Q: How is the ETA calculated?**
+A: Straight-line distance × 1.3 ÷ 20 km/h, kept between 15–60 min. → [cities.ts:36-40](../servio-api/src/config/cities.ts#L36-L40)
 
 **Q: How do add-ons work?**
-A: At ARRIVED/IN_PROGRESS the Pro uploads a photo and picks an add-on from the catalog (`POST /bookings/:id/addons`). The customer approves/declines (`…/decision`); approval adds another escrow hold ([bookings.ts:238-281](../servio-api/src/routes/bookings.ts#L238-L281)). One pending add-on at a time.
+A: Pro sends an add-on + photo → customer approves/declines → approved amount is added to the hold. One at a time. → [bookings.ts:238-281](../servio-api/src/routes/bookings.ts#L238-L281)
 
-**Q: How is the job marked complete?**
-A: The customer's app shows a 4-digit PIN; the Pro types it in. `POST /bookings/:id/verify-pin` ([bookings.ts:283-320](../servio-api/src/routes/bookings.ts#L283-L320)) checks it, releases escrow (85% Pro, 15% + ₱50 trust fee platform), sets COMPLETED, and increments the Pro's jobs done.
+**Q: How is the job completed?**
+A: Customer shows a 4-digit PIN, Pro types it. Correct → money released, status `COMPLETED`. → [bookings.ts:283-320](../servio-api/src/routes/bookings.ts#L283-L320)
 
-**Q: Where does the PIN come from? Is it stored?**
-A: Not stored. It's `HMAC(PIN_SECRET, bookingId)` cut to 4 digits ([completion-pin.ts](../servio-api/src/lib/completion-pin.ts)), so the server can recompute it. Only the customer's response includes it.
+**Q: Is the PIN stored?**
+A: No. It's computed from `HMAC(secret, bookingId)` every time. Only the customer sees it.
+
+**Q: What if the Pro gets the PIN wrong?**
+A: 5 tries, then `423 PIN_LOCKED`.
+
+**Q: How do reviews and tips work?**
+A: After `COMPLETED`, the customer gives 1–5 stars (+ optional tip). One review per booking. The Pro's average rating updates; the tip goes 100% to the Pro's wallet. → [booking-social.ts:18-49](../servio-api/src/routes/booking-social.ts#L18-L49)
+
+**Q: Where is booking history?**
+A: `GET /bookings` lists your bookings; `GET /bookings/:id` shows one. Status history is in `booking_events`.
 
 ### Cancelling
 
-**Q: How does cancelling work?**
-A: Tracking page ([tracking.page.ts:96](../servio-app/src/app/pages/tracking/tracking.page.ts#L96)) asks for a reason → `POST /bookings/:id/status {to:'CANCELLED', reason}` ([bookings.ts:183-210](../servio-api/src/routes/bookings.ts#L183-L210)). Server computes the fee, refunds the rest, writes ledger rows, sets escrow REFUNDED.
+**Q: How do I cancel?**
+A: Give a reason → `POST /bookings/:id/status {to:'CANCELLED'}`. Server computes fee and refunds the rest.
 
-**Q: Is there a cancellation fee?**
-A: Customer: free before the Pro leaves; ₱100 while en route; ₱200 after arrival; not allowed once work started (must contact support). Free if the Pro is past the no-show deadline. Pro cancelling: customer gets full refund, Pro gets a strike. Amounts: [cities.ts:2](../servio-api/src/config/cities.ts#L2).
+**Q: Is there a fee?**
+A: Before Pro leaves: free. En route: ₱100. Arrived: ₱200. In progress: not allowed (support). Pro is late (no-show): free. → [cities.ts:2](../servio-api/src/config/cities.ts#L2)
 
-**Q: Can I cancel a bulletin request?**
-A: Yes, before it becomes a booking: `POST /bulletin/:id/cancel` ([community.ts:163](../servio-api/src/routes/community.ts#L163)). After that, use booking cancellation.
+**Q: What if the Pro cancels?**
+A: Customer gets a full refund; Pro gets a strike (not enforced yet).
+
+**Q: Can I cancel a bulletin post?**
+A: Yes, before it becomes a booking. → [community.ts:163](../servio-api/src/routes/community.ts#L163)
+
+### Money
+
+**Q: Is payment real?**
+A: No, it's a mock. It sits behind a `PaymentProvider` interface so PayMongo/GCash can be added later. → [provider.ts](../servio-api/src/payments/provider.ts)
+
+**Q: What is escrow?**
+A: The money is held when you book and only released to the Pro when the job is completed (PIN).
+
+**Q: How is the money split?**
+A: Pro gets 85% of service + add-ons. SERVIO gets 15% + ₱50 trust fee. → [money.ts:11](../servio-api/src/lib/money.ts#L11)
+
+**Q: Why centavos?**
+A: Integers avoid decimal rounding errors (₱150.50 = 15050).
+
+**Q: What is the ledger?**
+A: Every money movement is saved as rows that add up to zero (double-entry). Balances are calculated with `SUM()`, never stored.
+
+**Q: How does a Pro withdraw?**
+A: `POST /wallet/cashout` — min ₱500, ₱15 fee, to GCash. Mock: marked PAID instantly. → [wallet.ts](../servio-api/src/routes/wallet.ts)
+
+**Q: How do you stop double payouts?**
+A: DB transactions + row locks (`FOR UPDATE`) — only one request can change that booking/wallet at a time.
 
 ### Realtime, tracking & maps
 
-**Q: How do updates appear without refreshing?**
-A: WebSockets. The app joins rooms (`booking:<id>`, `user:<id>`, `pro:<id>`) on an `OrderRoom` Durable Object ([order-room.ts](../servio-api/src/live/order-room.ts)). After any change, [notify.ts](../servio-api/src/live/notify.ts) pings the right rooms; the app then re-fetches the booking ([order.service.ts:118-146](../servio-app/src/app/core/services/order.service.ts#L118-L146)).
+**Q: How do updates show without refreshing?**
+A: WebSockets. The server pings the right "room" and the app re-fetches the data. → [order-room.ts](../servio-api/src/live/order-room.ts)
 
-**Q: What if the WebSocket disconnects?**
-A: [live.service.ts](../servio-app/src/app/core/services/live.service.ts) pings every 10 s, reconnects after 25 s of silence with backoff (max 10 s), and reconnects when the app resumes or internet returns. Meanwhile `OrderService` polls every 5 s.
+**Q: What is a Durable Object?**
+A: A small Cloudflare server instance with its own memory/storage. We use one per booking/user/Pro room to hold the WebSockets.
+
+**Q: Why send "hints" instead of the data itself?**
+A: The DB stays the only source of truth; the app always gets fresh, correct data with a normal GET.
 
 **Q: How is the WebSocket secured?**
-A: The app first gets a 60-second signed, single-use ticket using its login token ([routes/live.ts:16-28](../servio-api/src/routes/live.ts#L16-L28), [tickets.ts](../servio-api/src/live/tickets.ts)). The room checks the signature, the session, and that you're part of that booking ([order-room.ts:58-66](../servio-api/src/live/order-room.ts#L58-L66)).
+A: The app first gets a 60-second, one-time signed ticket. The room checks it and that you belong to that booking. → [tickets.ts](../servio-api/src/live/tickets.ts)
+
+**Q: Why a ticket and not the login token?**
+A: WebSockets can't send an `Authorization` header, so the token would go in the URL. A short one-time ticket is safer.
+
+**Q: What if the connection drops?**
+A: Auto-reconnect with backoff (max 10 s); meanwhile the app polls every 5 s. → [live.service.ts](../servio-app/src/app/core/services/live.service.ts)
 
 **Q: How does live tracking work?**
-A: The Pro's phone reads GPS about every second ([tracking.service.ts:148](../servio-app/src/app/core/services/tracking.service.ts#L148)) and sends it over the booking WebSocket. The room accepts it only from the assigned Pro while EN_ROUTE, saves the latest point, and broadcasts it ([order-room.ts:71-95](../servio-api/src/live/order-room.ts#L71-L95)). The customer's Leaflet map animates the marker ([tracking-map.component.ts](../servio-app/src/app/shared/components/tracking-map/tracking-map.component.ts)).
+A: Pro phone sends GPS ~every second over the WebSocket. Server accepts it only from the assigned Pro while `EN_ROUTE` and broadcasts it to the customer's map.
 
-**Q: What map do you use? Do you pay for it?**
-A: Leaflet with free OpenStreetMap tiles ([map-tiles.ts](../servio-app/src/app/shared/utils/map-tiles.ts)). No API key.
+**Q: Does tracking work with the app closed?**
+A: No, only in the foreground for now.
 
-**Q: How does dropping a pin fill in the address?**
-A: [addresses.page.ts:90-113](../servio-app/src/app/pages/addresses/addresses.page.ts#L90-L113) → `GET /locations/reverse?lat&lng` → a single `Geocoder` Durable Object asks OpenStreetMap Nominatim, max 1 request per 1.1 s, and caches results for 7 days ([geocoder.ts](../servio-api/src/locations/geocoder.ts)). If busy, `429` and the app retries once.
+**Q: Which map do you use?**
+A: Leaflet + free OpenStreetMap tiles. No API key, no cost.
+
+**Q: How does a pin become an address?**
+A: `GET /locations/reverse` → Nominatim (OpenStreetMap). Max 1 request/1.1 s, cached 7 days. → [geocoder.ts](../servio-api/src/locations/geocoder.ts)
 
 **Q: How do you find nearby Pros?**
-A: `GET /pros?lat&lng` computes distance in SQL with the haversine formula ([community.ts:26-31](../servio-api/src/routes/community.ts#L26-L31)) and sorts nearest first, then by rating. Distance is only shown if the Pro's GPS is less than 15 min old.
+A: SQL haversine (distance on a sphere) formula, nearest first, then by rating. → [community.ts:26-31](../servio-api/src/routes/community.ts#L26-L31)
 
-**Q: How does the Pro go online/offline?**
-A: Toggle → [pro.service.ts:75](../servio-app/src/app/core/services/pro.service.ts#L75) sends `POST /pro/availability` with current GPS ([pro.ts:19-32](../servio-api/src/routes/pro.ts#L19-L32)). Only approved Pros can go online. Switching to customer mode forces offline.
+**Q: What is haversine?**
+A: A formula that gives the distance between two GPS points on Earth.
+
+**Q: How does a Pro go online?**
+A: Toggle → sends GPS to `POST /pro/availability`. Only approved Pros. Location refreshes every 30 s.
+
+**Q: How does a Pro get alerted of a new job?**
+A: Live socket event → radar screen with looping sound (native-audio) + vibration (haptics).
+
+**Q: Is there a service area limit?**
+A: Not yet — any valid lat/lng is accepted.
 
 ### Chat, calls, notifications
 
 **Q: How does chat work?**
-A: Messages are DB rows per booking. Send: `POST /bookings/:id/messages`; read: `GET /bookings/:id/messages?after=` ([booking-social.ts:51-82](../servio-api/src/routes/booking-social.ts#L51-L82)). New messages trigger a WebSocket event so the other side re-fetches ([order-chat.page.ts:76-95](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L76-L95)). Only the customer and Pro can see it; it closes when the job ends.
+A: Messages are DB rows per booking. New message → WebSocket ping → other side re-fetches. Closed after the job ends. → [booking-social.ts](../servio-api/src/routes/booking-social.ts)
 
-**Q: Can you send photos in chat?**
-A: Yes — upload via `/uploads/presign` then send the `photoKey` ([order-chat.page.ts:149-165](../servio-app/src/app/pages/order/order-chat/order-chat.page.ts#L149-L165)). Viewing gets a 60-second signed URL.
+**Q: Can I send photos?**
+A: Yes — upload first, then send the `photoKey`.
 
 **Q: How does calling work?**
-A: Not in-app voice. During an active job, `GET /bookings/:id/contact` returns the other person's number ([bookings.ts:124-135](../servio-api/src/routes/bookings.ts#L124-L135)) and the phone dialer opens.
+A: Not in-app. During an active job the app gets the other person's number and opens the phone dialer.
 
-**Q: Do you have push notifications?**
-A: Partly. There's a server inbox with a bell + unread dot ([routes/notifications.ts](../servio-api/src/routes/notifications.ts)), and local phone alerts while the app is open/backgrounded ([notification.service.ts](../servio-app/src/app/core/services/notification.service.ts)). No Firebase remote push yet, so a fully closed app gets nothing.
+**Q: Push notifications?**
+A: In-app inbox + local phone alerts while the app is running. No Firebase push yet, so nothing when fully closed.
 
-### Offline / online mode
+### Uploads
+
+**Q: How are photos uploaded?**
+A: Ask for a signed URL (`/uploads/presign`) → upload the file to it → send only the key to other endpoints. → [uploads.ts](../servio-api/src/routes/uploads.ts)
+
+**Q: What is a signed URL?**
+A: A temporary link (15 min to upload, 60 s to view) that only works for that one file.
+
+**Q: Limits?**
+A: JPEG/PNG ≤ 5 MB, PDF ≤ 10 MB (KYC only). KYC files are only visible to the owner.
+
+### Offline / demo mode
 
 **Q: What is offline mode?**
-A: A demo mode with no server. Toggle in the demo-only "Demo connection" dialog ([demo-connection.service.ts](../servio-app/src/app/core/services/demo-connection.service.ts)). Login code `123456`, sample data from [mock-data.ts](../servio-app/src/app/core/data/mock-data.ts), state saved in `localStorage`, simulated tracking. Each service checks `useMockApi()` and does the action locally instead of calling the API.
+A: A demo with no server: login code `123456`, sample data, saved in `localStorage`, simulated tracking. → [mock-data.ts](../servio-app/src/app/core/data/mock-data.ts)
 
-**Q: Does the app work without internet in real mode?**
-A: No. It doesn't queue actions offline; requests fail with "Cannot reach SERVIO". The live socket and polling resume automatically when internet returns.
+**Q: How does the code switch between mock and real?**
+A: `if (useMockApi()) { do it locally } else { call the API }` in each service.
 
-**Q: How do you demo on a real phone with a local server?**
-A: In a demo build, open "Demo connection" and enter the Mac's Wi-Fi IP, e.g. `http://192.168.1.10:8787/api/v1` (`10.0.2.2` for Android emulator) ([api-settings.service.ts](../servio-app/src/app/core/api/api-settings.service.ts)).
+**Q: Does real mode work without internet?**
+A: No. No offline queue — you see "Cannot reach SERVIO".
 
-### Money & security
+**Q: How do you demo on a phone with a local server?**
+A: "Demo connection" → enter the Mac's Wi-Fi IP, e.g. `http://192.168.1.10:8787/api/v1`.
 
-**Q: Is the payment real?**
-A: No — it's a mock provider ([payments/mock.ts](../servio-api/src/payments/mock.ts)) behind a `PaymentProvider` interface ([provider.ts](../servio-api/src/payments/provider.ts)), so PayMongo/GCash can replace it later without changing the booking logic.
+### Security
 
-**Q: How do you keep money accurate?**
-A: All amounts are integer centavos; every movement is a double-entry ledger transaction that sums to zero; balances are computed with `SUM()`; DB constraints block bad values ([schema.ts:381-398](../servio-api/src/db/schema.ts#L381-L398)).
+**Q: How do you stop people seeing other bookings?**
+A: `participantBooking()` only finds a booking if you're its customer or Pro; otherwise `404`. → [lib/bookings.ts:18-23](../servio-api/src/lib/bookings.ts#L18-L23)
 
-**Q: How does a Pro withdraw?**
-A: `POST /wallet/cashout` — minimum ₱500, ₱15 fee, to a GCash number. Balance is checked under a lock ([wallet.ts:63-86](../servio-api/src/routes/wallet.ts#L63-L86)). Simulated, marked PAID right away.
+**Q: Are secrets stored in plain text?**
+A: No. Tokens and codes are hashed; PIN and tickets use HMAC; comparisons are timing-safe. Server secrets are Cloudflare secrets, not in code.
 
-**Q: How do you stop someone from seeing other people's bookings?**
-A: Every booking route uses `participantBooking()` ([lib/bookings.ts:18-23](../servio-api/src/lib/bookings.ts#L18-L23)), which only finds the booking if you're its customer or Pro; otherwise `404`.
+**Q: What is rate limiting?**
+A: Limits how often you can call login (10/min) to stop spam and brute-force guessing.
 
-**Q: How are passwords handled?**
-A: There are no passwords. Login is a one-time email code (hashed, 10 min, 5 tries, rate-limited). The session token is stored only as a hash ([middleware/auth.ts](../servio-api/src/middleware/auth.ts)).
+**Q: Hashing vs encryption?**
+A: Hashing is one-way (can't get the original back) — good for tokens/codes. Encryption can be reversed with a key.
 
-**Q: Are Pros verified?**
-A: The data model supports KYC (`kycStatus`, KYC file uploads), and only `APPROVED` Pros can get jobs. But in this prototype, `/me/upgrade-pro` approves automatically ([me.ts:86-108](../servio-api/src/routes/me.ts#L86-L108)) — admin review is future work.
+### Limitations / future work
 
-**Q: How do you check the server is up?**
-A: `GET /api/v1/health` runs `select 1` and returns `ok` or `degraded` with DB latency ([health.ts](../servio-api/src/routes/health.ts)).
+**Q: What's not finished?**
+A: Real payments, real KYC review, admin console, remote push, background GPS, auto-dispatch without a Pro app open (needs a Cron Trigger), service-area limit, PIN unlock. See §13.
+
+**Q: What would you improve first?**
+A: Add a Cron Trigger for dispatch (so bookings never get stuck), real payments, and push notifications.
+
+### Email (SMTP) — quick answers
+
+**Q: What is SMTP?**
+A: The standard "language" for sending email. Our server talks it to Gmail line by line (see §8.2).
+
+**Q: Why not use a library like nodemailer?**
+A: It needs Node.js network features Cloudflare Workers don't have. Workers can open a raw secure connection, so we wrote a small SMTP sender (~130 lines). → [mailer.ts](../servio-api/src/lib/mailer.ts)
+
+**Q: Which email account sends the codes?**
+A: A Gmail account set in the secret `SMTP_USER` / `SMTP_PASSWORD`. Not in the code.
+
+**Q: Is the password safe on the way?**
+A: Yes. The connection is encrypted (port 465, TLS) before the password is sent.
+
+**Q: What does `220 / 250 / 235 / 354` mean?**
+A: Gmail's answers: 220 ready, 250 OK, 235 logged in, 354 "send the letter now". Anything else = error.
+
+**Q: Why are there two versions of the email?**
+A: Plain text + HTML. The email app shows the pretty one if it can.
+
+**Q: What is header injection and how do you stop it?**
+A: Sneaking a line break into a subject/address to add hidden fields like `Bcc`. We refuse any value with a line break.
+
+**Q: What if Gmail is down?**
+A: After 15 s we give up; the user sees "couldn't send, try again", and that code is cancelled.
+
+**Q: How do I log in locally without Gmail?**
+A: Leave SMTP unset. The code is printed in the `npm run dev` terminal.
+
+**Q: Is the code saved in the database?**
+A: Only its hash. Works once, 10 minutes, 5 wrong tries max.

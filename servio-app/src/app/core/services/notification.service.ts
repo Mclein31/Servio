@@ -9,7 +9,7 @@ import { AuthService } from './auth.service';
 import { LiveService } from './live.service';
 import { OrderService } from './order.service';
 
-export type NotificationKind = 'BOOKING' | 'MESSAGE' | 'ADDON' | 'OFFER' | 'BULLETIN' | 'REVIEW';
+export type NotificationKind = 'BOOKING' | 'MESSAGE' | 'ADDON' | 'OFFER' | 'BULLETIN' | 'REVIEW' | 'REWARD';
 export interface AppNotification { id: string; kind: NotificationKind; title: string; body: string; route: string | null; bookingId: string | null; readAt: string | null; createdAt: string }
 interface InboxDto { notifications: AppNotification[]; unreadCount: number }
 

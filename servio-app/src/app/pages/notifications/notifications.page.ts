@@ -12,6 +12,7 @@ const ICONS: Record<NotificationKind, { icon: string; tint: string; ink: string 
   OFFER: { icon: 'flash-outline', tint: 'var(--servio-cat-tech)', ink: '#7C3AED' },
   BULLETIN: { icon: 'document-text-outline', tint: 'var(--servio-cat-errands)', ink: '#059669' },
   REVIEW: { icon: 'star-outline', tint: 'var(--servio-amber-surface)', ink: '#B45309' },
+  REWARD: { icon: 'gift-outline', tint: 'var(--servio-amber-surface)', ink: '#B45309' },
 };
 
 @Component({

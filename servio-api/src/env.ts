@@ -39,6 +39,7 @@ export interface LiveHints {
   previousProId?: string | null;
   replay?: boolean;
   dispatch?: DispatchResult;
+  rewards?: { customerId: string; milestone: number; percentOff: number; maxDiscountCentavos: number }[];
 }
 export interface DispatchResult { offered: { offerId: string; bookingId: string; proId: string }[]; cancelled: string[] }
 

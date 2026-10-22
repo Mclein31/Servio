@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import type { AppEnv } from '../env';
 import { connectDb, type Database } from '../db/client';
 import { bookings, dispatchOffers, notifications, proProfiles, proSkus, users } from '../db/schema';
-import { bookingNotices, bulletinNotices, type BookingChange, type BookingInfo, type Notice } from './notices';
+import { bookingNotices, bulletinNotices, rewardNotices, type BookingChange, type BookingInfo, type Notice } from './notices';
 
 async function send(env:AppEnv['Bindings'],resource:string,event:unknown) {
   await env.ORDER_ROOMS.getByName(resource).fetch('http://order-room/notify',{ method:'POST',headers:{ 'Content-Type':'application/json' },body:JSON.stringify(event) });
@@ -92,6 +92,8 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
         await sendAll(c.env,[request.authorId,request.acceptedProId,hints.previousProId,actor].filter((id):id is string=>!!id).map((id)=>`user:${id}`),{ type:'bulletin',bulletinId:request.id });
         notices.push(...bulletinNotices(request,action,actor,hints.previousProId));
       }
+
+      notices.push(...rewardNotices(hints.rewards ?? []));
 
       const database=notices.length ? await db() : undefined;
       if(database) await deliverNotices(c.env,database,notices);

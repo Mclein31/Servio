@@ -360,3 +360,11 @@
 - **Status:** Accepted (owner requested a bell with an unread dot and rejected Firebase/paid Apple accounts)
 - **Decision:** The `notifications` table is the record. Notices are derived after commit from the same events as live rooms (ADR-036) by pure rules in `live/notices.ts`, never notifying the acting user. The client shows a header bell with a red dot and an inbox page. New notifications received over the live socket while the app is backgrounded are shown with `@capacitor/local-notifications` (free on Android and iOS, works with a Personal Team).
 - **Limits:** No remote push: when the OS has closed the app, nothing is shown until it is reopened. Remote push would need FCM (free Firebase project) and, for iOS, a paid Apple Developer membership.
+
+## ADR-038: Platform-funded loyalty coupons at order milestones
+
+- **Date:** 2026-10-22
+- **Status:** Accepted (owner requested discounts for loyal customers at e.g. 3, 10 and 15 orders)
+- **Decision:** A customer earns one coupon each time their **completed** bookings reach a milestone in `servio-api/src/config/loyalty.ts` (defaults: 3 → 10% up to ₱100, 10 → 15% up to ₱200, 15 → 20% up to ₱300). Coupons are issued on PIN completion and backfilled by `GET /me/rewards`, once per milestone (`customer_coupons` unique on customer + milestone). The customer optionally picks one at checkout (`couponId`); the server locks it, discounts the base SKU price only (never the trust fee or add-ons, never the whole price) and stores `bookings.discount_centavos`.
+- **Money:** SERVIO funds the discount. The hold debits the customer for total − discount and `platform_promotions` for the discount, so escrow and the Pro's 85% stay whole. Capture charges the customer total − discount. Cancellation refunds the customer what they paid minus any fee, returns the funding to `platform_promotions` and makes the coupon available again.
+- **Limits:** Milestones do not repeat after the last one, coupons do not expire and offline mock mode has no coupons. A reward notice (`REWARD`) is sent when a completion unlocks a coupon. Demo order reset does not revoke coupons already earned.
