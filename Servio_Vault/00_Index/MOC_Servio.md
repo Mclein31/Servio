@@ -59,6 +59,8 @@ The complete blueprint of screens, flows, and interface specifications.
 - [[Screen_Specs_Customer]] — High-fidelity UI component specifications for the Customer App.
 - [[Screen_Specs_Provider]] — High-fidelity UI component specifications for the Servio Pro (Technician) App.
 - [[Screen_Specs_Admin]] — High-fidelity UI component specifications for the Admin Operations Portal.
+- [[Figma_UI_Completion_Handoff]] — Figma file handoff: reconstructed core tabs, onboarding and Pro execution frames.
+- [[Bulletin_Acceptance_and_Profile_Settings]] — Bulletin request lifecycle (reserve → confirm & book) and Profile settings behaviour.
 
 ### 4. Domain & System Design
 The technical, entity, and workflow modeling governing the platform.

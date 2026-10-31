@@ -6,7 +6,57 @@
   "hideUnresolved": false,
   "showOrphans": true,
   "collapse-color-groups": true,
-  "colorGroups": [],
+  "colorGroups": [
+    {
+      "query": "file:\"MOC_Servio\"",
+      "color": {
+        "a": 1,
+        "rgb": 2076068
+      }
+    },
+    {
+      "query": "path:\"00_Index\"",
+      "color": {
+        "a": 1,
+        "rgb": 2546125
+      }
+    },
+    {
+      "query": "path:\"01_Product_Vision\"",
+      "color": {
+        "a": 1,
+        "rgb": 2539993
+      }
+    },
+    {
+      "query": "path:\"02_Scope_and_Boundaries\"",
+      "color": {
+        "a": 1,
+        "rgb": 2546089
+      }
+    },
+    {
+      "query": "path:\"03_User_Experience_and_Screens\"",
+      "color": {
+        "a": 1,
+        "rgb": 5956313
+      }
+    },
+    {
+      "query": "path:\"04_Domain_and_System_Design\"",
+      "color": {
+        "a": 1,
+        "rgb": 5951714
+      }
+    },
+    {
+      "query": "path:\"05_Market_Research\"",
+      "color": {
+        "a": 1,
+        "rgb": 5956286
+      }
+    }
+  ],
   "collapse-display": true,
   "showArrow": false,
   "textFadeMultiplier": 0,

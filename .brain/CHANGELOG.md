@@ -2,6 +2,15 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.38] — 2026-10-31
+### Added
+- **30-second promo video (`promo-video/`):** Remotion + React Three Fiber project that renders `out/servio-promo.mp4` (1920×1080, 30 fps). It includes an extruded 3D SERVIO mark traced from `assets/logo/logo.png` (`scripts/trace-logo.cjs`), a cel-shaded 3D town with a cartoon scooter for tracking, CSS-3D phones showing real app captures, and a procedurally synthesized soundtrack (`scripts/make_soundtrack.py`). The voiceover script is in `promo-video/VOICEOVER_SCRIPT.md`; drop the recording at `public/audio/voiceover.wav` and run `npm run render:vo`. Owner direction: no download CTA and no city-specific messaging. Voiceover: 8 ElevenLabs takes ("Scotty – High energy promos") are in `public/audio/vo/`, placed by `scripts/build_voiceover.py`; the final cut is `out/servio-promo-vo.mp4`.
+### Changed
+- **Vault screen captures refreshed:** `Servio_Vault/03_User_Experience_and_Screens/assets/0[1-5]_screen_*.png` now show the current app (mock-API demo login, 430×932 @3x, saved at 860 px wide) instead of the old dollar-priced mockups. Full-resolution captures, plus onboarding, checkout, completion PIN and chat, are in `promo-video/public/screens/`.
+- **Promo re-cut to the voiceover:** scene cuts and every on-screen word now come from voice word onsets (`scripts/vo_timings.py` → `src/vo.ts` → `cue()` in `theme.ts`), and the on-screen copy matches the spoken script. New soundtrack: 100 BPM future-bass pop in D major (`scripts/music_synth.py`).
+### Removed
+- **Promo source cleaned out (owner request):** `promo-video/` now holds only the rendered `servio-promo-vo.mp4` (final, with voiceover) and `servio-promo.mp4` (music only). The Remotion project, scripts, audio and captures referenced above are no longer in the repo; the ElevenLabs voice takes are still in `~/Downloads`.
+
 ## [0.5.37] — 2026-10-22
 ### Added
 - **Loyalty coupons (ADR-038):** customers earn a coupon at 3, 10 and 15 completed orders (`config/loyalty.ts`). New `customer_coupons` table and `bookings.discount_centavos` (migration `0012_loyalty_coupons`), `GET /me/rewards`, optional `couponId` on `POST /bookings`, and a `REWARD` notification kind. SERVIO funds discounts through the `platform_promotions` ledger account; Pro payouts are unchanged and cancelled bookings return their coupon.
