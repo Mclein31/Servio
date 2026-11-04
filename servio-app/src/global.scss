@@ -409,3 +409,12 @@ ion-modal.servio-fullscreen {
     border-radius: 24px 24px 0 0;
   }
 }
+
+// Map credits: keep the required OpenStreetMap/OpenFreeMap attribution on one small line.
+.leaflet-container .leaflet-control-attribution {
+  font-size: 9px;
+  line-height: 1.35;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #4b5563;
+}

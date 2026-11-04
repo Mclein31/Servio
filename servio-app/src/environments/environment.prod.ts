@@ -10,4 +10,5 @@ export const environment = {
   apiUrl: resolvedApiUrl,
   useMockApi: false,
   mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  mapStyleUrl: 'https://tiles.openfreemap.org/styles/liberty',
 };
