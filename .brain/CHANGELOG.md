@@ -2,6 +2,13 @@
 
 All notable changes to the SERVIO project knowledge base, architecture, and codebase are documented here.
 
+## [0.5.39] — 2026-11-01
+### Changed
+- **Promo video v2, feature-led (owner request):** `promo-video/servio-promo-vo.mp4` and `servio-promo.mp4` were replaced with a 39 s, 1920×1080, 30 fps cut built around designed feature graphics instead of a tour of phone screens. In order: verified pro cards and categories, Community Bulletin request and reservation, fixed price tag with breakdown, one-tap booking with a dispatch radar, live 3D map with in-app chat, escrow unlocked by the completion PIN, ratings/tips/reward coupon, and an end card listing 8 features. Only the Bulletin and Home captures appear as phone screens.
+- **New VO script (9 lines, recorded by the owner in ElevenLabs "Scotty – High energy promos"):** takes are trimmed, internal pauses tightened, sped up 7 % (pitch preserved) and placed by whisper word timings. The v1 soundtrack was re-cut on its 100 BPM bar grid so the drop hits "Meet Servio" and the outro hits the tagline. Both mixes are normalized to −14 LUFS.
+- **3D rider rebuilt:** a semi-realistic cartoon rider (helmet and visor, jacket, jeans, hands on the grips) on a rounded moped with spinning wheels and a headlight that leans into turns, sized to the town's houses. The scene opens on a ¾ front close-up and cranes up to the route map.
+- The v2 Remotion source stayed outside the repo, as with v1. The previous cut is in commit `692fd94`.
+
 ## [0.5.38] — 2026-10-31
 ### Added
 - **30-second promo video (`promo-video/`):** Remotion + React Three Fiber project that renders `out/servio-promo.mp4` (1920×1080, 30 fps). It includes an extruded 3D SERVIO mark traced from `assets/logo/logo.png` (`scripts/trace-logo.cjs`), a cel-shaded 3D town with a cartoon scooter for tracking, CSS-3D phones showing real app captures, and a procedurally synthesized soundtrack (`scripts/make_soundtrack.py`). The voiceover script is in `promo-video/VOICEOVER_SCRIPT.md`; drop the recording at `public/audio/voiceover.wav` and run `npm run render:vo`. Owner direction: no download CTA and no city-specific messaging. Voiceover: 8 ElevenLabs takes ("Scotty – High energy promos") are in `public/audio/vo/`, placed by `scripts/build_voiceover.py`; the final cut is `out/servio-promo-vo.mp4`.
