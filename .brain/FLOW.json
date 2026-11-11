@@ -402,6 +402,62 @@
    "layer": "backend",
    "detail": "Bindings for R2, Durable Objects, Hyperdrive, rate limiter and env vars.",
    "file": "servio-api/wrangler.toml"
+  },
+  {
+   "id": "dc.code",
+   "label": "Code valid?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Verify checks the emailed code is right, unexpired, unlocked and the account is active and not staff.",
+   "file": "servio-api/src/routes/auth.ts"
+  },
+  {
+   "id": "dc.session",
+   "label": "Session valid?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "requireUser looks up the bearer token for a live, unrevoked session of an active user, else 401.",
+   "file": "servio-api/src/middleware/auth.ts"
+  },
+  {
+   "id": "dc.pro",
+   "label": "Pro approved & online?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Accepting an offer requires an approved KYC, online Pro who is not the customer.",
+   "file": "servio-api/src/routes/pro.ts"
+  },
+  {
+   "id": "dc.avail",
+   "label": "Pro available?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Dispatch picks the nearest eligible online pro; with none left the escrow is refunded and the booking cancelled.",
+   "file": "servio-api/src/dispatch/demo-dispatch.ts"
+  },
+  {
+   "id": "dc.pin",
+   "label": "PIN correct?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Completion PIN is compared to the expected value; five wrong tries lock it, a match releases escrow.",
+   "file": "servio-api/src/routes/bookings.ts"
+  },
+  {
+   "id": "dc.balance",
+   "label": "Balance covers cashout?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Cashout needs the balance to cover the amount plus the fee.",
+   "file": "servio-api/src/routes/wallet.ts"
+  },
+  {
+   "id": "dc.admin",
+   "label": "Role is admin?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "Only ADMIN users may review support reports.",
+   "file": "servio-api/src/routes/support.ts"
   }
  ],
  "edges": [
@@ -627,17 +683,7 @@
   },
   {
    "from": "api.edge",
-   "to": "api.bookings",
-   "label": "routes"
-  },
-  {
-   "from": "api.edge",
    "to": "api.community",
-   "label": "routes"
-  },
-  {
-   "from": "api.edge",
-   "to": "api.pro",
    "label": "routes"
   },
   {
@@ -717,11 +763,6 @@
   },
   {
    "from": "api.bookings",
-   "to": "db.orders",
-   "label": "reads/writes"
-  },
-  {
-   "from": "api.bookings",
    "to": "svc.payments",
    "label": "hold / capture"
   },
@@ -746,21 +787,6 @@
    "label": "writes"
   },
   {
-   "from": "api.pro",
-   "to": "svc.dispatch",
-   "label": "advances offers"
-  },
-  {
-   "from": "svc.dispatch",
-   "to": "db.orders",
-   "label": "writes offers"
-  },
-  {
-   "from": "svc.dispatch",
-   "to": "svc.payments",
-   "label": "refunds"
-  },
-  {
    "from": "svc.dispatch",
    "to": "db.money",
    "label": "writes"
@@ -781,11 +807,6 @@
    "label": "lists pros"
   },
   {
-   "from": "api.wallet",
-   "to": "db.money",
-   "label": "reads/writes"
-  },
-  {
    "from": "api.uploads",
    "to": "ext.r2",
    "label": "presign / store"
@@ -794,11 +815,6 @@
    "from": "api.uploads",
    "to": "db.social",
    "label": "records"
-  },
-  {
-   "from": "api.support",
-   "to": "db.social",
-   "label": "reads/writes"
   },
   {
    "from": "svc.notify",
@@ -849,6 +865,116 @@
    "from": "db.social",
    "to": "ext.pg",
    "label": "stored in"
+  },
+  {
+   "from": "api.auth",
+   "to": "dc.code",
+   "label": "verifies code"
+  },
+  {
+   "from": "dc.code",
+   "to": "db.core",
+   "label": "yes: opens session"
+  },
+  {
+   "from": "dc.code",
+   "to": "ui.login",
+   "label": "no: rejected"
+  },
+  {
+   "from": "api.edge",
+   "to": "dc.session",
+   "label": "checks token"
+  },
+  {
+   "from": "dc.session",
+   "to": "api.bookings",
+   "label": "yes"
+  },
+  {
+   "from": "dc.session",
+   "to": "api.pro",
+   "label": "yes"
+  },
+  {
+   "from": "dc.session",
+   "to": "ui.session",
+   "label": "no: 401"
+  },
+  {
+   "from": "api.pro",
+   "to": "dc.pro",
+   "label": "accept offer"
+  },
+  {
+   "from": "dc.pro",
+   "to": "svc.dispatch",
+   "label": "yes"
+  },
+  {
+   "from": "dc.pro",
+   "to": "ui.radar",
+   "label": "no: 403"
+  },
+  {
+   "from": "svc.dispatch",
+   "to": "dc.avail",
+   "label": "next offer"
+  },
+  {
+   "from": "dc.avail",
+   "to": "db.orders",
+   "label": "yes: offers pro"
+  },
+  {
+   "from": "dc.avail",
+   "to": "svc.payments",
+   "label": "no: refunds"
+  },
+  {
+   "from": "api.bookings",
+   "to": "dc.pin",
+   "label": "verify-pin"
+  },
+  {
+   "from": "dc.pin",
+   "to": "db.orders",
+   "label": "yes: completes"
+  },
+  {
+   "from": "dc.pin",
+   "to": "ui.modals",
+   "label": "no: wrong PIN"
+  },
+  {
+   "from": "api.wallet",
+   "to": "dc.balance",
+   "label": "cashout"
+  },
+  {
+   "from": "dc.balance",
+   "to": "db.money",
+   "label": "yes"
+  },
+  {
+   "from": "dc.balance",
+   "to": "ui.prowallet",
+   "label": "no: 409"
+  },
+  {
+   "from": "api.support",
+   "to": "dc.admin",
+   "label": "review"
+  },
+  {
+   "from": "dc.admin",
+   "to": "db.social",
+   "label": "yes"
+  },
+  {
+   "from": "dc.admin",
+   "to": "staff",
+   "label": "no: 403"
   }
  ],
  "flows": [
@@ -861,7 +987,11 @@
     "api.edge",
     "api.auth",
     "svc.mailer",
-    "ext.smtp"
+    "ext.smtp",
+    "svc.mailer",
+    "api.auth",
+    "dc.code",
+    "db.core"
    ]
   },
   {
@@ -873,9 +1003,12 @@
     "ui.services",
     "ui.session",
     "api.edge",
+    "dc.session",
     "api.bookings",
     "svc.payments",
+    "api.bookings",
     "svc.dispatch",
+    "dc.avail",
     "db.orders"
    ]
   },
@@ -887,9 +1020,12 @@
     "ui.radar",
     "ui.session",
     "api.edge",
+    "dc.session",
     "api.pro",
+    "dc.pro",
     "svc.dispatch",
     "db.money",
+    "dc.balance",
     "api.wallet",
     "api.edge",
     "ui.session",
@@ -905,7 +1041,9 @@
     "ui.jobexec",
     "ui.session",
     "api.edge",
+    "dc.session",
     "api.bookings",
+    "dc.pin",
     "db.orders"
    ]
   },
@@ -927,6 +1065,7 @@
    "steps": [
     "staff",
     "api.support",
+    "dc.admin",
     "db.social",
     "ext.pg"
    ]
