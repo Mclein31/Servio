@@ -1,0 +1,935 @@
+{
+ "version": 1,
+ "title": "SERVIO",
+ "summary": "A neighbourhood services marketplace for Tuguegarao: customers book standardized service packages or post bulletin requests, and nearby helpers are dispatched, tracked live and paid through escrow, using an Ionic/Angular app and a Cloudflare Workers API.",
+ "nodes": [
+  {
+   "id": "customer",
+   "label": "Customer",
+   "kind": "actor",
+   "layer": "frontend",
+   "detail": "Neighbour who books a helper or posts a request on the bulletin.",
+   "file": ""
+  },
+  {
+   "id": "pro",
+   "label": "Helper (Pro)",
+   "kind": "actor",
+   "layer": "frontend",
+   "detail": "Local skilled helper who receives dispatch offers and completes jobs.",
+   "file": ""
+  },
+  {
+   "id": "staff",
+   "label": "SERVIO staff",
+   "kind": "actor",
+   "layer": "frontend",
+   "detail": "Admin role that reviews support reports; no mobile sign-in.",
+   "file": ""
+  },
+  {
+   "id": "ui.login",
+   "label": "Login & OTP",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Email login, 6-digit code verify and profile setup.",
+   "file": "servio-app/src/app/pages/auth/login/login.page.ts"
+  },
+  {
+   "id": "ui.tabs",
+   "label": "Tab shell",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "Five-tab bottom navigation behind the auth guard.",
+   "file": "servio-app/src/app/tabs/tabs.routes.ts"
+  },
+  {
+   "id": "ui.home",
+   "label": "Home",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Search, categories, bulletin feed, top helpers and active order widget.",
+   "file": "servio-app/src/app/pages/home/home.page.ts"
+  },
+  {
+   "id": "ui.directory",
+   "label": "Directory",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Helper grid with skills, rating, distance and booking.",
+   "file": "servio-app/src/app/pages/directory/directory.page.ts"
+  },
+  {
+   "id": "ui.bulletin",
+   "label": "Bulletin",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Neighbourhood request board with filters and map.",
+   "file": "servio-app/src/app/pages/bulletin/bulletin.page.ts"
+  },
+  {
+   "id": "ui.checkout",
+   "label": "Checkout",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Pick address, payment method and coupon; places the booking.",
+   "file": "servio-app/src/app/pages/checkout/checkout.page.ts"
+  },
+  {
+   "id": "ui.tracking",
+   "label": "Tracking",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Live map, ETA and milestone stepper for the active order.",
+   "file": "servio-app/src/app/pages/tracking/tracking.page.ts"
+  },
+  {
+   "id": "ui.chat",
+   "label": "Order chat",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "In-order messaging between customer and helper.",
+   "file": "servio-app/src/app/pages/order/order-chat/order-chat.page.ts"
+  },
+  {
+   "id": "ui.modals",
+   "label": "Order modals",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "Add-on approval, completion PIN and rating/tip modals.",
+   "file": "servio-app/src/app/shared/modals/addon-approval-modal/addon-approval-modal.component.ts"
+  },
+  {
+   "id": "ui.profile",
+   "label": "Profile & settings",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Profile, role switch, addresses, payment methods, rewards, help, notifications.",
+   "file": "servio-app/src/app/pages/profile/profile.page.ts"
+  },
+  {
+   "id": "ui.prodash",
+   "label": "Pro dashboard",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Availability toggle, services, earnings summary and incoming work.",
+   "file": "servio-app/src/app/pages/pro/dashboard/dashboard.page.ts"
+  },
+  {
+   "id": "ui.radar",
+   "label": "Radar alert",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Full-screen incoming dispatch offer with accept/decline countdown.",
+   "file": "servio-app/src/app/pages/pro/radar-alert/radar-alert.page.ts"
+  },
+  {
+   "id": "ui.jobexec",
+   "label": "Job execution",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Helper steps the job through on-the-way, arrived and in progress, proposes add-on quotes and enters the customer PIN to finish.",
+   "file": "servio-app/src/app/pages/pro/job-execute/job-execute.page.ts"
+  },
+  {
+   "id": "ui.prowallet",
+   "label": "Pro wallet",
+   "kind": "screen",
+   "layer": "frontend",
+   "detail": "Earnings ledger and cash-out request.",
+   "file": "servio-app/src/app/pages/pro/wallet/wallet.page.ts"
+  },
+  {
+   "id": "ui.session",
+   "label": "API client & session",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "ApiService, interceptor and session token handling every request.",
+   "file": "servio-app/src/app/core/api/api.service.ts"
+  },
+  {
+   "id": "ui.services",
+   "label": "App state services",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "Signal services for orders, tracking, wallet, community, notifications and dispatch alerts.",
+   "file": "servio-app/src/app/core/services/order.service.ts"
+  },
+  {
+   "id": "ui.live",
+   "label": "Live socket client",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "Opens short-lived-ticket WebSockets for order, pro and user channels.",
+   "file": "servio-app/src/app/core/services/live.service.ts"
+  },
+  {
+   "id": "ui.demo",
+   "label": "Offline demo mode",
+   "kind": "component",
+   "layer": "frontend",
+   "detail": "Mock data and localStorage so the app runs without an API.",
+   "file": "servio-app/src/app/core/services/demo-store.ts"
+  },
+  {
+   "id": "api.edge",
+   "label": "Worker entry & middleware",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Hono app on Cloudflare Workers: request id, CORS, error handler, /api/v1 mount.",
+   "file": "servio-api/src/index.ts"
+  },
+  {
+   "id": "api.auth",
+   "label": "Auth routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Request and verify email codes, sign out; rate limited.",
+   "file": "servio-api/src/routes/auth.ts"
+  },
+  {
+   "id": "api.me",
+   "label": "Account routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Profile, role switch, pro upgrade, trades, rewards, payment methods.",
+   "file": "servio-api/src/routes/me.ts"
+  },
+  {
+   "id": "api.addr",
+   "label": "Addresses & locations",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Saved addresses and reverse geocoding.",
+   "file": "servio-api/src/routes/addresses.ts"
+  },
+  {
+   "id": "api.catalog",
+   "label": "Catalog routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "GET /catalog of categories, service SKUs and add-ons.",
+   "file": "servio-api/src/routes/catalog.ts"
+  },
+  {
+   "id": "api.bookings",
+   "label": "Booking routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Create, read, status changes, add-ons, completion PIN verify.",
+   "file": "servio-api/src/routes/bookings.ts"
+  },
+  {
+   "id": "api.community",
+   "label": "Bulletin & pros routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Post, list, accept, release and cancel requests; list nearby pros.",
+   "file": "servio-api/src/routes/community.ts"
+  },
+  {
+   "id": "api.pro",
+   "label": "Pro routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Availability, location pings, dispatch and offer accept/decline.",
+   "file": "servio-api/src/routes/pro.ts"
+  },
+  {
+   "id": "api.wallet",
+   "label": "Wallet routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Wallet ledger list and cashout.",
+   "file": "servio-api/src/routes/wallet.ts"
+  },
+  {
+   "id": "api.uploads",
+   "label": "Upload routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Presigned uploads and blob read/write for photos and KYC.",
+   "file": "servio-api/src/routes/uploads.ts"
+  },
+  {
+   "id": "api.support",
+   "label": "Support & inbox routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Support reports, admin review and notification inbox.",
+   "file": "servio-api/src/routes/support.ts"
+  },
+  {
+   "id": "api.live",
+   "label": "Live ticket routes",
+   "kind": "api",
+   "layer": "backend",
+   "detail": "Mint 60-second tickets and upgrade WebSockets to Durable Objects.",
+   "file": "servio-api/src/routes/live.ts"
+  },
+  {
+   "id": "svc.dispatch",
+   "label": "Dispatch engine",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "Offers a booking to nearest qualified pros one at a time with 60s expiry.",
+   "file": "servio-api/src/dispatch/demo-dispatch.ts"
+  },
+  {
+   "id": "svc.payments",
+   "label": "Mock escrow payments",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "Hold, capture and refund provider interface; only a mock is implemented.",
+   "file": "servio-api/src/payments/mock.ts"
+  },
+  {
+   "id": "svc.loyalty",
+   "label": "Loyalty & coupons",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "Milestone coupons earned by completed orders.",
+   "file": "servio-api/src/lib/loyalty.ts"
+  },
+  {
+   "id": "svc.notify",
+   "label": "Notify middleware",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "After successful POSTs, writes notices and pushes live events.",
+   "file": "servio-api/src/live/notify.ts"
+  },
+  {
+   "id": "svc.mailer",
+   "label": "SMTP mailer",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "Raw SMTP over sockets sends login codes; logs them in dev.",
+   "file": "servio-api/src/lib/mailer.ts"
+  },
+  {
+   "id": "do.room",
+   "label": "OrderRoom Durable Object",
+   "kind": "job",
+   "layer": "backend",
+   "detail": "WebSocket room per booking, pro and user that fans out live events.",
+   "file": "servio-api/src/live/order-room.ts"
+  },
+  {
+   "id": "do.geo",
+   "label": "Geocoder Durable Object",
+   "kind": "job",
+   "layer": "backend",
+   "detail": "Caches reverse geocoding lookups and throttles Nominatim.",
+   "file": "servio-api/src/locations/geocoder.ts"
+  },
+  {
+   "id": "db.core",
+   "label": "Users & sessions tables",
+   "kind": "store",
+   "layer": "backend",
+   "detail": "users, sessions, login_codes, addresses, pro profiles and pro SKUs.",
+   "file": "servio-api/src/db/schema.ts"
+  },
+  {
+   "id": "db.catalog",
+   "label": "Catalog tables",
+   "kind": "store",
+   "layer": "backend",
+   "detail": "categories, service_skus and addon_skus.",
+   "file": "servio-api/src/db/schema.ts"
+  },
+  {
+   "id": "db.orders",
+   "label": "Booking tables",
+   "kind": "store",
+   "layer": "backend",
+   "detail": "bookings, events, add-on quotes, dispatch offers, messages, reviews, coupons.",
+   "file": "servio-api/src/db/schema.ts"
+  },
+  {
+   "id": "db.money",
+   "label": "Ledger & payouts",
+   "kind": "store",
+   "layer": "backend",
+   "detail": "Append-only ledger entries and payout requests.",
+   "file": "servio-api/src/db/schema.ts"
+  },
+  {
+   "id": "db.social",
+   "label": "Bulletin & inbox tables",
+   "kind": "store",
+   "layer": "backend",
+   "detail": "bulletin_requests, notifications, support_requests, uploads.",
+   "file": "servio-api/src/db/schema.ts"
+  },
+  {
+   "id": "ext.pg",
+   "label": "Neon Postgres",
+   "kind": "external",
+   "layer": "external",
+   "detail": "Postgres reached through Cloudflare Hyperdrive in production.",
+   "file": "servio-api/src/db/client.ts"
+  },
+  {
+   "id": "ext.r2",
+   "label": "Cloudflare R2",
+   "kind": "external",
+   "layer": "external",
+   "detail": "Object storage for avatars, KYC and request photos.",
+   "file": "servio-api/src/lib/uploads.ts"
+  },
+  {
+   "id": "ext.smtp",
+   "label": "Email SMTP (Gmail)",
+   "kind": "external",
+   "layer": "external",
+   "detail": "Delivers one-time login codes.",
+   "file": ""
+  },
+  {
+   "id": "ext.osm",
+   "label": "OpenStreetMap",
+   "kind": "external",
+   "layer": "external",
+   "detail": "Nominatim reverse geocoding and map tiles.",
+   "file": "servio-api/src/locations/geocoder.ts"
+  },
+  {
+   "id": "cfg.wrangler",
+   "label": "Wrangler config",
+   "kind": "config",
+   "layer": "backend",
+   "detail": "Bindings for R2, Durable Objects, Hyperdrive, rate limiter and env vars.",
+   "file": "servio-api/wrangler.toml"
+  }
+ ],
+ "edges": [
+  {
+   "from": "customer",
+   "to": "ui.login",
+   "label": "signs in"
+  },
+  {
+   "from": "pro",
+   "to": "ui.login",
+   "label": "signs in"
+  },
+  {
+   "from": "customer",
+   "to": "ui.tabs",
+   "label": "browses"
+  },
+  {
+   "from": "customer",
+   "to": "ui.home",
+   "label": "browses"
+  },
+  {
+   "from": "ui.bulletin",
+   "to": "ui.services",
+   "label": "reads"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.home",
+   "label": "tab"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.directory",
+   "label": "tab"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.bulletin",
+   "label": "tab"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.tracking",
+   "label": "tab"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.profile",
+   "label": "tab"
+  },
+  {
+   "from": "ui.tabs",
+   "to": "ui.prodash",
+   "label": "pro tab"
+  },
+  {
+   "from": "ui.home",
+   "to": "ui.checkout",
+   "label": "books"
+  },
+  {
+   "from": "ui.directory",
+   "to": "ui.checkout",
+   "label": "books"
+  },
+  {
+   "from": "customer",
+   "to": "ui.bulletin",
+   "label": "posts request"
+  },
+  {
+   "from": "ui.checkout",
+   "to": "ui.tracking",
+   "label": "places order"
+  },
+  {
+   "from": "ui.tracking",
+   "to": "ui.chat",
+   "label": "opens chat"
+  },
+  {
+   "from": "ui.tracking",
+   "to": "ui.modals",
+   "label": "approve / PIN / rate"
+  },
+  {
+   "from": "customer",
+   "to": "ui.profile",
+   "label": "manages account"
+  },
+  {
+   "from": "pro",
+   "to": "ui.prodash",
+   "label": "goes online"
+  },
+  {
+   "from": "pro",
+   "to": "ui.radar",
+   "label": "gets offer"
+  },
+  {
+   "from": "ui.prodash",
+   "to": "ui.radar",
+   "label": "offer arrives"
+  },
+  {
+   "from": "ui.radar",
+   "to": "ui.jobexec",
+   "label": "accepts"
+  },
+  {
+   "from": "ui.prodash",
+   "to": "ui.prowallet",
+   "label": "opens"
+  },
+  {
+   "from": "pro",
+   "to": "ui.prowallet",
+   "label": "cashes out"
+  },
+  {
+   "from": "ui.prowallet",
+   "to": "ui.session",
+   "label": "GET /wallet"
+  },
+  {
+   "from": "staff",
+   "to": "api.support",
+   "label": "reviews reports"
+  },
+  {
+   "from": "ui.home",
+   "to": "ui.services",
+   "label": "reads"
+  },
+  {
+   "from": "ui.checkout",
+   "to": "ui.services",
+   "label": "uses"
+  },
+  {
+   "from": "ui.tracking",
+   "to": "ui.services",
+   "label": "reads"
+  },
+  {
+   "from": "ui.prodash",
+   "to": "ui.services",
+   "label": "uses"
+  },
+  {
+   "from": "ui.services",
+   "to": "ui.session",
+   "label": "calls"
+  },
+  {
+   "from": "ui.session",
+   "to": "api.edge",
+   "label": "HTTPS /api/v1"
+  },
+  {
+   "from": "ui.services",
+   "to": "ui.demo",
+   "label": "falls back"
+  },
+  {
+   "from": "ui.live",
+   "to": "do.room",
+   "label": "WebSocket"
+  },
+  {
+   "from": "ui.services",
+   "to": "ui.live",
+   "label": "subscribes"
+  },
+  {
+   "from": "ui.login",
+   "to": "ui.session",
+   "label": "requests code"
+  },
+  {
+   "from": "ui.chat",
+   "to": "ui.session",
+   "label": "sends"
+  },
+  {
+   "from": "ui.modals",
+   "to": "ui.session",
+   "label": "calls"
+  },
+  {
+   "from": "ui.jobexec",
+   "to": "ui.session",
+   "label": "status"
+  },
+  {
+   "from": "ui.radar",
+   "to": "ui.session",
+   "label": "accept offer"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.auth",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.me",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.addr",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.catalog",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.bookings",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.community",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.pro",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.wallet",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.uploads",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.support",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "api.live",
+   "label": "routes"
+  },
+  {
+   "from": "api.edge",
+   "to": "svc.notify",
+   "label": "wraps POSTs"
+  },
+  {
+   "from": "api.edge",
+   "to": "cfg.wrangler",
+   "label": "bound by"
+  },
+  {
+   "from": "api.auth",
+   "to": "svc.mailer",
+   "label": "sends code"
+  },
+  {
+   "from": "svc.mailer",
+   "to": "ext.smtp",
+   "label": "SMTP"
+  },
+  {
+   "from": "api.auth",
+   "to": "db.core",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.me",
+   "to": "db.core",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.me",
+   "to": "svc.loyalty",
+   "label": "reads"
+  },
+  {
+   "from": "api.addr",
+   "to": "db.core",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.addr",
+   "to": "do.geo",
+   "label": "reverse geocode"
+  },
+  {
+   "from": "do.geo",
+   "to": "ext.osm",
+   "label": "Nominatim"
+  },
+  {
+   "from": "api.catalog",
+   "to": "db.catalog",
+   "label": "reads"
+  },
+  {
+   "from": "api.bookings",
+   "to": "db.orders",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.bookings",
+   "to": "svc.payments",
+   "label": "hold / capture"
+  },
+  {
+   "from": "api.bookings",
+   "to": "svc.dispatch",
+   "label": "starts dispatch"
+  },
+  {
+   "from": "api.bookings",
+   "to": "svc.loyalty",
+   "label": "applies coupon"
+  },
+  {
+   "from": "api.bookings",
+   "to": "db.catalog",
+   "label": "prices"
+  },
+  {
+   "from": "api.bookings",
+   "to": "db.money",
+   "label": "writes"
+  },
+  {
+   "from": "api.pro",
+   "to": "svc.dispatch",
+   "label": "advances offers"
+  },
+  {
+   "from": "svc.dispatch",
+   "to": "db.orders",
+   "label": "writes offers"
+  },
+  {
+   "from": "svc.dispatch",
+   "to": "svc.payments",
+   "label": "refunds"
+  },
+  {
+   "from": "svc.dispatch",
+   "to": "db.money",
+   "label": "writes"
+  },
+  {
+   "from": "api.pro",
+   "to": "db.core",
+   "label": "updates pro"
+  },
+  {
+   "from": "api.community",
+   "to": "db.social",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.community",
+   "to": "db.core",
+   "label": "lists pros"
+  },
+  {
+   "from": "api.wallet",
+   "to": "db.money",
+   "label": "reads/writes"
+  },
+  {
+   "from": "api.uploads",
+   "to": "ext.r2",
+   "label": "presign / store"
+  },
+  {
+   "from": "api.uploads",
+   "to": "db.social",
+   "label": "records"
+  },
+  {
+   "from": "api.support",
+   "to": "db.social",
+   "label": "reads/writes"
+  },
+  {
+   "from": "svc.notify",
+   "to": "db.social",
+   "label": "writes notices"
+  },
+  {
+   "from": "svc.notify",
+   "to": "do.room",
+   "label": "pushes events"
+  },
+  {
+   "from": "api.live",
+   "to": "do.room",
+   "label": "upgrades socket"
+  },
+  {
+   "from": "svc.loyalty",
+   "to": "db.orders",
+   "label": "coupons"
+  },
+  {
+   "from": "api.edge",
+   "to": "ext.pg",
+   "label": "via Hyperdrive"
+  },
+  {
+   "from": "db.core",
+   "to": "ext.pg",
+   "label": "stored in"
+  },
+  {
+   "from": "db.catalog",
+   "to": "ext.pg",
+   "label": "stored in"
+  },
+  {
+   "from": "db.orders",
+   "to": "ext.pg",
+   "label": "stored in"
+  },
+  {
+   "from": "db.money",
+   "to": "ext.pg",
+   "label": "stored in"
+  },
+  {
+   "from": "db.social",
+   "to": "ext.pg",
+   "label": "stored in"
+  }
+ ],
+ "flows": [
+  {
+   "name": "Sign in with email code",
+   "steps": [
+    "customer",
+    "ui.login",
+    "ui.session",
+    "api.edge",
+    "api.auth",
+    "svc.mailer",
+    "ext.smtp"
+   ]
+  },
+  {
+   "name": "Book a service and track it",
+   "steps": [
+    "customer",
+    "ui.home",
+    "ui.checkout",
+    "ui.services",
+    "ui.session",
+    "api.edge",
+    "api.bookings",
+    "svc.payments",
+    "svc.dispatch",
+    "db.orders"
+   ]
+  },
+  {
+   "name": "Helper accepts and gets paid",
+   "steps": [
+    "pro",
+    "ui.prodash",
+    "ui.radar",
+    "ui.session",
+    "api.edge",
+    "api.pro",
+    "svc.dispatch",
+    "db.money",
+    "api.wallet",
+    "api.edge",
+    "ui.session",
+    "ui.prowallet",
+    "pro"
+   ]
+  },
+  {
+   "name": "Complete job with PIN",
+   "steps": [
+    "pro",
+    "ui.radar",
+    "ui.jobexec",
+    "ui.session",
+    "api.edge",
+    "api.bookings",
+    "db.orders"
+   ]
+  },
+  {
+   "name": "Post a bulletin request",
+   "steps": [
+    "customer",
+    "ui.bulletin",
+    "ui.services",
+    "ui.session",
+    "api.edge",
+    "api.community",
+    "db.social",
+    "ext.pg"
+   ]
+  },
+  {
+   "name": "Staff reviews a report",
+   "steps": [
+    "staff",
+    "api.support",
+    "db.social",
+    "ext.pg"
+   ]
+  }
+ ]
+}
