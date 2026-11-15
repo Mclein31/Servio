@@ -1,98 +1,83 @@
 # SERVIO — System Architecture
 
-> **Status:** Architecture Blueprint  
+> **Status:** As built · **Verified against code:** 2026-11-15 (`main` @ `74164cc`)
 > **Related Vault Note:** `vault/04_Domain_and_System_Design/Domain_Model.md`
+> **Machine-readable map:** `.brain/FLOW.json` (actors, screens, routes, decision points)
 
 ---
 
-## 1. System Topology Overview
-
-SERVIO follows a modular, client-server event-driven architecture designed to support low-latency real-time dispatch, geospatial queries, and transactional financial integrity.
+## 1. System Topology
 
 ```
-+-------------------------------------------------------------+
-|                      CLIENT APPLICATIONS                    |
-|                                                             |
-|   [ Servio Unified Mobile App ]               [ Admin Web ] |
-|   (Ionic + Angular + HTML/SCSS / Capacitor)     (Angular/TS)|
-+-------------------+-----------------------------------------+
-                    |
-                    v
-+-------------------------------------------------------------+
-|                   API GATEWAY / EDGE PROXY                  |
-|                 (Auth, Rate Limiting, SSL)                  |
-+-------------------------------------------------------------+
-                    |
-      +-------------+-------------+-------------+
-      |                           |             |
-      v                           v             v
-+-------------+             +-----------+ +-----------+
-| Booking &   |             | Geospatial| | Escrow &  |
-| Dispatch    |<----------->| Radar &   | | Payments  |
-| Engine      |             | Tracking  | | Service   |
-+-------------+             +-----------+ +-----------+
-      ^                           ^             ^
-      |                           |             |
-+-----+-------+             +-----+-----+       |
-| Service     |             | Real-Time |       |
-| Catalog     |             | Messaging |       |
-| & Ratings   |             | (Chat/Call|       |
-+-------------+             +-----------+       |
-      |                           |             |
-      +-------------+-------------+-------------+
-                    |
-                    v
-+-------------------------------------------------------------+
-|                     DATA PERSISTENCE LAYER                  |
-|   - Primary DB (PostgreSQL / Supabase with PostGIS)         |
-|   - Real-Time State & Cache (Redis / Firebase Realtime)     |
-|   - Object Storage (S3 / Cloud Storage for KYC & Photos)   |
-+-------------------------------------------------------------+
++--------------------------------------------------------------+
+|  servio-app  (Ionic 9 + Angular 22 + Capacitor 8, iOS/Android)|
+|  REST via HttpClient(fetch)  ·  WebSockets via LiveService     |
++-----------------------------+--------------------------------+
+                              | HTTPS /api/v1   wss (ticketed)
+                              v
++--------------------------------------------------------------+
+|  servio-api  Cloudflare Worker (Hono, Valibot, Drizzle)       |
+|  middleware: request-id, CORS, error envelope, withDb, auth   |
+|  routes: auth, me, catalog, community, addresses, bookings,   |
+|          booking-social, pro, wallet, uploads, live, locations,|
+|          notifications, support, demo, health                  |
+|  Durable Objects: OrderRoom (booking:/pro:/user: rooms)       |
+|                   Geocoder (single Nominatim queue + cache)    |
++------+-------------------+-------------------+---------------+
+       | Hyperdrive (prod, |  R2 binding       | outbound
+       | caching disabled) |  UPLOADS          |
+       v                   v                   v
+  Neon Postgres 17     R2 servio-uploads    Gmail SMTP (codes), Nominatim,
+  (branch production)  (dev: local          OSRM (dev routing only)
+                        servio-uploads-dev)
 ```
+
+The app also loads map tiles directly from OpenFreeMap (vector style) or tile.openstreetmap.org (raster fallback).
+
+There is no API gateway, Redis, Firebase, Supabase or PostGIS. Authorization is done in code on every endpoint (participants only, 404 otherwise; ADR-005).
 
 ---
 
 ## 2. Core Subsystems
 
-### 2.1 Mobile Application (Ionic-Angular with HTML & SCSS — Unified Client Architecture)
-The mobile app is developed strictly in the **Ionic-Angular framework (`@ionic/angular`)** using **HTML** and **SCSS**, wrapped with **Capacitor**. It employs a unified 5-tab bottom navigation architecture designed for both customers seeking services and local community helpers offering skills:
-- **`Home` (`/home`):** Global search, "Stronger Together" hero banner, category pills, live neighborhood bulletin feed, top helpers nearby carousel, and active tracking mini-widget.
-- **`Directory` (`/directory`):** 2-column helper grid with availability status, skills, rating, distance, and direct profile booking.
-- **`Bulletin` (`/bulletin`):** Real-time neighborhood request board with status filters (`Open`, `Urgent`, `Nearby`) and interactive request map.
-- **`Tracking` (`/tracking`):** Live map execution tracking with dynamic ETA, 5-stage milestone stepper (`Posted` -> `Accepted` -> `On the Way` -> `Arrived` -> `Done`), and in-app chat banner.
-- **`Profile` (`/profile`):** Dual-role dashboard managing user requests, metrics (Requests Posted, Jobs Completed), and "My Services" offerings ($XX/hr).
+### 2.1 Mobile Application (`servio-app/`)
+- **Layout:** `core/` (api client, guards, services, data incl. `tuguegarao-route.ts`), `shared/` (components, modals, models, pipes, utils such as `map-tiles.ts`), `pages/`, `tabs/` (shell). SCSS tokens in `src/theme/variables.scss`, mixins in `src/theme/_mixins.scss`, globals in `src/global.scss`.
+- **Tabs:** `/tabs/home`, `/tabs/directory`, `/tabs/bulletin`, `/tabs/tracking`, `/tabs/pro` (Pro mode, replaces Home), `/tabs/profile`.
+- **Other routes:** `/onboarding`, `/auth/login`, `/auth/verify-otp`, `/auth/profile`, `/legal/:type`, `/addresses`, `/profile/edit`, `/rewards`, `/payment-methods`, `/notifications`, `/help`, `/checkout`, `/order/:id/{chat,addon-modal,completion,review}`, `/pro/radar-alert`, `/pro/order/:id/{execute,add-quote,verify-otp}`, `/pro/wallet` (+ redirect aliases). Not built: `/pro/onboarding` (KYC upload) and `/request/:id`.
+- **State:** API mode uses `CommunityService` (discovery/catalog), `OrderService` (participant booking snapshots), `ProService`, `WalletService`, `RewardsService`; money/status writes happen on the API and refresh the presentation model. Offline mock mode alone persists the local order/wallet (`demo-store.ts`). Sessions live in Capacitor Preferences via `SessionService`.
+- **Tracking:** `TrackingService` consumes authenticated OrderRoom GPS or an explicit demo-only Tuguegarao route source, snaps/interpolates along street geometry and shows Reconnecting on stale fixes. Road routes come from OSRM in development only; production glides the marker between real fixes without a route line.
+- **Maps:** `servioTileLayer()` uses MapLibre GL (OpenFreeMap "liberty" style) inside Leaflet when WebGL2 exists, otherwise raster OSM tiles. Leaflet owns markers and routes.
 
-> **Visual Screen Mockups:** Stored in `assets/ui/` (e.g. `01_screen_home.png` to `05_screen_tracking.png`) and fully specified in `vault/03_User_Experience_and_Screens/UI_Assets_and_Screen_Specs_for_Codex.md`.
+### 2.2 Pro & Execution Workflows (Pro mode in the same app)
+- **Availability toggle:** optimistic; requires a GPS fix ≤ 30 s old to go online. Upgrading or switching to Pro always starts offline (ADR-030).
+- **Dispatch alert:** 60-second offer with alarm sound (native-audio) and haptics.
+- **Job execution:** `ACCEPTED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED`, with optional add-on quote (photo evidence) and completion by entering the customer's PIN.
+- **Wallet:** ledger-derived available balance, pending earnings, today's net (PH time), mock GCash cashout (min ₱500, ₱15 fee).
 
-### 2.2 Pro & Execution Workflows (Within Unified Client / Pro Mode)
-- **Go Online / Offline Toggle:** Background location streaming using battery-efficient geospatial geofences.
-- **Dispatch Radar Modal:** 60-second animated acceptance ticker showing job title, base payout, distance, and customer location.
-- **Job Execution Stepper:** One-tap transitions: `Accept` -> `Navigate to Site` -> `Arrive` -> `Start Job` -> `Request Add-on (Optional)` -> `Complete (Request OTP)`.
-- **In-App Digital Wallet:** Accumulated ledger showing Pending Clearances, Available Balance, and Cash Collected.
+### 2.3 Dispatch (`servio-api/src/dispatch/demo-dispatch.ts`)
+- Runs only when a Pro app sends the `POST /pro/dispatch` heartbeat (foreground); there is no cron/alarm yet.
+- Candidates: approved, active, online, SKU-qualified Pros with a fix younger than two minutes, excluding prior offers; ranked by great-circle distance (plain SQL) then rating. No radius cap (ADR-035).
+- One offer at a time, 60 s each, up to five Pros; exhaustion refunds the hold. An ASAP booking with no eligible Pro waits up to 5 minutes (`FIRST_OFFER_WAIT_MS`) before refunding.
+- Direct (specific-Pro) bookings and Bulletin reservations skip dispatch; direct bookings start `ACCEPTED` without Pro consent (open product question).
 
-### 2.3 Dispatch & Geospatial Engine
-- **Spatial Indexing:** Uses PostGIS / H3 hexagonal spatial indexing to query active online providers within radius `R` (default 10km).
-- **Matching Algorithm:** Filter by category qualification -> Sort by distance + rating -> Dispatch round-robin / broadcast.
+### 2.4 Escrow & Ledger
+- All money is integer centavos in an append-only, balanced double-entry ledger (`ledger_entries`) guarded by DB triggers (`0001_ledger_guards`).
+- **Booking:** hold base price + ₱50 trust fee (minus any platform-funded coupon, ADR-038) inside one transaction with the booking row; optional idempotency key.
+- **Cancellation (ADR-009):** free before `EN_ROUTE`; ₱100 at `EN_ROUTE`, ₱200 at `ARRIVED`, fee 100% to the Pro; Pro cancellation = full refund + strike (no penalty logic).
+- **Completion (ADR-012):** customer PIN = HMAC(PIN_SECRET, booking id), 5 attempts then locked; release splits base + approved add-ons 85/15, platform also keeps the trust fee. Tips go 100% to the Pro.
 
-### 2.4 Escrow & Financial State Machine
-- When order is placed: **Authorize / Hold** funds in Escrow.
-- If customer cancels before dispatch: **Full Refund**.
-- If customer cancels after arrival: **Trip Fee Deducted** and paid to provider.
-- When job is completed with valid OTP: **Release Escrow** -> Split into Provider Payout (80-85%) and Platform Commission (15-20%).
+### 2.5 Realtime (ADR-022, ADR-036)
+- One `OrderRoom` Durable Object class hosts booking rooms (GPS, chat, status), `pro:` rooms (dispatch) and personal `user:<id>` rooms (all booking/bulletin invalidations and notifications).
+- Clients get a 60 s single-use ticket, connect, and refetch authorized REST snapshots on events. 25 s of silence = dead socket → reconnect; 5 s polling only while disconnected.
 
 ---
 
 ## 3. Communication Protocols
-- **HTTP / REST / GraphQL:** Transactional CRUD (Auth, catalog, profile, payment intent).
-- **WebSockets / Server-Sent Events (SSE):** Real-time order status broadcasts and chat.
-- **FCM (Firebase Cloud Messaging) / APNs:** High-priority push notifications for dispatch alerts and message pings.
+- **HTTPS REST** (`/api/v1`): all reads and transactional writes.
+- **WebSockets** (Durable Object hibernation API): invalidation events, live GPS, chat pings.
+- **Local notifications** (`@capacitor/local-notifications`): shown for events received while the app is open or recently backgrounded. No remote push.
 
 ---
 
-## 4. Client Implementation (`servio-app/`)
-
-- **Stack:** Angular 22 standalone (zoneless, signals, OnPush) + `@ionic/angular` 9 (iOS mode) + Capacitor 8. SCSS tokens in `src/theme/variables.scss`, mixins in `src/theme/_mixins.scss`, global utilities in `src/global.scss`.
-- **Layout:** `core/` (guards, services, mock data), `shared/` (components, modals, models, pipes, utils), `pages/` (screens), `tabs/` (shell).
-- **State:** API mode uses `CommunityService` for discovery/catalog and `OrderService` for participant booking snapshots; money/status writes occur on the API and refresh the presentation model. Mock mode alone persists the local order/wallet (`demo-store.ts`). Auth sessions use Capacitor Preferences through `SessionService`.
-- **Tracking:** `TrackingService` consumes authenticated OrderRoom GPS or an explicit demo-only Tuguegarao route source. It snaps/interpolates along street geometry; renderers call displayDistance each frame. Separate travel bookings preserve GPS while viewing queued work. Native foreground Geolocation watches and conditional dispatch-location refresh never alter availability/status/money; stale fixes show Reconnecting. See docs/TRACKING.md.
-- **Routes:** `/onboarding`, `/auth/login`, `/auth/verify-otp`, `/tabs/{home,directory,bulletin,tracking,profile}`, `/checkout`, `/order/:id/{chat,addon-modal,completion,review}`, `/pro`, `/pro/radar-alert`, `/pro/order/:id/{execute,add-quote,verify-otp}`, `/pro/wallet` (+ aliases from the screen inventory).
+## 4. Data Model
+22 Drizzle tables in `servio-api/src/db/schema.ts`: `users`, `user_addresses`, `login_codes`, `sessions`, `pro_profiles`, `categories`, `service_skus`, `addon_skus`, `pro_skus`, `bookings`, `customer_coupons`, `booking_events`, `addon_quotes`, `dispatch_offers`, `bulletin_requests`, `messages`, `reviews`, `ledger_entries`, `payouts`, `uploads`, `support_requests`, `notifications`. `booking_events` and `ledger_entries` are append-only (DB triggers). Migrations `0000`–`0012` in `servio-api/drizzle/`.

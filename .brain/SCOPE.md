@@ -3,6 +3,7 @@
 > **Status:** Active Boundary Definition  
 > **Related Vault Note:** `vault/02_Scope_and_Boundaries/Project_Scope.md`  
 > **Rule for Agents:** Any code, architecture, or database schema must comply strictly with the boundaries defined below.
+> **Reviewed:** 2026-11-15 — see §4 for where the current prototype deviates from these boundaries.
 
 ---
 
@@ -39,7 +40,8 @@ The MVP is strictly focused on establishing a working two-sided on-demand servic
      - `CANCELLED`
 
 5. **In-App Communication:**
-   - Order-scoped text chat and masked voice/audio call between customer and assigned technician (active only during the active order lifecycle).
+   - Order-scoped text chat between customer and assigned technician (active only during the active order lifecycle).
+   - Calls: the owner chose carrier calls via the device dialer using the peer's saved number, available only to active booking participants (ADR-031), instead of masked voice calls.
 
 6. **Add-on / Extra Scope Approval:**
    - If a technician diagnoses additional work needed (e.g., replacement capacitor for AC), they submit an in-app "Extra Parts / Service" quote with photo proof.
@@ -80,3 +82,17 @@ These features are fundamentally antithetical to SERVIO's product model and must
    - Providers MUST be KYC-verified before appearing on the dispatch radar.
 4. **General Social Networking Features:**
    - No social friending, public wall posts, or direct messaging outside active bookings.
+
+---
+
+## 4. Implementation Status vs. Boundaries (2026-11-15)
+
+Where the working prototype currently differs from the MVP scope above. These are known gaps, not new scope; details in `TODO.md` → Known gaps.
+
+- **Sign-in:** email codes only (Gmail SMTP). Phone OTP is not implemented.
+- **Provider vetting:** self-service "Become a Servio Pro" grants `APPROVED` without document review, which conflicts with Anti-Scope rule 3 until real KYC review exists.
+- **Payments:** escrow, add-on holds, tips and payouts are simulated by a mock provider over a real ledger; no Card/Digital Wallet charge happens.
+- **Dispatch:** nearest qualified online Pros with no radius cutoff (ADR-035); runs only while a Pro app is open.
+- **Calls:** carrier calls with real numbers between active participants (ADR-031), not masked calls.
+- **Admin operations:** no web console; only staff support-report API endpoints.
+- **Added beyond the original list (owner-approved):** fixed-SKU Bulletin reservations (ADR-032) and platform-funded loyalty coupons (ADR-038). Neither introduces bidding or price negotiation.
