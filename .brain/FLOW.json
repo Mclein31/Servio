@@ -316,6 +316,30 @@
    "file": "servio-api/src/live/order-room.ts"
   },
   {
+   "id": "do.dispatcher",
+   "label": "Dispatcher Durable Object",
+   "kind": "job",
+   "layer": "backend",
+   "detail": "Singleton whose alarm advances held bookings without an open Pro app; armed idempotently and never delayed past an earlier wakeup.",
+   "file": "servio-api/src/dispatch/dispatcher.ts"
+  },
+  {
+   "id": "svc.sched",
+   "label": "Scheduled dispatch runner",
+   "kind": "service",
+   "layer": "backend",
+   "detail": "Runs one dispatch tick over held bookings, notifies live rooms and computes the next alarm time (minimum 30 s ahead).",
+   "file": "servio-api/src/dispatch/scheduled.ts"
+  },
+  {
+   "id": "dc.work",
+   "label": "Held bookings left?",
+   "kind": "decision",
+   "layer": "backend",
+   "detail": "After an alarm tick, re-arm only while a PENDING_ACCEPTANCE booking with held escrow remains; otherwise the Dispatcher goes idle.",
+   "file": "servio-api/src/dispatch/dispatcher.ts"
+  },
+  {
    "id": "do.geo",
    "label": "Geocoder Durable Object",
    "kind": "job",
@@ -832,6 +856,56 @@
    "label": "upgrades socket"
   },
   {
+   "from": "svc.notify",
+   "to": "do.dispatcher",
+   "label": "arms alarm on new booking"
+  },
+  {
+   "from": "api.pro",
+   "to": "svc.sched",
+   "label": "next dispatch time"
+  },
+  {
+   "from": "api.pro",
+   "to": "do.dispatcher",
+   "label": "arms alarm on expired offer"
+  },
+  {
+   "from": "do.dispatcher",
+   "to": "svc.sched",
+   "label": "alarm runs tick"
+  },
+  {
+   "from": "svc.sched",
+   "to": "svc.dispatch",
+   "label": "dispatchTick"
+  },
+  {
+   "from": "svc.sched",
+   "to": "svc.notify",
+   "label": "notifyDispatch"
+  },
+  {
+   "from": "svc.sched",
+   "to": "db.orders",
+   "label": "reads held bookings & offers"
+  },
+  {
+   "from": "svc.sched",
+   "to": "dc.work",
+   "label": "next alarm time"
+  },
+  {
+   "from": "dc.work",
+   "to": "do.dispatcher",
+   "label": "yes: re-arms"
+  },
+  {
+   "from": "dc.work",
+   "to": "db.orders",
+   "label": "no: idle"
+  },
+  {
    "from": "svc.loyalty",
    "to": "db.orders",
    "label": "coupons"
@@ -1031,6 +1105,24 @@
     "ui.session",
     "ui.prowallet",
     "pro"
+   ]
+  },
+  {
+   "name": "Held booking advances by alarm",
+   "steps": [
+    "customer",
+    "ui.home",
+    "ui.checkout",
+    "ui.services",
+    "ui.session",
+    "api.edge",
+    "svc.notify",
+    "do.dispatcher",
+    "svc.sched",
+    "svc.dispatch",
+    "dc.avail",
+    "db.orders",
+    "ext.pg"
    ]
   },
   {
