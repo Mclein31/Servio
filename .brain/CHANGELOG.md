@@ -5,6 +5,15 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 > Entries dated 2026-10-16 and earlier (v0.2.0 – v0.5.30: knowledge base, app build-out, backend A1–A9/B2/B3/C1–C4/D1–D3/F1, Neon/Worker deployment, Pro mode) are in [archive/CHANGELOG_ARCHIVE.md](archive/CHANGELOG_ARCHIVE.md).
 > Older entries mention `docs/*.md`, `assets/ui/` and test counts; those files were later removed from the repo — see `NOTES.md` §7 for how to read them from git.
 
+## 2026-11-16 — Event-armed Dispatcher DO alarm & dependency cleanup
+### Added
+- **Event-armed `Dispatcher` Durable Object alarm (`servio-api/`, ADR-039):** configured `DISPATCHER` binding (`[env.production]` + default env) and `servio-dispatcher-v1` SQLite DO migration in `wrangler.toml`; added `Dispatcher` (`src/dispatch/dispatcher.ts`), `runScheduledDispatch` / `nextDispatchAt` / `computeNextDispatchAt` / `armDispatcher` (`src/dispatch/scheduled.ts`), and shared `notifyDispatch` (`src/live/notify.ts`). Armed idempotently on `POST /bookings` (`PENDING_ACCEPTANCE`), `POST /pro/dispatch`, `POST /offers/:id/decline`, and expired offer `409 OFFER_EXPIRED` when held bookings remain (30 s floor), staying dormant when idle so Neon can scale to zero.
+- **Dispatcher alarm tests:** added `test/setup.ts`, `tsconfig.test.json`, `test/dispatcher.test.ts` (17 tests via `tsx --test` + `node:test`), and `npm test` in `servio-api/package.json`.
+### Removed
+- Removed unused `@neon/env` dependency from `servio-api/package.json` and updated `servio-api/package-lock.json` via `npm uninstall @neon/env`.
+### Verified
+- `servio-api`: `npm run typecheck`, `npm test` (17/17 passing with mocked `pg.Client` / `OrderRoom` / DO storage stubs; no local Postgres instance running), and `wrangler deploy --dry-run` (default + `--env production`) pass. Not deployed to Cloudflare.
+
 ## 2026-11-15 — Brain cleanup
 ### Changed (knowledge base only; no code changes)
 - Verified `.brain/` against the repo (`main` @ `74164cc`) and rewrote PROJECT_CONTEXT, ARCHITECTURE, TODO and NOTES to the current state: completed academic prototype (presented at finals 2026-10-22), actual Workers/Neon/R2/Durable Objects topology, OpenFreeMap vector basemap, no automated tests in the tree.

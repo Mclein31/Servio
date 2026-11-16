@@ -1,9 +1,10 @@
 // notification delivery
 import { createMiddleware } from 'hono/factory';
 import { and, eq } from 'drizzle-orm';
-import type { AppEnv } from '../env';
+import type { AppEnv, DispatchResult } from '../env';
 import { connectDb, type Database } from '../db/client';
 import { bookings, dispatchOffers, notifications, proProfiles, proSkus, users } from '../db/schema';
+import { armDispatcher } from '../dispatch/scheduled';
 import { bookingNotices, bulletinNotices, rewardNotices, type BookingChange, type BookingInfo, type Notice } from './notices';
 
 async function send(env:AppEnv['Bindings'],resource:string,event:unknown) {
@@ -11,10 +12,55 @@ async function send(env:AppEnv['Bindings'],resource:string,event:unknown) {
 }
 const sendAll=(env:AppEnv['Bindings'],resources:Iterable<string>,event:unknown)=>Promise.all([...new Set(resources)].map((resource)=>send(env,resource,event)));
 
+type TouchBooking = (bookingId: string, change: BookingChange, event: Record<string, unknown>) => Promise<void>;
+
+async function touchBooking(
+  env: AppEnv['Bindings'],
+  database: Database,
+  bookingId: string,
+  change: BookingChange,
+  event: Record<string, unknown>,
+  actor: string | undefined,
+  notices: Notice[],
+) {
+  const [info] = await database.select({ id: bookings.id, code: bookings.code, skuName: bookings.skuName, status: bookings.status, customerId: bookings.customerId, proId: bookings.proId })
+    .from(bookings).where(eq(bookings.id, bookingId)) as BookingInfo[];
+  if (!info) return;
+  await sendAll(env, [info.customerId, ...(info.proId ? [info.proId] : [])].map((id) => `user:${id}`), { type: 'booking', bookingId, ...event });
+  const offers = await database.select({ proId: dispatchOffers.proId }).from(dispatchOffers).where(and(eq(dispatchOffers.bookingId, bookingId), eq(dispatchOffers.response, 'PENDING')));
+  await sendAll(env, offers.map((o) => `pro:${o.proId}`), { type: 'dispatch' });
+  notices.push(...bookingNotices(info, change, actor));
+}
+
+async function collectDispatchNotifications(env: AppEnv['Bindings'], dispatch: DispatchResult, touched: TouchBooking) {
+  for (const offer of dispatch.offered) {
+    await send(env, `pro:${offer.proId}`, { type: 'dispatch', eventId: offer.offerId });
+    await touched(offer.bookingId, { kind: 'offer', proId: offer.proId }, { change: 'status' });
+  }
+  for (const bookingId of dispatch.cancelled) {
+    await send(env, `booking:${bookingId}`, { type: 'status', bookingId });
+    await touched(bookingId, { kind: 'status' }, { change: 'status' });
+  }
+}
+
 export async function deliverNotices(env:AppEnv['Bindings'],db:Database,notices:Notice[]) {
   if(!notices.length) return;
   const rows=await db.insert(notifications).values(notices).returning();
   await sendAll(env,rows.map((row)=>`user:${row.userId}`),{ type:'notification' });
+}
+
+/** Emits OrderRoom updates and inbox notices for bookings advanced by scheduled dispatch. */
+export async function notifyDispatch(env: AppEnv['Bindings'], db: Database, dispatch: DispatchResult): Promise<void> {
+  if (!dispatch.offered.length && !dispatch.cancelled.length) return;
+  const notices: Notice[] = [];
+  try {
+    await collectDispatchNotifications(env, dispatch, (bookingId, change, event) =>
+      touchBooking(env, db, bookingId, change, event, undefined, notices),
+    );
+    await deliverNotices(env, db, notices);
+  } catch (error) {
+    console.error(JSON.stringify({ code: 'LIVE_NOTIFY_FAILED', message: error instanceof Error ? error.message : String(error) }));
+  }
 }
 
 export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
@@ -27,15 +73,9 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
     const db=async()=>(connection??=await connectDb(c.env))?.db;
     const notices:Notice[]=[];
     try {
-      const touched=async(bookingId:string,change:BookingChange,event:Record<string,unknown>)=>{
+      const touched:TouchBooking=async(bookingId,change,event)=>{
         const database=await db(); if(!database) return;
-        const [info]=await database.select({ id:bookings.id,code:bookings.code,skuName:bookings.skuName,status:bookings.status,customerId:bookings.customerId,proId:bookings.proId })
-          .from(bookings).where(eq(bookings.id,bookingId)) as BookingInfo[];
-        if(!info) return;
-        await sendAll(c.env,[info.customerId,...(info.proId?[info.proId]:[])].map((id)=>`user:${id}`),{ type:'booking',bookingId,...event });
-        const offers=await database.select({ proId:dispatchOffers.proId }).from(dispatchOffers).where(and(eq(dispatchOffers.bookingId,bookingId),eq(dispatchOffers.response,'PENDING')));
-        await sendAll(c.env,offers.map((o)=>`pro:${o.proId}`),{ type:'dispatch' });
-        notices.push(...bookingNotices(info,change,actor));
+        await touchBooking(c.env,database,bookingId,change,event,actor,notices);
       };
 
       const match=/\/bookings\/([0-9a-f-]{36})\/(status|verify-pin|addons|addons\/[^/]+\/decision|messages|review)$/.exec(path);
@@ -54,6 +94,7 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
 
       if(/\/bookings$/.test(path)) {
         const { booking }=await c.res.clone().json() as { booking:{ id:string; status:string; skuId:string; isDemo:boolean } };
+        if(booking.status==='PENDING_ACCEPTANCE') await armDispatcher(c.env);
         await touched(booking.id,{ kind:'created' },{ change:'created' });
         if(booking.status==='PENDING_ACCEPTANCE') {
           const database=await db();
@@ -76,14 +117,10 @@ export const notifyLive=createMiddleware<AppEnv>(async(c,next)=>{
         await touched(body.bookingId,{ kind:'status' },{ change:'status' });
       }
 
-      for(const offer of hints.dispatch?.offered ?? []) {
-        await send(c.env,`pro:${offer.proId}`,{ type:'dispatch',eventId:offer.offerId });
-        await touched(offer.bookingId,{ kind:'offer',proId:offer.proId },{ change:'status' });
+      if (hints.nextDispatchAtMs !== undefined && hints.nextDispatchAtMs !== null) {
+        await armDispatcher(c.env, hints.nextDispatchAtMs);
       }
-      for(const bookingId of hints.dispatch?.cancelled ?? []) {
-        await send(c.env,`booking:${bookingId}`,{ type:'status',bookingId });
-        await touched(bookingId,{ kind:'status' },{ change:'status' });
-      }
+      if (hints.dispatch) await collectDispatchNotifications(c.env, hints.dispatch, touched);
 
       const bulletin=/\/bulletin\/[0-9a-f-]{36}\/(accept|release|cancel)$/.exec(path);
       if(bulletin && actor) {

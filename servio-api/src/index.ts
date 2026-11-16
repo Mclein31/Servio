@@ -1,4 +1,5 @@
 // api entry
+export { Dispatcher } from './dispatch/dispatcher';
 export { Geocoder } from './locations/geocoder';
 export { OrderRoom } from './live/order-room';
 import { live } from './routes/live';

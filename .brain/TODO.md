@@ -1,6 +1,6 @@
 # SERVIO — Operational Roadmap & Task Checklist
 
-> **Status:** Prototype complete (finals presented 2026-10-22); launch work below is not scheduled · **Updated:** 2026-11-15
+> **Status:** Prototype complete (finals presented 2026-10-22); launch work below is not scheduled · **Updated:** 2026-11-16
 > **Legend:** `[ ]` Not Started | `[/]` In Progress / partly verified | `[x]` Completed
 > **Branches:** all work is on `main`. `booking_bug` is stale: its three 2026-10-18 fixes were re-committed on `main` (`e028135`, `c94d166`, `bf13476`); `bugfix/ui`, `feature/app-and-backend` and `fix/realtime-and-notifications` are fully merged.
 
@@ -8,11 +8,11 @@
 
 ## Known gaps (from the 2026-10-22 backend audit, re-checked against code 2026-11-15)
 
-No API code has changed since the audit, so all twelve are still open. Full write-up: `archive/BACKEND_AUDIT.md` §13.
+Full write-up: `archive/BACKEND_AUDIT.md` §13 (2 items resolved 2026-11-16; remaining items still open).
 
 - [ ] **Self-service Pro approval:** `POST /me/upgrade-pro` sets `kycStatus: 'APPROVED'` with a seeded 5.0 rating and no ID check (`servio-api/src/routes/me.ts`). Needs real KYC review before real users.
 - [ ] **Payments are mock** (`payments/mock.ts`): nothing is charged or paid out.
-- [ ] **Dispatch only advances while a Pro app is open** (`POST /pro/dispatch` heartbeat). Add a Cloudflare Cron Trigger / DO alarm so held bookings never wait indefinitely.
+- [x] **Dispatch only advances while a Pro app is open** (`POST /pro/dispatch` heartbeat). Add a Cloudflare Cron Trigger / DO alarm so held bookings never wait indefinitely. — done 2026-11-16: added event-armed `Dispatcher` Durable Object alarm (`src/dispatch/dispatcher.ts`, `src/dispatch/scheduled.ts`, `wrangler.toml` `DISPATCHER` + `servio-dispatcher-v1`) reusing `dispatchTick` and shared `notifyDispatch` (`src/live/notify.ts`), instead of a polling cron (ADR-039); not yet deployed.
 - [ ] **No remote push** (ADR-037): a closed app gets nothing until reopened.
 - [ ] **No road route line in production:** OSRM routing is development-only; needs a licensed/self-hosted router.
 - [ ] **GPS stops when the Pro backgrounds the app** (foreground location only); customer sees Reconnecting.
@@ -23,7 +23,7 @@ No API code has changed since the audit, so all twelve are still open. Full writ
 - [ ] **Pro cancellation strikes are stored but never enforced.**
 - [ ] **Gmail SMTP for sign-in codes** (daily limit, spam risk); move to a transactional email service before launch.
 - [ ] Direct (specific-Pro) bookings start `ACCEPTED` without Pro consent — product decision pending (ADR-036).
-- [ ] Remove unused `@neon/env` dependency from `servio-api/package.json`.
+- [x] Remove unused `@neon/env` dependency from `servio-api/package.json`. — done 2026-11-16: confirmed no imports/CLI usage and uninstalled via `npm uninstall @neon/env` (updating `package.json` and `package-lock.json`).
 
 ## Quality
 

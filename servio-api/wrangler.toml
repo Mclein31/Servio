@@ -28,6 +28,10 @@ class_name = "OrderRoom"
 name = "GEOCODER"
 class_name = "Geocoder"
 
+[[durable_objects.bindings]]
+name = "DISPATCHER"
+class_name = "Dispatcher"
+
 [[migrations]]
 tag = "servio-order-room-v1"
 new_sqlite_classes = ["OrderRoom"]
@@ -35,6 +39,10 @@ new_sqlite_classes = ["OrderRoom"]
 [[migrations]]
 tag = "servio-geocoder-v1"
 new_sqlite_classes = ["Geocoder"]
+
+[[migrations]]
+tag = "servio-dispatcher-v1"
+new_sqlite_classes = ["Dispatcher"]
 
 [env.production]
 name = "servio-api"
@@ -62,3 +70,7 @@ class_name = "OrderRoom"
 [[env.production.durable_objects.bindings]]
 name = "GEOCODER"
 class_name = "Geocoder"
+
+[[env.production.durable_objects.bindings]]
+name = "DISPATCHER"
+class_name = "Dispatcher"

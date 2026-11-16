@@ -23,6 +23,7 @@
 |          notifications, support, demo, health                  |
 |  Durable Objects: OrderRoom (booking:/pro:/user: rooms)       |
 |                   Geocoder (single Nominatim queue + cache)    |
+|                   Dispatcher (event-armed dispatch DO alarm)   |
 +------+-------------------+-------------------+---------------+
        | Hyperdrive (prod, |  R2 binding       | outbound
        | caching disabled) |  UPLOADS          |
@@ -54,8 +55,8 @@ There is no API gateway, Redis, Firebase, Supabase or PostGIS. Authorization is 
 - **Job execution:** `ACCEPTED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED`, with optional add-on quote (photo evidence) and completion by entering the customer's PIN.
 - **Wallet:** ledger-derived available balance, pending earnings, today's net (PH time), mock GCash cashout (min ₱500, ₱15 fee).
 
-### 2.3 Dispatch (`servio-api/src/dispatch/demo-dispatch.ts`)
-- Runs only when a Pro app sends the `POST /pro/dispatch` heartbeat (foreground); there is no cron/alarm yet.
+### 2.3 Dispatch (`servio-api/src/dispatch/demo-dispatch.ts`, `src/dispatch/dispatcher.ts`, `src/dispatch/scheduled.ts`)
+- Runs on both the Pro foreground heartbeat (`POST /pro/dispatch`) and the event-armed `Dispatcher` Durable Object alarm (ADR-039), sharing `dispatchTick`, `nextDispatchAt`, and `notifyDispatch` (`src/live/notify.ts`); armed idempotently only while held bookings or pending offers remain, floored at 30 s (`MIN_DISPATCH_DELAY_MS`); configured in `wrangler.toml` (`servio-dispatcher-v1`), pending deployment.
 - Candidates: approved, active, online, SKU-qualified Pros with a fix younger than two minutes, excluding prior offers; ranked by great-circle distance (plain SQL) then rating. No radius cap (ADR-035).
 - One offer at a time, 60 s each, up to five Pros; exhaustion refunds the hold. An ASAP booking with no eligible Pro waits up to 5 minutes (`FIRST_OFFER_WAIT_MS`) before refunding.
 - Direct (specific-Pro) bookings and Bulletin reservations skip dispatch; direct bookings start `ACCEPTED` without Pro consent (open product question).

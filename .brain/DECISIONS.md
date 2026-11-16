@@ -185,6 +185,17 @@
 - **Money:** SERVIO funds the discount. The hold debits the customer for total − discount and `platform_promotions` for the discount, so escrow and the Pro's 85% stay whole. Capture charges the customer total − discount. Cancellation refunds the customer what they paid minus any fee, returns the funding to `platform_promotions` and makes the coupon available again.
 - **Limits:** Milestones do not repeat after the last one, coupons do not expire and offline mock mode has no coupons. A reward notice (`REWARD`) is sent when a completion unlocks a coupon. Demo order reset does not revoke coupons already earned.
 
+## ADR-039: Event-Armed Durable Object Alarm for Dispatch (No Polling Cron)
+
+- **Date:** 2026-11-16
+- **Status:** Accepted
+- **Context:** Held `PENDING_ACCEPTANCE` bookings previously only advanced while a Pro app polled `POST /pro/dispatch`. A 1-minute Cloudflare Cron Trigger (`* * * * *`) was considered and rejected because opening a Neon Postgres connection (via Hyperdrive in production) every minute 24/7—even when no held bookings exist—prevents Neon compute from scaling to zero and burns free-tier compute hours.
+- **Decision:** Replace polling cron with a singleton `Dispatcher` Durable Object (`servio-api/src/dispatch/dispatcher.ts`, binding `DISPATCHER`, migration tag `servio-dispatcher-v1`) driven by an event-armed Durable Object alarm:
+  - Arm idempotently (`storage.getAlarm()` / `setAlarm()` inside `blockConcurrencyWhile`, preserving any already-earlier alarm) only when a booking enters `PENDING_ACCEPTANCE` (`HOLD_AUTHORIZED`) via `POST /bookings`, or when `POST /pro/dispatch`, `POST /offers/:id/decline`, or an expired offer (`409 OFFER_EXPIRED`) leaves held bookings or pending offers behind.
+  - Compute the next alarm time (`computeNextDispatchAt` / `nextDispatchAt` in `src/dispatch/scheduled.ts`) from the soonest pending offer expiry or unoffered retry/wait deadline (`FIRST_OFFER_WAIT_MS` / `OFFER_SECONDS`), floored at `MIN_DISPATCH_DELAY_MS` (30 s).
+  - `Dispatcher.alarm()` runs `runScheduledDispatch` (reusing `dispatchTick` and shared `notifyDispatch` in `src/live/notify.ts`), re-arming only while held bookings remain; when none remain (`nextAt === null`), no alarm is armed and the DO stays dormant.
+- **Consequences:** Zero idle Neon connections or compute wakeups when no bookings await dispatch; one serialized alarm loop prevents duplicate polling under concurrent bookings; deploying `servio-api` requires applying the `servio-dispatcher-v1` DO migration.
+
 ---
 
 ## Archived ADRs index

@@ -5,6 +5,7 @@ import * as v from 'valibot';
 import type { AppEnv } from '../env';
 import { bookings, bookingEvents, dispatchOffers, messages, proProfiles, users } from '../db/schema';
 import { advanceDispatch, dispatchTick, emptyDispatch } from '../dispatch/demo-dispatch';
+import { armDispatcher, nextDispatchAt } from '../dispatch/scheduled';
 import { serverNow } from '../lib/bookings';
 import { ApiError } from '../lib/errors';
 import { validate } from '../lib/validation';
@@ -42,7 +43,9 @@ pro.post('/pro/location', validate('json',v.strictObject({
 
 pro.post('/pro/dispatch', validate('json', v.strictObject({})), async (c) => {
   const [actor] = await c.get('db').select({ isDemo: users.isDemo }).from(users).where(eq(users.id, c.get('userId')));
-  c.set('liveHints', { dispatch: await dispatchTick(c.get('db'), c.env.LAUNCH_CITY, actor!.isDemo) });
+  const dispatch = await dispatchTick(c.get('db'), c.env.LAUNCH_CITY, actor!.isDemo);
+  const nextDispatchAtMs = await nextDispatchAt(c.get('db'));
+  c.set('liveHints', { dispatch, nextDispatchAtMs });
   const now = await serverNow(c.get('db'));
   const rows = await c.get('db').select({ offer: dispatchOffers,
     booking: { id: bookings.id, code: bookings.code, skuName: bookings.skuName, priceCentavos: bookings.priceCentavos, trustFeeCentavos: bookings.trustFeeCentavos,
@@ -79,6 +82,16 @@ pro.post('/offers/:id/:action', validate('param', v.strictObject({ id: v.pipe(v.
     }
     return { bookingId: booking!.id };
   });
-  if (!result) throw new ApiError(409, 'OFFER_EXPIRED', 'This offer expired.');
+  if (!result) {
+    const nextAt = await nextDispatchAt(c.get('db'));
+    if (nextAt !== null) {
+      const arm = armDispatcher(c.env, nextAt);
+      try { c.executionCtx.waitUntil(arm); } catch { await arm; }
+    }
+    throw new ApiError(409, 'OFFER_EXPIRED', 'This offer expired.');
+  }
+  if (action === 'decline') {
+    c.set('liveHints', { dispatch, nextDispatchAtMs: await nextDispatchAt(c.get('db')) });
+  }
   return c.json(result);
 });

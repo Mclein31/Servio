@@ -5,6 +5,7 @@ export interface Bindings {
   ENVIRONMENT: string;
   ORDER_ROOMS: DurableObjectNamespace;
   GEOCODER: DurableObjectNamespace;
+  DISPATCHER: DurableObjectNamespace;
   GEOCODING_URL?: string;
   LAUNCH_CITY?: string;
   ALLOWED_ORIGINS: string;
@@ -39,6 +40,7 @@ export interface LiveHints {
   previousProId?: string | null;
   replay?: boolean;
   dispatch?: DispatchResult;
+  nextDispatchAtMs?: number | null;
   rewards?: { customerId: string; milestone: number; percentOff: number; maxDiscountCentavos: number }[];
 }
 export interface DispatchResult { offered: { offerId: string; bookingId: string; proId: string }[]; cancelled: string[] }
