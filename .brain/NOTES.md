@@ -1,7 +1,7 @@
 # SERVIO — Operational Notes & AI Agent Guidelines
 
 > **Target Audience:** Any AI coding agent, developer, or collaborator working within this workspace.
-> **Updated:** 2026-11-15
+> **Updated:** 2026-11-16
 
 ---
 
@@ -29,8 +29,9 @@ When an agent is asked to implement or design a feature:
 - Do NOT generate Flutter, React Native, or Vue code.
 
 ## 5. Running the App & Implementation Gotchas
-- **App:** `cd servio-app && npm start` (http://localhost:4200). Lint: `npm run lint`. There is currently **no test runner** (specs and the `angular.json` test target were removed on 2026-10-22).
-- **API:** `cd servio-api && npm run dev` (Wrangler, port 8787). Typecheck: `npm run typecheck`. No tests in the tree (see TODO → Quality).
+- **App:** `cd servio-app && npm start` (http://localhost:4200). Lint: `cd servio-app && npm run lint`. Build: `cd servio-app && npm run build`. There is currently no `typecheck` script or test runner in `servio-app/package.json` (specs and the `angular.json` test target were removed on 2026-10-22).
+- **API:** `cd servio-api && npm run dev` (Wrangler, port 8787). Checks: `cd servio-api && npm run typecheck` (checks `src/`, `scripts/`, and `test/`) and `cd servio-api && npm test` (runs `tsx --import ./test/setup.ts --test test/*.test.ts`, 17 unit/handler tests with mocked DB/DO stubs). Dry-run Worker build: `cd servio-api && npm run build`.
+- **CI:** `.github/workflows/ci.yml` runs on `push` and `pull_request` using Node from `servio-api/.nvmrc` (`26`) with npm caching, executing `npm ci`, `npm run typecheck`, and `npm test` in `servio-api/`.
 - **Port clash:** AdvanCare's local Wrangler can also hold port 8787 and answer "Route not found" for SERVIO paths. Do not kill the unrelated process; pick another port.
 - First run shows onboarding. Offline mode accepts `123456`; live email codes come from the API log when SMTP is absent. New live users complete name/optional PH mobile before landing. The demo connection sheet on Login selects mock/API and a LAN URL. Mock customer completion PIN is `7492`; the live PIN comes only from authenticated booking reads. Live demo accounts use the locally configured `DEMO_LOGIN_CODE` (D2), without email. Staff cannot use mobile sign-in.
 - `cd servio-api && npm run db:seed-demo` seeds the catalog and presentation baseline into local `servio_dev` and uploads four bundled PNGs to the local `servio-uploads-dev` R2 binding. It is idempotent, preserves ongoing bookings and refuses production/other-project databases or conflicting seed identities/codes. Full reset (`npm run db:demo-reset`) uses the dedicated local `servio_demo` database, never mixed `servio_dev`; seeding alone does not reset the clock or progress. Internal demo IDs start `de000000-0000-4000-8000-`; opening wallet credits display as Previous earnings.

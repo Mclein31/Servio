@@ -28,7 +28,7 @@ Full write-up: `archive/BACKEND_AUDIT.md` §13 (2 items resolved 2026-11-16; rem
 ## Quality
 
 - [ ] Restore automated tests: API Vitest suites (`servio-api/test/`, `vitest.config.ts`) and app `*.spec.ts` files were deleted in `397a45d`; recover with `git checkout 397a45d^ -- <paths>` and re-add the test scripts/`angular.json` test target.
-- [ ] CI (GitHub Actions): app build + lint + tests, API typecheck + tests, migrations against a Neon branch. (`.github/` currently holds only an unrelated `modernize/java-upgrade` hook.)
+- [/] CI (GitHub Actions): app build + lint + tests, API typecheck + tests, migrations against a Neon branch. — 2026-11-16: added `.github/workflows/ci.yml` (`push` and `pull_request`) running `npm ci`, `npm run typecheck`, and `npm test` in `servio-api/` with Node from `servio-api/.nvmrc` (`26`) and npm caching (`servio-app/package.json` has no `typecheck` script); app build/lint/tests and Neon branch migrations remain open. (`.github/modernize/` also holds an unrelated hook.)
 - [/] Real Gmail inbox delivery: implemented and tested with fake SMTP; actual delivery from the production Worker was never recorded as verified.
 - [ ] Bell/inbox/local alerts not yet checked on physical phones (0.5.34).
 

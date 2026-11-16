@@ -5,6 +5,10 @@ All notable changes to the SERVIO project knowledge base, architecture, and code
 > Entries dated 2026-10-16 and earlier (v0.2.0 – v0.5.30: knowledge base, app build-out, backend A1–A9/B2/B3/C1–C4/D1–D3/F1, Neon/Worker deployment, Pro mode) are in [archive/CHANGELOG_ARCHIVE.md](archive/CHANGELOG_ARCHIVE.md).
 > Older entries mention `docs/*.md`, `assets/ui/` and test counts; those files were later removed from the repo — see `NOTES.md` §7 for how to read them from git.
 
+## 2026-11-16 — CI workflow for servio-api
+### Added
+- **GitHub Actions CI (`.github/workflows/ci.yml`):** triggers on `push` and `pull_request`, uses `servio-api/.nvmrc` (`26`) with npm cache (`servio-api/package-lock.json`), runs `npm ci`, `npm run typecheck`, and `npm test` in `servio-api/` (`servio-app/package.json` has no `typecheck` script). Updated `.brain/TODO.md` (marked CI `[/]`) and `.brain/NOTES.md` §5 with how to run checks.
+
 ## 2026-11-16 — Event-armed Dispatcher DO alarm & dependency cleanup
 ### Added
 - **Event-armed `Dispatcher` Durable Object alarm (`servio-api/`, ADR-039):** configured `DISPATCHER` binding (`[env.production]` + default env) and `servio-dispatcher-v1` SQLite DO migration in `wrangler.toml`; added `Dispatcher` (`src/dispatch/dispatcher.ts`), `runScheduledDispatch` / `nextDispatchAt` / `computeNextDispatchAt` / `armDispatcher` (`src/dispatch/scheduled.ts`), and shared `notifyDispatch` (`src/live/notify.ts`). Armed idempotently on `POST /bookings` (`PENDING_ACCEPTANCE`), `POST /pro/dispatch`, `POST /offers/:id/decline`, and expired offer `409 OFFER_EXPIRED` when held bookings remain (30 s floor), staying dormant when idle so Neon can scale to zero.
